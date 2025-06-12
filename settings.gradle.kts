@@ -15,6 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Jetz"
-include(":androidApp")
+rootProject.name = "Jetzy"
 include(":shared")

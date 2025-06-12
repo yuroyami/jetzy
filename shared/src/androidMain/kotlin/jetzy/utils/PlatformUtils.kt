@@ -1,4 +1,4 @@
-package jetz.common.utils
+package jetzy.utils
 
 import android.widget.Toast
 import androidx.activity.ComponentActivity

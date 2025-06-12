@@ -1,75 +1,128 @@
+@file:OptIn(ExperimentalDistributionDsl::class)
+@file:Suppress("WrongGradleMethod")
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalDistributionDsl
 
 plugins {
-    id("org.jetbrains.kotlin.multiplatform")
-    id("org.jetbrains.kotlin.native.cocoapods")
-    id("org.jetbrains.compose")
-    id("com.android.library")
-    id("org.jetbrains.kotlin.plugin.compose")
+    alias(libs.plugins.multiplatform)
+    //alias(libs.plugins.cocoapods)
+    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.compose)
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.buildConfig)
+    alias(libs.plugins.kSerialization)
+    alias(libs.plugins.ksp)
 }
 
+val verString = "0.1.0"
+val verCode = ("1" + verString.split(".").joinToString("") { it.padStart(2, '0') }).toIntOrNull() ?: 0
+
 kotlin {
-    applyDefaultHierarchyTemplate()
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
+    jvmToolchain(21)
 
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "17"
+    }
+
+    js(IR) {
+        outputModuleName = "jetzyApp"
+        generateTypeScriptDefinitions()
+        browser {
+            commonWebpackConfig {
+                outputFileName = "jetzyApp.js"
+                sourceMaps = false // Disables source maps
+            }
+
+            distribution {
+                outputDirectory.set(rootDir.resolve("WebAppOutput"))
             }
         }
+        binaries.executable()
+        useEsModules()
     }
+
 
     iosX64()
     iosArm64()
     iosSimulatorArm64()
 
-    cocoapods {
-        summary = "Some description for the Shared Module"
-        homepage = "Link to the Shared Module homepage"
-        version = "1.0"
-        ios.deploymentTarget = "14.0"
-        podfile = project.file("../iosApp/Podfile")
-        framework {
-            baseName = "shared"
-            isStatic = false
-        }
-    }
+
+//    cocoapods {
+//        summary = "Some description for the Shared Module"
+//        homepage = "Link to the Shared Module homepage"
+//        version = "1.0"
+//        ios.deploymentTarget = "14.0"
+//        podfile = project.file("../iosApp/Podfile")
+//        framework {
+//            baseName = "shared"
+//            isStatic = false
+//        }
+//    }
 
     //jvm()
-
-//    js {
-//        browser()
-//        binaries.executable()
-//    }
 
     sourceSets {
         all {
             languageSettings {
+                optIn("kotlin.RequiresOptIn")
+                optIn("kotlin.experimental.ExperimentalNativeApi")
                 optIn("org.jetbrains.compose.resources.ExperimentalResourceApi")
+                optIn("androidx.compose.material3.ExperimentalMaterial3Api")
+                optIn("kotlin.uuid.ExperimentalUuidApi")
+                optIn("kotlin.ExperimentalUnsignedTypes")
+                optIn("kotlin.ExperimentalStdlibApi")
+                optIn("kotlin.io.encoding.ExperimentalEncodingApi")
+                optIn("androidx.compose.material3.ExperimentalMaterial3ExpressiveApi")
+                optIn("kotlinx.cinterop.ExperimentalForeignApi") //for iOS
+                optIn("kotlinx.cinterop.BetaInteropApi") //for iOS
+                optIn("kotlin.ExperimentalUnsignedTypes")
+                optIn("kotlin.io.encoding.ExperimentalEncodingApi")
+                optIn("kotlin.ExperimentalStdlibApi")
+                optIn("kotlin.time.ExperimentalTime")
             }
         }
+
         commonMain.dependencies {
-            api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+            /* Standard Kotlin lib to match the compiler */
+            implementation(libs.kotlinstdlib)
 
-            api("co.touchlab:kermit:2.0.3")
+            /* Explicitly specifying a newer coroutines version */
+            implementation(libs.koroutines.core)
 
-            implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.3.3")
+            /* Logging */
+            implementation(libs.kermit)
 
-            val ktor =  /* "2.3.9" */ "3.0.0-beta-1"
-            implementation("io.ktor:ktor-network:$ktor")
+            /* Multiplatform Kotlin equivalent of Java's datetime */
+            implementation(libs.kotlinx.datetime)
 
-            implementation("io.github.alexzhirkevich:qrose:1.0.0-beta02")
+            /* IO extensions */
+            implementation(libs.kotlinx.io)
 
-            /* Compose core dependencies */
-            api(compose.runtime)
-            api(compose.foundation)
-            api(compose.material3)
-            api(compose.materialIconsExtended)
-            api(compose.ui)
-            //@OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
-            api(compose.components.resources)
-            api("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0-beta01")
+            /* Networking */
+            implementation(libs.ktor.network)
+
+            /* QRCode generation */
+            implementation(libs.qrose)
+
+            /* Compose multiplatform dependencies */
+            implementation(compose.runtime)
+            implementation(compose.foundation)
+            implementation(compose.material3)
+            implementation(compose.materialIconsExtended)
+            implementation(compose.components.resources)
+
+            /* ViewModel support */
+            implementation(libs.compose.viewmodel)
+
+            /* Screen Navigation */
+            implementation(libs.compose.navigation)
+
+            /* FileKit to save/open files */
+            implementation(libs.filekit)
         }
 
         commonTest.dependencies {
@@ -77,14 +130,23 @@ kotlin {
         }
 
         androidMain.dependencies {
-            api("androidx.core:core-ktx:1.13.0")
-            api("androidx.appcompat:appcompat:1.7.0-alpha03")
-            api("androidx.activity:activity-compose:1.9.0")
-            api("androidx.core:core-splashscreen:1.1.0-rc01")
+            /* Android Backward compatibility APIs */
+            implementation(libs.jetpack.core)
+            implementation(libs.jetpack.appcompat)
 
-            api("com.google.android.gms:play-services-nearby:19.2.0")
+            /* Splash Screen with backward compatibility */
+            implementation(libs.jetpack.splashscreen) //1.2.0 bugs our navbar opacity
 
-            api("androidx.documentfile:documentfile:1.0.1")
+            /*  Activity's compose support with backward compatibility */
+            implementation(libs.jetpack.activity.compose)
+
+            /* Coroutine support for Android threading */
+            implementation(libs.koroutines.android)
+
+            /* Support for SAF storage */
+            implementation(libs.jetpack.documentfile)
+
+            api("com.google.android.gms:play-services-nearby:19.3.0")
         }
 
         jvmMain.dependencies {
@@ -104,20 +166,43 @@ kotlin {
 }
 
 android {
-    namespace = "jetz.common.android"
-    compileSdk = 34
+    namespace = "jetzy"
+    compileSdk = 36
+
+    signingConfigs {
+        create("jetzy") {
+            storeFile = file("${rootDir}/keystore/jetzy.jks")
+            keyAlias = "jetzy"
+            keyPassword = "az90az09"
+            storePassword = "az90az09"
+        }
+    }
+
     defaultConfig {
-        minSdk = 21
+        minSdk = 24
+        targetSdk = 35
+
+        applicationId = "com.yuroyami.jetzy"
+        versionCode = verCode
+        versionName = verString
+
+        signingConfig = signingConfigs.getByName("jetzy")
     }
+
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
-    kotlin {
-        jvmToolchain(17)
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+        }
     }
 }
 
+dependencies {
+    coreLibraryDesugaring(libs.desugaring)
+}
 
 compose.desktop {
     application {
@@ -131,13 +216,8 @@ compose.desktop {
     }
 }
 
-compose.experimental {
-    web.application {}
-}
-
-
-tasks.withType<KotlinCompile> {
-    compilerOptions {
-        freeCompilerArgs.add("-Xexpect-actual-classes")
-    }
+buildConfig {
+    buildConfigField("APP_VERSION", verString)
+    buildConfigField("DEBUG", false)
+    buildConfigField("ALLOW_LOGGING", false)
 }
