@@ -10,9 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.outlined.ElectricBike
-import androidx.compose.material.icons.outlined.GpsFixed
-import androidx.compose.material.icons.outlined.Web
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,6 +44,7 @@ import jetzy.p2p.P2pHandler
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.jetzy_vector
 import jetzy.theme.JetzyTheme
+import jetzy.theme.NightMode
 import jetzy.utils.ScreenSizeInfo
 import jetzy.utils.getScreenSizeInfo
 import jetzy.viewmodel.JetzyViewmodel
@@ -62,7 +60,9 @@ val LocalViewmodel = compositionLocalOf<JetzyViewmodel> { error("No Viewmodel pr
 val LocalScreenSize = compositionLocalOf<ScreenSizeInfo> { error("No Screen Size Info provided") }
 val LocalNavigator = compositionLocalOf<NavController> { error("No Navigator provided yet") }
 
-enum class NightMode { SYSTEM, LIGHT, DARK }
+
+
+val screens = listOf(Screen.SendPhotosScreen, Screen.SendVideosScreen, Screen.MainScreen, Screen.SendFoldersScreen, Screen.SendTextScreen)
 
 @Composable
 fun AdamScreen() {
@@ -132,37 +132,19 @@ fun AdamScreen() {
                         Column {
                             HorizontalDivider()
                             NavigationBar {
-                                NavigationBarItem(
-                                    selected = true,
-                                    icon = {
-                                        Icon(Icons.Outlined.Web, null)
+                                screens.forEach { screen ->
+                                    NavigationBarItem(
+                                        selected = true,
+                                        icon = {
+                                            Icon(screen.icon, null)
 
-                                    },
-                                    label = { Text("Foobar") },
-                                    onClick = {
-
-                                    }
-                                )
-                                NavigationBarItem(
-                                    selected = false,
-                                    icon = {
-                                        Icon(Icons.Outlined.GpsFixed, null)
-                                    },
-                                    label = { Text("Bafoor") },
-                                    onClick = {
-
-                                    }
-                                )
-                                NavigationBarItem(
-                                    selected = false,
-                                    icon = {
-                                        Icon(Icons.Outlined.ElectricBike, null)
-                                    },
-                                    label = { Text("Teafoo") },
-                                    onClick = {
-
-                                    }
-                                )
+                                        },
+                                        label = { Text(screen.label) },
+                                        onClick = {
+                                            navigator.navigate(screen.label)
+                                        }
+                                    )
+                                }
                             }
                         }
                     },
@@ -171,7 +153,9 @@ fun AdamScreen() {
                             navController = navigator,
                             startDestination = if (BuildConfig.DEBUG) Screen.MainScreen.label else Screen.MainScreen.label
                         ) {
-                            addScreen(Screen.MainScreen)
+                            screens.forEach {
+                                addScreen(it)
+                            }
                         }
                     }
                 )
@@ -194,7 +178,7 @@ fun JetzyBackground() {
     Box(
         modifier = Modifier.fillMaxSize().background(
             brush = Brush.linearGradient(
-                listOf(MaterialTheme.colorScheme.primary.copy(0.25f), Color.White, MaterialTheme.colorScheme.primary.copy(0.25f))
+                listOf(MaterialTheme.colorScheme.primary.copy(0.1f), Color.White, MaterialTheme.colorScheme.primary.copy(0.1f))
             )
         )
     )
