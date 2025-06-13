@@ -5,7 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import jetzy.p2p.P2pCallback
-import jetzy.ui.ScreenUI
+import jetzy.ui.AdamScreen
 import jetzy.ui.p2pCallback
 
 class MainActivity: ComponentActivity(), P2pCallback {
@@ -17,7 +17,7 @@ class MainActivity: ComponentActivity(), P2pCallback {
         p2pCallback = this
 
         setContent {
-            ScreenUI()
+            AdamScreen()
         }
     }
 

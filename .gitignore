@@ -24,10 +24,7 @@ Thumbs.db
 .gradle/
 build/
 app/build/
-gradle/
-keystore/
 obj/
-*.jks
 *.so
 libavcodec.so
 libavdevice.so
@@ -41,3 +38,5 @@ libpostproc.so
 libswresample.so
 lbswscale.so
 Pods/
+*.lock
+WebAppOutput/

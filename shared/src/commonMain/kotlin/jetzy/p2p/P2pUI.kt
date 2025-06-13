@@ -40,20 +40,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import jetzy.p2p.ComposeUtils.AppPopup
-import jetzy.shared.generated.resources.Inter_Regular
-import jetzy.shared.generated.resources.Res
 import jetzy.ui.p2pCallback
 import jetzy.ui.p2pHandler
 import jetzy.ui.viewmodel
 import jetzy.utils.Platform
 import jetzy.utils.loggy
 import jetzy.utils.platform
-import org.jetbrains.compose.resources.Font
 
 object P2pUI {
 
@@ -68,8 +64,6 @@ object P2pUI {
                 visibilityState.value = false
             }
         ) {
-            val inter = Font(Res.font.Inter_Regular)
-
             Column(
                 modifier = Modifier.fillMaxSize().padding(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -80,7 +74,6 @@ object P2pUI {
                     text = "Gmix P2P playlist transfer",
                     color = ComposeUtils.scheme.primary,
                     textAlign = TextAlign.Center,
-                    fontFamily = FontFamily(inter),
                     fontSize = 16.sp
                 )
 
@@ -90,7 +83,6 @@ object P2pUI {
                     text = "The peer user has:",
                     color = ComposeUtils.scheme.primary,
                     textAlign = TextAlign.Center,
-                    fontFamily = FontFamily(inter),
                     fontSize = 14.sp
                 )
 
@@ -125,7 +117,6 @@ object P2pUI {
                                 modifier = Modifier.fillMaxWidth(),
                                 color = Color(156, 185, 63, 255),
                                 textAlign = TextAlign.Center,
-                                fontFamily = FontFamily(inter),
                                 fontSize = 14.sp
                             )
                         }
@@ -158,7 +149,6 @@ object P2pUI {
                                 modifier = Modifier.fillMaxWidth(),
                                 color = Color(152, 152, 152, 255),
                                 textAlign = TextAlign.Center,
-                                fontFamily = FontFamily(inter),
                                 fontSize = 14.sp
                             )
                         }
@@ -179,8 +169,6 @@ object P2pUI {
                 visibilityState.value = false
             }
         ) {
-            val inter = Font(Res.font.Inter_Regular)
-
             Column(
                 modifier = Modifier.fillMaxSize().padding(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -191,7 +179,6 @@ object P2pUI {
                     text = "Gmix P2P playlist transfer\n- Cross Platform mode - ",
                     color = ComposeUtils.scheme.primary,
                     textAlign = TextAlign.Center,
-                    fontFamily = FontFamily(inter),
                     fontSize = 15.sp
                 )
 
@@ -201,7 +188,6 @@ object P2pUI {
                     text = "To transfer playlists between Android & iOS, both peers need to join the same network (WiFi or Personal Hotspot)",
                     color = ComposeUtils.scheme.primary,
                     textAlign = TextAlign.Center,
-                    fontFamily = FontFamily(inter),
                     fontSize = 10.sp
                 )
 
@@ -223,7 +209,6 @@ object P2pUI {
                 visibilityState.value = false
             }
         ) {
-            val inter = Font(Res.font.Inter_Regular)
 
             val peers = remember { viewmodel.p2pPeers }
 
@@ -236,7 +221,6 @@ object P2pUI {
                     text = "Gmix P2P playlist transfer",
                     color = ComposeUtils.scheme.primary,
                     textAlign = TextAlign.Center,
-                    fontFamily = FontFamily(inter),
                     fontSize = 14.sp
                 )
 
@@ -273,7 +257,7 @@ object P2pUI {
 //                                )
                             },
                             headlineContent = {
-                                Text(remember { peer.peerName() }, fontFamily = FontFamily(inter))
+                                Text(remember { peer.peerName() })
                             },
                             modifier = Modifier.clickable(
                                 interactionSource = remember { MutableInteractionSource() },
@@ -314,7 +298,6 @@ object P2pUI {
             val transferButtonText by remember { mutableStateOf("OK") }
             val transferButtonIcon by remember { mutableStateOf(Icons.Filled.Webhook) }
 
-            val inter = Font(Res.font.Inter_Regular)
 
             LaunchedEffect(transferStatusText) {
                 loggy("UI $transferStatusText")
@@ -330,7 +313,6 @@ object P2pUI {
                     text = "Gmix P2P playlist transfer",
                     color = ComposeUtils.scheme.primary,
                     textAlign = TextAlign.Center,
-                    fontFamily = FontFamily(inter),
                     fontSize = 14.sp
                 )
 
@@ -364,7 +346,6 @@ object P2pUI {
                             text = textPeer1 ?: "Unknown",
                             color = ComposeUtils.scheme.surfaceTint,
                             textAlign = TextAlign.Center,
-                            fontFamily = FontFamily(inter),
                             fontSize = 9.sp,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -409,7 +390,6 @@ object P2pUI {
                             text = textPeer2 ?: "Unknown",
                             color = ComposeUtils.scheme.surfaceTint,
                             textAlign = TextAlign.Center,
-                            fontFamily = FontFamily(inter),
                             fontSize = 9.sp,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -420,7 +400,6 @@ object P2pUI {
                     text = transferStatusText,
                     color = ComposeUtils.scheme.primary,
                     textAlign = TextAlign.Center,
-                    fontFamily = FontFamily(inter),
                     fontSize = 10.sp
                 )
 

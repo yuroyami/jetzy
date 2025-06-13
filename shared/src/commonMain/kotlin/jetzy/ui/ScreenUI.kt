@@ -31,6 +31,7 @@ import jetzy.p2p.P2pUI.P2pChoosePeerPopup
 import jetzy.p2p.P2pUI.P2pInitialPopup
 import jetzy.p2p.P2pUI.P2pQR
 import jetzy.p2p.P2pUI.P2pTransfer
+import jetzy.theme.JetzyTheme
 import jetzy.utils.ScreenSizeInfo
 import jetzy.utils.getScreenSizeInfo
 
@@ -41,60 +42,63 @@ var p2pHandler: P2pHandler? = null
 
 val LocalScreenSize = compositionLocalOf<ScreenSizeInfo> { error("No Screen Size Info provided") }
 
+
 @Composable
-fun ScreenUI() {
-    val scope = rememberCoroutineScope()
+fun AdamScreen() {
+    JetzyTheme {
+        val scope = rememberCoroutineScope()
 
-    viewmodel = viewModel(
-        key = "main",
-        modelClass = ComposeViewmodel::class,
-        factory = viewModelFactory { initializer { ComposeViewmodel() } }
-    )
+        viewmodel = viewModel(
+            key = "main",
+            modelClass = ComposeViewmodel::class,
+            factory = viewModelFactory { initializer { ComposeViewmodel() } }
+        )
 
-    val snackbarHostState = remember { SnackbarHostState() }
+        val snackbarHostState = remember { SnackbarHostState() }
 
-    var showVideoPicker by remember { mutableStateOf(false) }
-    val filePicker = rememberFilePickerLauncher(
-        type = PickerType.File(), mode = PickerMode.Multiple(),
-    ) { files ->
-        files?.forEach {
-            viewmodel.files.add(it)
+        var showVideoPicker by remember { mutableStateOf(false) }
+        val filePicker = rememberFilePickerLauncher(
+            type = PickerType.File(), mode = PickerMode.Multiple(),
+        ) { files ->
+            files?.forEach {
+                viewmodel.files.add(it)
+            }
         }
-    }
 
 
-    CompositionLocalProvider(LocalScreenSize provides getScreenSizeInfo()) {
-        Scaffold(
-            snackbarHost = {
-                viewmodel.snack = snackbarHostState
-                SnackbarHost(snackbarHostState)
-            },
-            topBar = {
+        CompositionLocalProvider(LocalScreenSize provides getScreenSizeInfo()) {
+            Scaffold(
+                snackbarHost = {
+                    viewmodel.snack = snackbarHostState
+                    SnackbarHost(snackbarHostState)
+                },
+                topBar = {
 
-            },
-            content = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = CenterHorizontally
-                ) {
-                    Button(onClick = {
-                        showVideoPicker = true
-                    }) {
-                        Text("Send")
-                    }
+                },
+                content = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = CenterHorizontally
+                    ) {
+                        Button(onClick = {
+                            showVideoPicker = true
+                        }) {
+                            Text("Send")
+                        }
 
-                    LazyColumn {
-                        itemsIndexed(viewmodel.files) { i, f ->
-                            f.path?.let { text -> Text(text) }
+                        LazyColumn {
+                            itemsIndexed(viewmodel.files) { i, f ->
+                                f.path?.let { text -> Text(text) }
+                            }
                         }
                     }
                 }
-            }
-        )
+            )
 
-        P2pInitialPopup(visibilityState = remember { viewmodel.p2pInitialPopup })
-        P2pQR(visibilityState = remember { viewmodel.p2pQRpopup })
-        P2pChoosePeerPopup(visibilityState = remember { viewmodel.p2pChoosePeerPopup })
-        P2pTransfer(visibilityState = remember { viewmodel.p2pTransferPopup })
+            P2pInitialPopup(visibilityState = remember { viewmodel.p2pInitialPopup })
+            P2pQR(visibilityState = remember { viewmodel.p2pQRpopup })
+            P2pChoosePeerPopup(visibilityState = remember { viewmodel.p2pChoosePeerPopup })
+            P2pTransfer(visibilityState = remember { viewmodel.p2pTransferPopup })
+        }
     }
 }
