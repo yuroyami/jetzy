@@ -1,4 +1,4 @@
-package jetz.common.ui
+package jetzy.ui
 
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
@@ -6,22 +6,18 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
-import jetz.common.p2p.P2pPeer
-import jetz.common.picking.MPFile
-import kotlinx.coroutines.CoroutineScope
+import androidx.lifecycle.viewModelScope
+import io.github.vinceglb.filekit.core.PlatformFile
+import jetzy.p2p.P2pPeer
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 class ComposeViewmodel: ViewModel() {
 
-    val files = mutableStateListOf<MPFile<Any>>()
+    val files = mutableStateListOf<PlatformFile>()
 
     val userMode = MutableStateFlow<Boolean?>(null)
-
-    val mainScope = CoroutineScope(Dispatchers.Main)
-    val ioScope = CoroutineScope(Dispatchers.IO)
 
     var snack = SnackbarHostState()
 
@@ -41,7 +37,7 @@ class ComposeViewmodel: ViewModel() {
     val transferStatusText = mutableStateOf("") //status of transfer
 
     fun snacky(string: String) {
-        mainScope.launch {
+        viewModelScope.launch(Dispatchers.Main) {
             snack.showSnackbar(
                 message = string,
                 duration = SnackbarDuration.Short

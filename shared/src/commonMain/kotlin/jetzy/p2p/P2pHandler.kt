@@ -1,13 +1,10 @@
-package jetz.common.p2p
+package jetzy.p2p
 
 import io.ktor.utils.io.ByteWriteChannel
-import jetz.common.ui.viewmodel
-import jetz.common.utils.getDeviceName
-import jetz.common.utils.loggy
+import jetzy.ui.viewmodel
+import jetzy.utils.getDeviceName
+import jetzy.utils.loggy
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.io.RawSink
 import kotlinx.io.RawSource
 import kotlinx.io.buffered
@@ -24,9 +21,6 @@ abstract class P2pHandler {
     var p2pOutput: RawSink? = null
 
     var p2pCrossOutput: ByteWriteChannel? = null //only necessary for iOS-to-Android writing
-
-    /* Coroutine properties */
-    var coroutineP2p = CoroutineScope(Dispatchers.IO)
 
     val receivedSongs = mutableListOf<P2pReceivedFile>()
 
@@ -47,13 +41,8 @@ abstract class P2pHandler {
     /** Needs to be overridden */
     open fun stopP2pOperations() {
         isP2Ptransferring = false
-        runIgnoring { p2pInput?.close(); p2pInput = null }
-        runIgnoring { p2pOutput?.close(); p2pOutput = null }
-    }
-
-    fun runIgnoring(block: () -> Unit) = try {
-        block.invoke()
-    } catch (ignore: Throwable) {
+        runCatching { p2pInput?.close(); p2pInput = null }
+        runCatching { p2pOutput?.close(); p2pOutput = null }
     }
 
     protected suspend fun sendPlaylist() {
@@ -122,7 +111,7 @@ abstract class P2pHandler {
                 loggy(e.stackTraceToString())
                 viewmodel.transferStatusText.value = "Error sending playlist: ${e.message}"
             } finally {
-                runIgnoring { output.emit() }
+                runCatching { output.emit() }
                 stopP2pOperations()
             }
         }

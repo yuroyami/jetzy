@@ -1,12 +1,12 @@
-package jetz.android
+package jetzy
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import jetz.common.p2p.P2pCallback
-import jetz.common.ui.ScreenUI
-import jetz.common.ui.p2pCallback
+import jetzy.p2p.P2pCallback
+import jetzy.ui.ScreenUI
+import jetzy.ui.p2pCallback
 
 class MainActivity: ComponentActivity(), P2pCallback {
 

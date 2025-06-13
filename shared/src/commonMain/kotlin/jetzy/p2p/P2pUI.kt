@@ -1,4 +1,4 @@
-package jetz.common.p2p
+package jetzy.p2p
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Webhook
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -30,6 +29,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -44,15 +44,15 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import jetz.common.p2p.ComposeUtils.AppPopup
-import jetz.common.ui.p2pCallback
-import jetz.common.ui.p2pHandler
-import jetz.common.ui.viewmodel
-import jetz.common.utils.Platform
-import jetz.common.utils.getPlatform
-import jetz.common.utils.loggy
-import jetz.shared.generated.resources.Inter_Regular
-import jetz.shared.generated.resources.Res
+import jetzy.p2p.ComposeUtils.AppPopup
+import jetzy.shared.generated.resources.Inter_Regular
+import jetzy.shared.generated.resources.Res
+import jetzy.ui.p2pCallback
+import jetzy.ui.p2pHandler
+import jetzy.ui.viewmodel
+import jetzy.utils.Platform
+import jetzy.utils.loggy
+import jetzy.utils.platform
 import org.jetbrains.compose.resources.Font
 
 object P2pUI {
@@ -104,9 +104,10 @@ object P2pUI {
                             visibilityState.value = false
 
                             viewmodel.p2pPeers.clear()
-                            when (getPlatform()) {
+                            when (platform) {
                                 Platform.Android -> p2pCallback.p2pStartNativePlatform()
-                                Platform.iOS -> p2pCallback.p2pStartCrossPlatform()
+                                Platform.IOS -> p2pCallback.p2pStartCrossPlatform()
+                                Platform.Web -> TODO()
                             }
                         },
                         modifier = Modifier.weight(1f).padding(12.dp),
@@ -135,9 +136,10 @@ object P2pUI {
                             visibilityState.value = false
 
                             viewmodel.p2pPeers.clear()
-                            when (getPlatform()) {
-                                Platform.iOS -> p2pCallback.p2pStartNativePlatform()
+                            when (platform) {
+                                Platform.IOS -> p2pCallback.p2pStartNativePlatform()
                                 Platform.Android -> p2pCallback.p2pStartCrossPlatform()
+                                Platform.Web -> TODO()
                             }
 
                         },
@@ -240,12 +242,13 @@ object P2pUI {
 
                 Spacer(Modifier.height(10.dp))
 
-                val text = when (getPlatform()) {
+                val text = when (platform) {
                     Platform.Android -> {
                         "Gmix requires WiFi, GPS (Location) and Bluetooth to all be enabled in order to transfer files." +
                                 " Please select your playlist-provider Android peer after granting the necessary permissions."
                     }
-                    Platform.iOS -> "Please select your iOS (iPhone/iPad) peer."
+                    Platform.IOS -> "Please select your iOS (iPhone/iPad) peer."
+                    Platform.Web -> TODO()
                 }
                 Text(
                     text = text,
@@ -274,7 +277,7 @@ object P2pUI {
                             },
                             modifier = Modifier.clickable(
                                 interactionSource = remember { MutableInteractionSource() },
-                                indication = rememberRipple(),
+                                indication = ripple(),
                                 onClick = {
                                     visibilityState.value = false
 

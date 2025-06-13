@@ -1,4 +1,4 @@
-package jetz.common.p2p
+package jetzy.p2p
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope

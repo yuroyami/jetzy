@@ -1,4 +1,4 @@
-package jetz.common.p2p
+package jetzy.p2p
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -25,16 +25,14 @@ import com.google.android.gms.nearby.connection.Payload
 import com.google.android.gms.nearby.connection.PayloadCallback
 import com.google.android.gms.nearby.connection.PayloadTransferUpdate
 import com.google.android.gms.nearby.connection.Strategy
-import jetz.common.ui.p2pHandler
-import jetz.common.ui.viewmodel
-import jetz.common.utils.getLocalIpAddress
-import jetz.common.utils.loggy
-import jetz.common.utils.toasty
+import jetzy.ui.p2pHandler
+import jetzy.ui.viewmodel
+import jetzy.utils.loggy
+import jetzy.utils.toasty
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.io.RawSink
@@ -179,10 +177,10 @@ class P2pAndroidHandler(private val activity: ComponentActivity) : P2pHandler() 
         p2pHandler = this
         isP2Ptransferring = false
         selectedPeer = null
-        runIgnoring {
-            coroutineP2p.cancel()
+        runCatching {
+            //todo coroutineP2p.cancel()
         }
-        coroutineP2p = CoroutineScope(Dispatchers.IO)
+        //coroutineP2p = CoroutineScope(Dispatchers.IO)
     }
 
     /*********** Android to Android **************/
@@ -278,7 +276,7 @@ class P2pAndroidHandler(private val activity: ComponentActivity) : P2pHandler() 
 
         viewmodel.transferStatusText.value = "Initiating connection..."
 
-        coroutineP2p.launch(Dispatchers.IO) {
+        GlobalScope.launch(Dispatchers.IO) {
             viewmodel.transferStatusText.value = "Initiating bridge..."
 
             try {
@@ -317,7 +315,7 @@ class P2pAndroidHandler(private val activity: ComponentActivity) : P2pHandler() 
 
     override fun songSource(uri: String, doLast: CompletableDeferred<() -> Unit>?): CompletableDeferred<Triple<RawSource, Long, String>> {
         val future = CompletableDeferred<Triple<RawSource, Long, String>>()
-        coroutineP2p.launch {
+        GlobalScope.launch {
             val df = DocumentFile.fromSingleUri(activity, uri.toUri())
             if (df != null) {
                 val source = activity.contentResolver.openInputStream(df.uri)?.asSource()
@@ -332,7 +330,7 @@ class P2pAndroidHandler(private val activity: ComponentActivity) : P2pHandler() 
 
     override fun songSink(tempName: String, scope: P2pTempFolder): CompletableDeferred<Pair<RawSink, P2pReceivedFile?>> {
         val future = CompletableDeferred<Pair<RawSink, P2pReceivedFile?>>()
-        coroutineP2p.launch {
+        GlobalScope.launch {
             try {
                 val product = scope.tempDirectory.createFile("audio/*", tempName) ?: throw Exception()
                 val sink = activity.contentResolver.openOutputStream(product.uri)?.asSink() ?: throw Exception()
@@ -346,7 +344,7 @@ class P2pAndroidHandler(private val activity: ComponentActivity) : P2pHandler() 
 
     override fun songRename(oldName: String, scope: P2pTempFolder, tempProduct: P2pReceivedFile, finalName: String): CompletableDeferred<P2pReceivedFile> {
         val future = CompletableDeferred<P2pReceivedFile>()
-        coroutineP2p.launch {
+        GlobalScope.launch {
             tempProduct.file.renameTo(finalName)
             future.complete(tempProduct)
         }
@@ -370,7 +368,7 @@ class P2pAndroidHandler(private val activity: ComponentActivity) : P2pHandler() 
 
         val isReceiving = viewmodel.userMode.value == true
 
-        coroutineP2p.launch(Dispatchers.IO) {
+        GlobalScope.launch(Dispatchers.IO) {
             try {
                 while (p2pInput == null && p2pOutput == null) { continue }
 
@@ -393,10 +391,10 @@ class P2pAndroidHandler(private val activity: ComponentActivity) : P2pHandler() 
 
     fun hostCrossPlatform(): CompletableDeferred<Pair<String, Int>> {
         val future: CompletableDeferred<Pair<String, Int>> = CompletableDeferred()
-        runIgnoring { socketJob?.cancel() }
-        socketJob = coroutineP2p.launch(Dispatchers.IO) {
+        runCatching { socketJob?.cancel() }
+        socketJob = GlobalScope.launch(Dispatchers.IO) {
             try {
-                val localAddress = getLocalIpAddress()
+                val localAddress = "" //todo getLocalIpAddress()
 
                 if (localAddress == null) {
                     future.complete(Pair("", 0))

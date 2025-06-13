@@ -1,4 +1,4 @@
-package jetz.common.p2p
+package jetzy.p2p
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Cancel

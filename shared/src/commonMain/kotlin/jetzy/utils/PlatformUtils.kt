@@ -1,14 +1,16 @@
-package jetz.common.utils
+package jetzy.utils
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.Dp
+import kotlinx.coroutines.CoroutineDispatcher
 
 enum class Platform {
     Android,
-    iOS
+    IOS,
+    Web
 }
 
-expect fun getPlatform(): Platform
+expect val platform: Platform
 
 expect fun generateTimestampMillis(): Long
 
@@ -17,3 +19,5 @@ data class ScreenSizeInfo(val hPX: Int, val wPX: Int, val hDP: Dp, val wDP: Dp)
 @Composable expect fun getScreenSizeInfo(): ScreenSizeInfo
 
 expect fun getDeviceName(): String
+
+expect val PreferablyIO: CoroutineDispatcher

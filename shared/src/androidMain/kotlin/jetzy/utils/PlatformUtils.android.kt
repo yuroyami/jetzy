@@ -7,11 +7,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
 import java.net.InetAddress
 import java.net.NetworkInterface
 import java.util.Enumeration
 
-actual fun getPlatform(): Platform = Platform.Android
+actual val PreferablyIO = Dispatchers.IO
+
+actual val platform: Platform = Platform.Android
 
 actual fun generateTimestampMillis() = System.currentTimeMillis()
 
@@ -32,7 +35,7 @@ actual fun getScreenSizeInfo(): ScreenSizeInfo {
     }
 }
 
-actual fun getDeviceName() = android.os.Build.MODEL
+actual fun getDeviceName() = android.os.Build.MODEL ?: "UNKNOWN DEVICE"
 
 fun getLocalIpAddress(): String? {
     try {

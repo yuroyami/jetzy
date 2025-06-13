@@ -1,4 +1,4 @@
-package jetz.common.ui
+package jetzy.ui
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,15 +22,17 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import jetz.common.p2p.P2pCallback
-import jetz.common.p2p.P2pHandler
-import jetz.common.p2p.P2pUI.P2pChoosePeerPopup
-import jetz.common.p2p.P2pUI.P2pInitialPopup
-import jetz.common.p2p.P2pUI.P2pQR
-import jetz.common.p2p.P2pUI.P2pTransfer
-import jetz.common.picking.MultipleFilePicker
-import jetz.common.utils.ScreenSizeInfo
-import jetz.common.utils.getScreenSizeInfo
+import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
+import io.github.vinceglb.filekit.core.PickerMode
+import io.github.vinceglb.filekit.core.PickerType
+import jetzy.p2p.P2pCallback
+import jetzy.p2p.P2pHandler
+import jetzy.p2p.P2pUI.P2pChoosePeerPopup
+import jetzy.p2p.P2pUI.P2pInitialPopup
+import jetzy.p2p.P2pUI.P2pQR
+import jetzy.p2p.P2pUI.P2pTransfer
+import jetzy.utils.ScreenSizeInfo
+import jetzy.utils.getScreenSizeInfo
 
 lateinit var viewmodel: ComposeViewmodel
 
@@ -52,12 +54,14 @@ fun ScreenUI() {
     val snackbarHostState = remember { SnackbarHostState() }
 
     var showVideoPicker by remember { mutableStateOf(false) }
-    MultipleFilePicker(show = showVideoPicker) { file ->
-        showVideoPicker = false
-        file?.forEach {
+    val filePicker = rememberFilePickerLauncher(
+        type = PickerType.File(), mode = PickerMode.Multiple(),
+    ) { files ->
+        files?.forEach {
             viewmodel.files.add(it)
         }
     }
+
 
     CompositionLocalProvider(LocalScreenSize provides getScreenSizeInfo()) {
         Scaffold(
@@ -81,7 +85,7 @@ fun ScreenUI() {
 
                     LazyColumn {
                         itemsIndexed(viewmodel.files) { i, f ->
-                            Text(f.path)
+                            f.path?.let { text -> Text(text) }
                         }
                     }
                 }

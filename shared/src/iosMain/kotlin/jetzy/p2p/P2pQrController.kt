@@ -1,4 +1,4 @@
-package jetz.common.p2p
+package jetzy.p2p
 
 import jetz.common.ui.p2pHandler
 import jetz.common.utils.loggy

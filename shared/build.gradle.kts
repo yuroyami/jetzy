@@ -1,7 +1,6 @@
 @file:OptIn(ExperimentalDistributionDsl::class)
 @file:Suppress("WrongGradleMethod")
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalDistributionDsl
 
 plugins {
@@ -154,11 +153,12 @@ kotlin {
             implementation(compose.desktop.currentOs)
         }
 
-//        jsMain.dependencies {
-//            implementation(compose.html.core)
-//        }
+        jsMain.dependencies {
+
+        }
 
         iosMain.dependencies {
+
         }
 
     }
@@ -180,7 +180,7 @@ android {
 
     defaultConfig {
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 36
 
         applicationId = "com.yuroyami.jetzy"
         versionCode = verCode

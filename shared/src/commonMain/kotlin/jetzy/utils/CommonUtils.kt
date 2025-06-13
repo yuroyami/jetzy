@@ -1,4 +1,4 @@
-package jetz.common.utils
+package jetzy.utils
 
 /*********************************************************************************************************
  * These utilities are used in common code using common libraries and do not need to use expect/actuals  *

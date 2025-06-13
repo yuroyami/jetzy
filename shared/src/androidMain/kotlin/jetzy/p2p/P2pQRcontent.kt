@@ -1,4 +1,4 @@
-package jetz.common.p2p
+package jetzy.p2p
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -23,9 +23,9 @@ import io.github.alexzhirkevich.qrose.options.QrPixelShape
 import io.github.alexzhirkevich.qrose.options.QrShapes
 import io.github.alexzhirkevich.qrose.options.roundCorners
 import io.github.alexzhirkevich.qrose.rememberQrCodePainter
-import jetz.common.ui.p2pHandler
-import jetz.common.ui.viewmodel
-import jetz.common.utils.getDeviceName
+import jetzy.ui.p2pHandler
+import jetzy.ui.viewmodel
+import jetzy.utils.getDeviceName
 
 @Composable
 actual fun P2pQRcontent(modifier: Modifier) {
