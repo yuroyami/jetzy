@@ -21,6 +21,8 @@ import jetzy.p2p.P2pUI.P2pTransfer
 
 @Composable
 fun MainScreenUI() {
+    val viewmodel = LocalViewmodel.current
+
     val filePicker = rememberFilePickerLauncher(
         type = PickerType.File(), mode = PickerMode.Multiple(),
     ) { files ->

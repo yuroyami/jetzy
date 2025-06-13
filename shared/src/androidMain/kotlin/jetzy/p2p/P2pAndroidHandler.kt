@@ -25,8 +25,10 @@ import com.google.android.gms.nearby.connection.Payload
 import com.google.android.gms.nearby.connection.PayloadCallback
 import com.google.android.gms.nearby.connection.PayloadTransferUpdate
 import com.google.android.gms.nearby.connection.Strategy
+import jetzy.ui.p2pHandler
 import jetzy.utils.loggy
 import jetzy.utils.toasty
+import jetzy.viewmodel.JetzyViewmodel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -44,7 +46,10 @@ import java.net.ServerSocket
 import java.net.Socket
 
 @SuppressLint("MissingPermission", "Recycle")
-class P2pAndroidHandler(private val activity: ComponentActivity) : P2pHandler() {
+class P2pAndroidHandler(
+    private val activity: ComponentActivity,
+    override val viewmodel: JetzyViewmodel
+) : P2pHandler(viewmodel) {
 
     /* Nearby-Connections client properties */
     lateinit var ncClient: ConnectionsClient

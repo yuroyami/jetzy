@@ -23,10 +23,14 @@ import io.github.alexzhirkevich.qrose.options.QrPixelShape
 import io.github.alexzhirkevich.qrose.options.QrShapes
 import io.github.alexzhirkevich.qrose.options.roundCorners
 import io.github.alexzhirkevich.qrose.rememberQrCodePainter
+import jetzy.ui.LocalViewmodel
+import jetzy.ui.p2pHandler
 import jetzy.utils.getDeviceName
 
 @Composable
 actual fun P2pQRcontent(modifier: Modifier) {
+    val viewmodel = LocalViewmodel.current
+
     Column(
         modifier = modifier,
         horizontalAlignment = CenterHorizontally,

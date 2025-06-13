@@ -1,11 +1,16 @@
 package jetzy.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
+import jetzy.ui.LocalViewmodel
+import jetzy.ui.NightMode
 
 private val lightScheme = lightColorScheme(
     primary = primaryLight,
@@ -249,13 +254,24 @@ val unspecified_scheme = ColorFamily(
 
 @Composable
 fun JetzyTheme(
-    darkTheme: Boolean = true, //isSystemInDarkTheme(),
     content: @Composable() () -> Unit
 ) {
-  val colorScheme = mediumContrastLightColorScheme
+    val viewmodel = LocalViewmodel.current
+    val nightMode by viewmodel.nightMode.collectAsState()
+    val isSystemInDarkMode = isSystemInDarkTheme()
 
   MaterialTheme(
-    colorScheme = colorScheme,
+    colorScheme = when (nightMode) {
+        NightMode.SYSTEM -> {
+            if (isSystemInDarkMode) {
+                mediumContrastDarkColorScheme
+            } else {
+                mediumContrastLightColorScheme
+            }
+        }
+        NightMode.LIGHT -> mediumContrastLightColorScheme
+        NightMode.DARK -> mediumContrastDarkColorScheme
+    },
     typography = AppTypography,
     content = content
   )

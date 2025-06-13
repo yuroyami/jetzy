@@ -1,23 +1,59 @@
 package jetzy
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import jetzy.p2p.P2pCallback
 import jetzy.ui.AdamScreen
+import jetzy.ui.NightMode
 import jetzy.ui.p2pCallback
+import jetzy.viewmodel.JetzyViewmodel
+import org.koin.android.ext.android.inject
 
 class MainActivity: ComponentActivity(), P2pCallback {
 
+    val viewmodel: JetzyViewmodel by inject()
+
+    @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
 
         p2pCallback = this
 
+        /* Tweaking some window UI elements */
+        window.attributes = window.attributes.apply {
+            flags = flags and WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS.inv()
+        }
+        window.statusBarColor = Color.Transparent.toArgb()
+        window.navigationBarColor = Color.Transparent.toArgb()
+
+        /** Telling Android that it should keep the screen on */
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
         setContent {
             AdamScreen()
+
+            val nightMode = viewmodel.nightMode.collectAsState()
+            val isSystemInDarkMode = isSystemInDarkTheme()
+
+            LaunchedEffect(nightMode.value) {
+                WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = when(nightMode.value) {
+                    NightMode.LIGHT -> true
+                    NightMode.DARK -> false
+                    NightMode.SYSTEM -> !isSystemInDarkMode
+                }
+            }
         }
     }
 

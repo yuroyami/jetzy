@@ -3,17 +3,31 @@ package jetzy.ui
 import Jetzy.shared.BuildConfig
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.outlined.ElectricBike
+import androidx.compose.material.icons.outlined.GpsFixed
+import androidx.compose.material.icons.outlined.Web
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -22,7 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.NavHost
@@ -37,9 +50,10 @@ import jetzy.theme.JetzyTheme
 import jetzy.utils.ScreenSizeInfo
 import jetzy.utils.getScreenSizeInfo
 import jetzy.viewmodel.JetzyViewmodel
+import jetzy.viewmodel.jetzyModule
 import org.jetbrains.compose.resources.vectorResource
-
-lateinit var viewmodel: JetzyViewmodel
+import org.koin.compose.KoinApplication
+import org.koin.compose.viewmodel.koinViewModel
 
 lateinit var p2pCallback: P2pCallback
 var p2pHandler: P2pHandler? = null
@@ -48,54 +62,120 @@ val LocalViewmodel = compositionLocalOf<JetzyViewmodel> { error("No Viewmodel pr
 val LocalScreenSize = compositionLocalOf<ScreenSizeInfo> { error("No Screen Size Info provided") }
 val LocalNavigator = compositionLocalOf<NavController> { error("No Navigator provided yet") }
 
+enum class NightMode { SYSTEM, LIGHT, DARK }
+
 @Composable
 fun AdamScreen() {
-    val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    val navigator = rememberNavController()
-    val navEntry by navigator.currentBackStackEntryAsState()
-
-    JetzyTheme {
-        viewmodel = viewModel<JetzyViewmodel>(key = "jetzy")
-
-        LaunchedEffect(null) {
-            viewmodel.nav = navigator
+    KoinApplication(
+        application = {
+            modules(jetzyModule)
         }
+    ) {
+        val viewmodel = koinViewModel<JetzyViewmodel>()
+        val scope = rememberCoroutineScope()
+        val snackbarHostState = remember { SnackbarHostState() }
+        val navigator = rememberNavController()
+        val navEntry by navigator.currentBackStackEntryAsState()
 
         CompositionLocalProvider(
             LocalScreenSize provides getScreenSizeInfo(),
             LocalViewmodel provides viewmodel,
             LocalNavigator provides navigator
         ) {
+            val nightMode by viewmodel.nightMode.collectAsState()
+            val isSystemInDarkMode = isSystemInDarkTheme()
 
-            Scaffold(
-                snackbarHost = {
-                    viewmodel.snack = snackbarHostState
-                    SnackbarHost(snackbarHostState)
-                },
-                topBar = {
-                    TopAppBar(
-                        title = {
-                            Image(
-                                imageVector = vectorResource(Res.drawable.jetzy_vector),
-                                contentDescription = null,
-                                modifier = Modifier.height(48.dp)
-                            )
-                        },
-                        actions = {
-                        }
-                    )
-                },
-                content = { pv ->
-                    NavHost(
-                        navController = navigator,
-                        startDestination = if (BuildConfig.DEBUG) Screen.MainScreen.label else Screen.MainScreen.label
-                    ) {
-                        addScreen(Screen.MainScreen)
-                    }
+            JetzyTheme {
+                LaunchedEffect(null) {
+                    viewmodel.nav = navigator
                 }
-            )
+                Scaffold(
+                    snackbarHost = {
+                        viewmodel.snack = snackbarHostState
+                        SnackbarHost(snackbarHostState)
+                    },
+                    topBar = {
+                        Column {
+                            //CenterAligned
+                            TopAppBar(
+                                title = {
+                                    Image(
+                                        imageVector = vectorResource(Res.drawable.jetzy_vector),
+                                        contentDescription = null,
+                                        modifier = Modifier.height(64.dp)
+                                    )
+                                },
+                                actions = {
+                                    IconButton(
+                                        onClick = {
+                                            viewmodel.nightMode.value = when (nightMode) {
+                                                NightMode.SYSTEM -> {
+                                                    if (isSystemInDarkMode) {
+                                                        NightMode.LIGHT
+                                                    } else {
+                                                        NightMode.DARK
+                                                    }
+                                                }
+                                                NightMode.DARK -> NightMode.LIGHT
+                                                NightMode.LIGHT -> NightMode.DARK
+                                            }
+                                        }
+                                    ) {
+                                        Icon(Icons.Filled.DarkMode, null)
+                                    }
+                                }
+                            )
+                            HorizontalDivider()
+                        }
+                    },
+                    bottomBar = {
+                        Column {
+                            HorizontalDivider()
+                            NavigationBar {
+                                NavigationBarItem(
+                                    selected = true,
+                                    icon = {
+                                        Icon(Icons.Outlined.Web, null)
+
+                                    },
+                                    label = { Text("Foobar") },
+                                    onClick = {
+
+                                    }
+                                )
+                                NavigationBarItem(
+                                    selected = false,
+                                    icon = {
+                                        Icon(Icons.Outlined.GpsFixed, null)
+                                    },
+                                    label = { Text("Bafoor") },
+                                    onClick = {
+
+                                    }
+                                )
+                                NavigationBarItem(
+                                    selected = false,
+                                    icon = {
+                                        Icon(Icons.Outlined.ElectricBike, null)
+                                    },
+                                    label = { Text("Teafoo") },
+                                    onClick = {
+
+                                    }
+                                )
+                            }
+                        }
+                    },
+                    content = { pv ->
+                        NavHost(
+                            navController = navigator,
+                            startDestination = if (BuildConfig.DEBUG) Screen.MainScreen.label else Screen.MainScreen.label
+                        ) {
+                            addScreen(Screen.MainScreen)
+                        }
+                    }
+                )
+            }
         }
     }
 }
@@ -103,7 +183,7 @@ fun AdamScreen() {
 fun NavGraphBuilder.addScreen(screen: Screen) {
     with(screen) {
         composable(label) {
-            JetzyBackground()
+            //JetzyBackground()
             UI()
         }
     }

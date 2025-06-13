@@ -3,13 +3,16 @@ package jetzy.p2p
 import io.ktor.utils.io.ByteWriteChannel
 import jetzy.utils.getDeviceName
 import jetzy.utils.loggy
+import jetzy.viewmodel.JetzyViewmodel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.io.RawSink
 import kotlinx.io.RawSource
 import kotlinx.io.buffered
 import kotlinx.io.readByteArray
 
-abstract class P2pHandler {
+abstract class P2pHandler(
+    open val viewmodel: JetzyViewmodel
+) {
 
     var selectedPeer: P2pPeer? = null
     var crossPeer: String = "iPhone"
