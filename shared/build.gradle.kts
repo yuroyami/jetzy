@@ -122,6 +122,10 @@ kotlin {
 
             /* FileKit to save/open files */
             implementation(libs.filekit)
+
+            /* Dependency Injection */
+            implementation(project.dependencies.platform(libs.koin.bom))
+            implementation(libs.bundles.koin)
         }
 
         commonTest.dependencies {

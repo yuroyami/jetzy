@@ -1,4 +1,4 @@
-package jetzy.ui
+package jetzy.viewmodel
 
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
@@ -7,19 +7,22 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavController
 import io.github.vinceglb.filekit.core.PlatformFile
 import jetzy.p2p.P2pPeer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
-class ComposeViewmodel: ViewModel() {
+class JetzyViewmodel: ViewModel() {
+
+    var nav: NavController? = null
 
     val files = mutableStateListOf<PlatformFile>()
 
     val userMode = MutableStateFlow<Boolean?>(null)
 
-    var snack = SnackbarHostState()
+
 
     /* Popups */
 
@@ -36,7 +39,10 @@ class ComposeViewmodel: ViewModel() {
     val transferProgressSecondary = mutableFloatStateOf(0f) //the progress of transferring each file
     val transferStatusText = mutableStateOf("") //status of transfer
 
-    fun snacky(string: String) {
+
+    var snack = SnackbarHostState()
+    fun snacky(string: String, queue: Boolean = true) {
+        if (!queue) snack.currentSnackbarData?.dismiss()
         viewModelScope.launch(Dispatchers.Main) {
             snack.showSnackbar(
                 message = string,

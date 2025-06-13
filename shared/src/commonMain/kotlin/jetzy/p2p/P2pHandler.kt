@@ -1,7 +1,6 @@
 package jetzy.p2p
 
 import io.ktor.utils.io.ByteWriteChannel
-import jetzy.ui.viewmodel
 import jetzy.utils.getDeviceName
 import jetzy.utils.loggy
 import kotlinx.coroutines.CompletableDeferred

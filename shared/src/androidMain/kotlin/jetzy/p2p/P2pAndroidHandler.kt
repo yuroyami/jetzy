@@ -25,8 +25,6 @@ import com.google.android.gms.nearby.connection.Payload
 import com.google.android.gms.nearby.connection.PayloadCallback
 import com.google.android.gms.nearby.connection.PayloadTransferUpdate
 import com.google.android.gms.nearby.connection.Strategy
-import jetzy.ui.p2pHandler
-import jetzy.ui.viewmodel
 import jetzy.utils.loggy
 import jetzy.utils.toasty
 import kotlinx.coroutines.CompletableDeferred

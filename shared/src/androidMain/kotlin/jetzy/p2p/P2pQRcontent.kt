@@ -23,8 +23,6 @@ import io.github.alexzhirkevich.qrose.options.QrPixelShape
 import io.github.alexzhirkevich.qrose.options.QrShapes
 import io.github.alexzhirkevich.qrose.options.roundCorners
 import io.github.alexzhirkevich.qrose.rememberQrCodePainter
-import jetzy.ui.p2pHandler
-import jetzy.ui.viewmodel
 import jetzy.utils.getDeviceName
 
 @Composable

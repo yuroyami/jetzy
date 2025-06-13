@@ -44,9 +44,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import jetzy.p2p.ComposeUtils.AppPopup
-import jetzy.ui.p2pCallback
-import jetzy.ui.p2pHandler
-import jetzy.ui.viewmodel
 import jetzy.utils.Platform
 import jetzy.utils.loggy
 import jetzy.utils.platform
