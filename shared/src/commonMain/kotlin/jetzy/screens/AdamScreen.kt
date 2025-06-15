@@ -1,24 +1,25 @@
-package jetzy.ui
+package jetzy.screens
 
-import Jetzy.shared.BuildConfig
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -27,7 +28,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -60,8 +60,6 @@ val LocalViewmodel = compositionLocalOf<JetzyViewmodel> { error("No Viewmodel pr
 val LocalScreenSize = compositionLocalOf<ScreenSizeInfo> { error("No Screen Size Info provided") }
 val LocalNavigator = compositionLocalOf<NavController> { error("No Navigator provided yet") }
 
-
-
 val screens = listOf(Screen.SendPhotosScreen, Screen.SendVideosScreen, Screen.MainScreen, Screen.SendFoldersScreen, Screen.SendTextScreen)
 
 @Composable
@@ -73,7 +71,6 @@ fun AdamScreen() {
     ) {
         val viewmodel = koinViewModel<JetzyViewmodel>()
         val scope = rememberCoroutineScope()
-        val snackbarHostState = remember { SnackbarHostState() }
         val navigator = rememberNavController()
         val navEntry by navigator.currentBackStackEntryAsState()
 
@@ -91,8 +88,7 @@ fun AdamScreen() {
                 }
                 Scaffold(
                     snackbarHost = {
-                        viewmodel.snack = snackbarHostState
-                        SnackbarHost(snackbarHostState)
+                        SnackbarHost(viewmodel.snack)
                     },
                     topBar = {
                         Column {
@@ -109,19 +105,16 @@ fun AdamScreen() {
                                     IconButton(
                                         onClick = {
                                             viewmodel.nightMode.value = when (nightMode) {
-                                                NightMode.SYSTEM -> {
-                                                    if (isSystemInDarkMode) {
-                                                        NightMode.LIGHT
-                                                    } else {
-                                                        NightMode.DARK
-                                                    }
-                                                }
+                                                NightMode.SYSTEM -> if (isSystemInDarkMode) NightMode.LIGHT else NightMode.DARK
                                                 NightMode.DARK -> NightMode.LIGHT
                                                 NightMode.LIGHT -> NightMode.DARK
                                             }
                                         }
                                     ) {
-                                        Icon(Icons.Filled.DarkMode, null)
+                                        Icon(
+                                            if (nightMode.isDark()) Icons.Filled.LightMode else Icons.Filled.DarkMode,
+                                            null
+                                        )
                                     }
                                 }
                             )
@@ -131,7 +124,17 @@ fun AdamScreen() {
                     bottomBar = {
                         Column {
                             HorizontalDivider()
-                            NavigationBar {
+                            BottomAppBar {
+                                ElevatedButton(
+                                    modifier = Modifier.fillMaxWidth().height(64.dp),
+                                    onClick = {
+                                        //TODO
+                                    }
+                                ) {
+                                    Text("Proceed")
+                                }
+                            }
+                            /*NavigationBar {
                                 screens.forEach { screen ->
                                     NavigationBarItem(
                                         selected = true,
@@ -145,13 +148,14 @@ fun AdamScreen() {
                                         }
                                     )
                                 }
-                            }
+                            }*/
                         }
                     },
                     content = { pv ->
                         NavHost(
+                            modifier = Modifier.padding(pv),
                             navController = navigator,
-                            startDestination = if (BuildConfig.DEBUG) Screen.MainScreen.label else Screen.MainScreen.label
+                            startDestination = Screen.MainScreen.label
                         ) {
                             screens.forEach {
                                 addScreen(it)

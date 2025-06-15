@@ -2,7 +2,7 @@ package jetzy
 
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.CanvasBasedWindow
-import jetzy.ui.ScreenUI
+import jetzy.screens.ScreenUI
 import org.jetbrains.skiko.wasm.onWasmReady
 
 @OptIn(ExperimentalComposeUiApi::class)

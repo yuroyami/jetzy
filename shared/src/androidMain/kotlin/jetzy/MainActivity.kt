@@ -15,8 +15,8 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import jetzy.p2p.P2pCallback
 import jetzy.theme.NightMode
-import jetzy.ui.AdamScreen
-import jetzy.ui.p2pCallback
+import jetzy.screens.AdamScreen
+import jetzy.screens.p2pCallback
 import jetzy.viewmodel.JetzyViewmodel
 import org.koin.android.ext.android.inject
 

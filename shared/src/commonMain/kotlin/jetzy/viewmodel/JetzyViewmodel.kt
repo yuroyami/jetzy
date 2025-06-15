@@ -11,15 +11,14 @@ import androidx.navigation.NavController
 import io.github.vinceglb.filekit.core.PlatformFile
 import jetzy.p2p.P2pPeer
 import jetzy.theme.NightMode
-import jetzy.ui.NightMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 class JetzyViewmodel: ViewModel() {
+    val nightMode = MutableStateFlow(NightMode.SYSTEM)
 
     var nav: NavController? = null
-    val nightMode = MutableStateFlow(NightMode.SYSTEM)
 
     val files = mutableStateListOf<PlatformFile>()
 

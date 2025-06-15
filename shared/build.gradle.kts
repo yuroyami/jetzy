@@ -114,6 +114,8 @@ kotlin {
             implementation(compose.materialIconsExtended)
             implementation(compose.components.resources)
 
+            implementation("br.com.devsrsouza.compose.icons:font-awesome:1.1.1")
+
             /* ViewModel support */
             implementation(libs.compose.viewmodel)
 
