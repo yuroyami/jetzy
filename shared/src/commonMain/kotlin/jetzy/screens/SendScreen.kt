@@ -1,6 +1,5 @@
 package jetzy.screens
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -16,14 +15,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.unit.dp
-import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
-import io.github.vinceglb.filekit.core.PickerMode
-import io.github.vinceglb.filekit.core.PickerType
 import kotlinx.coroutines.launch
 
 
@@ -31,15 +25,6 @@ import kotlinx.coroutines.launch
 fun SendScreenUI() {
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
-    val viewmodel = LocalViewmodel.current
-
-    val filePicker = rememberFilePickerLauncher(
-        type = PickerType.File(), mode = PickerMode.Multiple(),
-    ) { files ->
-        files?.forEach {
-            viewmodel.files.add(it)
-        }
-    }
 
     val sendScreens by derivedStateOf {
         buildList {
@@ -73,19 +58,14 @@ fun SendScreenUI() {
                     }
                 }
             }
-        }
+        },
     ) { pv ->
-        Column(
+        HorizontalPager(
+            state = pagerState,
             modifier = Modifier.fillMaxSize().padding(pv),
-            horizontalAlignment = CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize().padding(pv),
-                userScrollEnabled = false
-            ) { pageIndex ->
-            }
+            userScrollEnabled = false
+        ) { pageIndex ->
+            sendScreens[pageIndex].UI()
         }
     }
 }

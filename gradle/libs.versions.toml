@@ -1,9 +1,9 @@
 [versions] ########################################################################################
 ## KMM
 kotlin = "2.2.0-RC2"
-agp = "8.11.0-rc01"
+agp = "8.11.0-rc02"
 kable = "0.37.1"
-filekit = "0.8.8"
+filekit = "0.10.0-beta04"
 kermit = "2.0.5"
 compose = "1.9.0-alpha02"
 koin = "4.1.0"
@@ -33,7 +33,7 @@ indexeddb = "0.9.1"
 kotlinstdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
 koroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "koroutines" }
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
-filekit = { module = "io.github.vinceglb:filekit-compose", version.ref = "filekit" }
+filekit = { module = "io.github.vinceglb:filekit-dialogs-compose", version.ref = "filekit" }
 compose-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "viewmodelCompose" }
 compose-navigation = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }

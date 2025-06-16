@@ -3,10 +3,9 @@ package jetzy.utils
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.dp
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.dialogs.compose.PickerResultLauncher
+import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import kotlinx.coroutines.Dispatchers
 import java.net.InetAddress
 import java.net.NetworkInterface
@@ -18,22 +17,6 @@ actual val platform: Platform = Platform.Android
 
 actual fun generateTimestampMillis() = System.currentTimeMillis()
 
-@Composable
-actual fun getScreenSizeInfo(): ScreenSizeInfo {
-    val density = LocalDensity.current
-    val config = LocalConfiguration.current
-    val hDp = config.screenHeightDp.dp
-    val wDp = config.screenWidthDp.dp
-
-    return remember(density, config) {
-        ScreenSizeInfo(
-            hPX = with(density) { hDp.roundToPx() },
-            wPX = with(density) { wDp.roundToPx() },
-            hDP = hDp,
-            wDP = wDp
-        )
-    }
-}
 
 actual fun getDeviceName() = android.os.Build.MODEL ?: "UNKNOWN DEVICE"
 
@@ -62,3 +45,11 @@ fun ComponentActivity.toasty(s: String) {
         Toast.makeText(this@toasty, s, Toast.LENGTH_SHORT).show()
     }
 }
+
+@Composable
+actual fun rememberDirectoryPickerLauncher(
+    onResult: (PlatformFile?) -> Unit
+): PickerResultLauncher? = rememberDirectoryPickerLauncher(
+    title = "Picker a folder to send", //TODO
+    onResult = onResult
+)

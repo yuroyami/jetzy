@@ -46,8 +46,6 @@ import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.jetzy_vector
 import jetzy.theme.JetzyTheme
 import jetzy.theme.NightMode
-import jetzy.utils.ScreenSizeInfo
-import jetzy.utils.getScreenSizeInfo
 import jetzy.viewmodel.JetzyViewmodel
 import jetzy.viewmodel.jetzyModule
 import org.jetbrains.compose.resources.vectorResource
@@ -58,7 +56,6 @@ lateinit var p2pCallback: P2pCallback
 var p2pHandler: P2pHandler? = null
 
 val LocalViewmodel = compositionLocalOf<JetzyViewmodel> { error("No Viewmodel provided") }
-val LocalScreenSize = compositionLocalOf<ScreenSizeInfo> { error("No Screen Size Info provided") }
 val LocalNavigator = compositionLocalOf<NavController> { error("No Navigator provided yet") }
 
 val topLevelScreens = listOf(Screen.MainScreen, Screen.SendScreen)
@@ -76,7 +73,6 @@ fun AdamScreen() {
         val navEntry by navigator.currentBackStackEntryAsState()
 
         CompositionLocalProvider(
-            LocalScreenSize provides getScreenSizeInfo(),
             LocalViewmodel provides viewmodel,
             LocalNavigator provides navigator
         ) {

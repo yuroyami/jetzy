@@ -19,23 +19,12 @@ import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
-import io.github.vinceglb.filekit.core.PickerMode
-import io.github.vinceglb.filekit.core.PickerType
 
 
 @Composable
 fun ReceiveScreenUI() {
     val haptic = LocalHapticFeedback.current
     val viewmodel = LocalViewmodel.current
-
-    val filePicker = rememberFilePickerLauncher(
-        type = PickerType.File(), mode = PickerMode.Multiple(),
-    ) { files ->
-        files?.forEach {
-            viewmodel.files.add(it)
-        }
-    }
 
     val sendScreens by derivedStateOf {
         buildList {

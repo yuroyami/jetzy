@@ -1,10 +1,9 @@
 package jetzy.utils
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalWindowInfo
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.dialogs.compose.PickerResultLauncher
+import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import platform.Foundation.NSDate
@@ -23,18 +22,10 @@ actual fun generateTimestampMillis(): Long {
 
 actual fun getDeviceName() = UIDevice.currentDevice.name
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
-actual fun getScreenSizeInfo(): ScreenSizeInfo {
-    val density = LocalDensity.current
-    val config = LocalWindowInfo.current.containerSize
-
-    return remember(density, config) {
-        ScreenSizeInfo(
-            hPX = config.height,
-            wPX = config.width,
-            hDP = with(density) { config.height.toDp() },
-            wDP = with(density) { config.width.toDp() }
-        )
-    }
-}
+actual fun rememberDirectoryPickerLauncher(
+    onResult: (PlatformFile?) -> Unit
+): PickerResultLauncher? = rememberDirectoryPickerLauncher(
+    title = "Picker a folder to send", //TODO
+    onResult = onResult
+)

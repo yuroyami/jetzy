@@ -8,7 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
-import io.github.vinceglb.filekit.core.PlatformFile
+import io.github.vinceglb.filekit.PlatformFile
 import jetzy.p2p.P2pPeer
 import jetzy.screens.Operation
 import jetzy.theme.NightMode
@@ -24,7 +24,6 @@ class JetzyViewmodel: ViewModel() {
 
     val currentOperation = MutableStateFlow<Operation?>(null)
     val currentPeerPlatform = MutableStateFlow<Platform?>(null)
-
 
     val files = mutableStateListOf<PlatformFile>()
 

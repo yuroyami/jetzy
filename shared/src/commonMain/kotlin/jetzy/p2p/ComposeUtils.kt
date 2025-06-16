@@ -45,6 +45,10 @@ object ComposeUtils {
         @ReadOnlyComposable
         get() = MaterialTheme.colorScheme
 
+
+    val FontResource.font: FontFamily
+        @Composable get() = FontFamily(Font(this))
+
     @Composable
     fun JetzyText(
         modifier: Modifier = Modifier,

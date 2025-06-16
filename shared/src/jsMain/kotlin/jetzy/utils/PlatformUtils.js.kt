@@ -1,10 +1,8 @@
 package jetzy.utils
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalWindowInfo
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.dialogs.compose.PickerResultLauncher
 import kotlinx.browser.window
 import kotlinx.coroutines.Dispatchers
 import kotlin.js.Date
@@ -15,23 +13,6 @@ actual val PreferablyIO = Dispatchers.Default  //There is no multithreading/IO t
 actual val platform = Platform.Web
 
 actual fun generateTimestampMillis() = Date().getTime().roundToLong()
-
-@OptIn(ExperimentalComposeUiApi::class)
-@Composable
-actual fun getScreenSizeInfo(): ScreenSizeInfo {
-    val density = LocalDensity.current
-    val config = LocalWindowInfo.current.containerSize
-
-
-    return remember(density, config) {
-        ScreenSizeInfo(
-            hPX = config.height,
-            wPX = config.width,
-            hDP = with(density) { config.height.toDp() },
-            wDP = with(density) { config.width.toDp() }
-        )
-    }
-}
 
 actual fun getDeviceName(): String {
     val userAgent = window.navigator.userAgent
@@ -58,3 +39,6 @@ actual fun getDeviceName(): String {
 
     return "$browser on $platformName"
 }
+
+@Composable
+actual fun rememberDirectoryPickerLauncher(onResult: (PlatformFile?) -> Unit): PickerResultLauncher? = null

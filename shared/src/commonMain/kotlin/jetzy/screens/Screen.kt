@@ -9,6 +9,7 @@ import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavController
+import jetzy.screens.sendscreens.SendFilesScreenUI
 
 sealed interface Screen {
     val label: String
@@ -48,7 +49,7 @@ sealed interface Screen {
 
     data object SendFilesScreen : Screen {
         @Composable
-        override fun UI() = MainScreenUI()
+        override fun UI() = SendFilesScreenUI()
         override val label = "Files"
         override val icon: ImageVector = Icons.Outlined.FileCopy
     }
