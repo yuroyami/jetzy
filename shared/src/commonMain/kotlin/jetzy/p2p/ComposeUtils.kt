@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.ReadOnlyComposable
@@ -21,10 +22,19 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import jetzy.shared.generated.resources.Res
+import jetzy.shared.generated.resources.broshk4blue
+import jetzy.theme.jetzyYellow
+import org.jetbrains.compose.resources.Font
+import org.jetbrains.compose.resources.FontResource
 
 /** Contains a bunch of composable functions that are frequently reused */
 object ComposeUtils {
@@ -35,6 +45,43 @@ object ComposeUtils {
         @ReadOnlyComposable
         get() = MaterialTheme.colorScheme
 
+    @Composable
+    fun JetzyText(
+        modifier: Modifier = Modifier,
+        text: String,
+        size: TextUnit,
+        strokeThickness: Float = 4f,
+        font: FontResource = Res.font.broshk4blue
+    ) {
+        Box {
+            val font = FontFamily(Font(font))
+
+            // Black stroke (background text)
+            Text(
+                text,
+                style = MaterialTheme.typography.titleMediumEmphasized.copy(
+                    color = Color.Black,
+                    drawStyle = Stroke(width = strokeThickness)
+                ),
+                modifier = modifier,
+                textAlign = TextAlign.Center,
+                fontSize = size,
+                fontFamily = font
+            )
+
+            // Yellow fill (foreground text)
+            Text(
+                text,
+                style = MaterialTheme.typography.titleMediumEmphasized.copy(
+                    color = jetzyYellow
+                ),
+                modifier = modifier,
+                textAlign = TextAlign.Center,
+                fontSize = size,
+                fontFamily = font
+            )
+        }
+    }
     /** Adds a gradient overlay on the composable (gradient default if null) */
     fun Modifier.gradientOverlay(colors: List<Color>? = null): Modifier = composed {
         val clrs = colors

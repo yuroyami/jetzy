@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Downloading
@@ -24,7 +23,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.OutlinedToggleButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -35,10 +36,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import compose.icons.FontAwesomeIcons
@@ -51,6 +54,8 @@ import compose.icons.fontawesomeicons.solid.Desktop
 import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.core.PickerMode
 import io.github.vinceglb.filekit.core.PickerType
+import jetzy.p2p.ComposeUtils.JetzyText
+import jetzy.p2p.ComposeUtils.scheme
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.genos
 import jetzy.utils.Platform
@@ -58,6 +63,7 @@ import org.jetbrains.compose.resources.Font
 
 @Composable
 fun MainScreenUI() {
+    val haptic = LocalHapticFeedback.current
     val viewmodel = LocalViewmodel.current
 
     val filePicker = rememberFilePickerLauncher(
@@ -76,10 +82,22 @@ fun MainScreenUI() {
                     ElevatedButton(
                         modifier = Modifier.fillMaxWidth().height(64.dp),
                         onClick = {
-                            //TODO
+                            if (viewmodel.currentOperation.value == null) {
+                                viewmodel.snacky("Select an operation!")
+                                haptic.performHapticFeedback(HapticFeedbackType.Reject)
+                                return@ElevatedButton
+                            }
+                            if (viewmodel.currentPeerPlatform.value == null) {
+                                viewmodel.snacky("Select which platform your peer has!")
+                                haptic.performHapticFeedback(HapticFeedbackType.Reject)
+                                return@ElevatedButton
+                            }
+
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+
                         }
                     ) {
-                        Text("Proceed")
+                        Text("Proceed", style = MaterialTheme.typography.titleLarge)
                     }
                 }
                 /*NavigationBar {
@@ -106,45 +124,71 @@ fun MainScreenUI() {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             key(1) {
-                Text(
+                JetzyText(
                     text = "Welcome to Jetzy!",
-                    style = MaterialTheme.typography.titleMediumEmphasized,
+                    size = 36.sp,
+                    strokeThickness = 8f,
                 )
 
                 Text(
                     text = "Send and receive across different platforms with ease.",
-                    style = MaterialTheme.typography.bodyMediumEmphasized,
+                        style = MaterialTheme.typography.bodyLargeEmphasized,
                 )
             }
 
             Spacer(Modifier.height(8.dp))
 
-            key(2) {
-                Text("Choose an operation:")
-
-                Row {
-                    OperationButton(
-                        operation = Operation.SEND
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                tonalElevation = 0.dp,
+                shadowElevation = 8.dp
+            ) {
+                Column(
+                    horizontalAlignment = CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth().padding(8.dp)
+                ) {
+                    Text(
+                        text = "Select Jetzy operation",
+                        modifier = Modifier.fillMaxWidth().padding(8.dp),
+                        style = MaterialTheme.typography.titleLarge,
+                        textAlign = TextAlign.Center,
+                        color = lerp(Color.White, scheme.outlineVariant, 0.65f)
                     )
 
-                    OperationButton(
-                        operation = Operation.RECEIVE
-                    )
+                    Row(modifier = Modifier.fillMaxWidth()){
+                        OperationButton(operation = Operation.SEND, modifier = Modifier.weight(1f).padding(horizontal = 4.dp))
+                        OperationButton(operation = Operation.RECEIVE, modifier = Modifier.weight(1f).padding(horizontal = 4.dp))
+                    }
                 }
             }
 
-            key(3) {
-                Text("Your friend's Jetzy is running on:")
-
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(8.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                tonalElevation = 0.dp,
+                shadowElevation = 8.dp
+            ) {
+                Column(
+                    horizontalAlignment = CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth().padding(8.dp)
                 ) {
-                    PeerPlatformButton(peerPlatform = Platform.Android, modifier = Modifier.weight(1f))
-                    PeerPlatformButton(peerPlatform = Platform.IOS, modifier = Modifier.weight(1f))
-                    PeerPlatformButton(peerPlatform = Platform.PC, modifier = Modifier.weight(1f))
-                    PeerPlatformButton(peerPlatform = Platform.Web, modifier = Modifier.weight(1f))
+                    Text(
+                        text = "Your friend's Jetzy is running on",
+                        modifier = Modifier.fillMaxWidth().padding(8.dp),
+                        style = MaterialTheme.typography.titleLarge,
+                        textAlign = TextAlign.Center,
+                        color = lerp(Color.White, scheme.outlineVariant, 0.65f)
+                    )
 
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(8.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        PeerPlatformButton(peerPlatform = Platform.Android, modifier = Modifier.weight(1f))
+                        PeerPlatformButton(peerPlatform = Platform.IOS, modifier = Modifier.weight(1f))
+                        PeerPlatformButton(peerPlatform = Platform.PC, modifier = Modifier.weight(1f))
+                        PeerPlatformButton(peerPlatform = Platform.Web, modifier = Modifier.weight(1f))
+
+                    }
                 }
             }
         }
@@ -169,52 +213,40 @@ fun OperationButton(
     val currentOperation by viewmodel.currentOperation.collectAsState()
     val isSelected by derivedStateOf { currentOperation == operation }
 
-    OutlinedCard(
-        modifier = modifier.width(148.dp).height(96.dp).padding(12.dp),
-        border = CardDefaults.outlinedCardBorder(enabled = isSelected),
-        shape = RoundedCornerShape(if (isSelected) 16.dp else 8.dp),
-        onClick = {
+    OutlinedToggleButton(
+        modifier = modifier.height(96.dp).padding(12.dp),
+        checked = isSelected,
+        onCheckedChange = {
             viewmodel.currentOperation.value = operation
             haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
         }
     ) {
-        BadgedBox(
-            modifier = Modifier.width(148.dp).height(96.dp),
-            badge = {
-                if (isSelected) {
-                    Badge {
-
-                    }
-                }
-            }
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Center, verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Center, verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = when (operation) {
-                        Operation.SEND -> Icons.Filled.PresentToAll
-                        Operation.RECEIVE -> Icons.Filled.Downloading
-                    },
-                    contentDescription = null,
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                        tint = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outlineVariant
-                )
+            Icon(
+                imageVector = when (operation) {
+                    Operation.SEND -> Icons.Filled.PresentToAll
+                    Operation.RECEIVE -> Icons.Filled.Downloading
+                },
+                contentDescription = null,
+                modifier = Modifier.padding(horizontal = 4.dp),
+                //tint = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outlineVariant
+            )
 
 
-                Text(
-                    text = when (operation) {
-                        Operation.SEND -> "Send"
-                        Operation.RECEIVE -> "Receive"
-                    },
-                    fontSize = 24.sp,
-                    fontFamily = FontFamily(Font(Res.font.genos)),
-                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.outlineVariant,
-                    fontWeight = FontWeight.W800,
-                    maxLines = 1
-                )
-            }
+            Text(
+                text = when (operation) {
+                    Operation.SEND -> "Send"
+                    Operation.RECEIVE -> "Receive"
+                },
+                fontSize = 24.sp,
+                fontFamily = FontFamily(Font(Res.font.genos)),
+                //color = if (isSelected) Color.White else MaterialTheme.colorScheme.outlineVariant,
+                fontWeight = FontWeight.W800,
+                maxLines = 1
+            )
         }
     }
 }

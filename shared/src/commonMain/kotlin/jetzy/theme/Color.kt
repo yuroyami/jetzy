@@ -2,6 +2,9 @@ package jetzy.theme
 
 import androidx.compose.ui.graphics.Color
 
+val jetzyYellow = Color(255,199,29,254)
+val jetzyBlack = Color(0,12,21,255)
+
 val primaryLight = Color(0xFF755B0B)
 val onPrimaryLight = Color(0xFFFFFFFF)
 val primaryContainerLight = Color(0xFFFFDF97)

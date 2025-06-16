@@ -56,7 +56,7 @@ val LocalViewmodel = compositionLocalOf<JetzyViewmodel> { error("No Viewmodel pr
 val LocalScreenSize = compositionLocalOf<ScreenSizeInfo> { error("No Screen Size Info provided") }
 val LocalNavigator = compositionLocalOf<NavController> { error("No Navigator provided yet") }
 
-val screens = listOf(Screen.SendPhotosScreen, Screen.SendVideosScreen, Screen.MainScreen, Screen.SendFoldersScreen, Screen.SendTextScreen)
+val topLevelScreens = listOf(Screen.MainScreen, Screen.SendScreen)
 
 @Composable
 fun AdamScreen() {
@@ -123,7 +123,7 @@ fun AdamScreen() {
                             navController = navigator,
                             startDestination = Screen.MainScreen.label
                         ) {
-                            screens.forEach {
+                            topLevelScreens.forEach {
                                 addScreen(it)
                             }
                         }

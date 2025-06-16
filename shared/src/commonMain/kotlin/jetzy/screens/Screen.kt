@@ -4,7 +4,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ElectricBike
 import androidx.compose.material.icons.outlined.BrowseGallery
 import androidx.compose.material.icons.outlined.FileCopy
-import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.FormatColorText
 import androidx.compose.material.icons.outlined.PermMedia
 import androidx.compose.runtime.Composable
@@ -21,35 +20,42 @@ sealed interface Screen {
     data object MainScreen : Screen {
         @Composable
         override fun UI() = MainScreenUI()
-        override val label = "Send files"
+        override val label = "main"
+    }
+
+    data object SendScreen : Screen {
+        @Composable
+        override fun UI() = MainScreenUI()
+        override val label = "Send"
+    }
+
+
+
+    data object SendFilesScreen : Screen {
+        @Composable
+        override fun UI() = MainScreenUI()
+        override val label = "Files"
         override val icon: ImageVector = Icons.Outlined.FileCopy
     }
 
     data object SendVideosScreen : Screen {
         @Composable
         override fun UI() = MainScreenUI()
-        override val label = "Send videos"
+        override val label = "Videos"
         override val icon: ImageVector = Icons.Outlined.PermMedia
     }
 
     data object SendPhotosScreen : Screen {
         @Composable
         override fun UI() = MainScreenUI()
-        override val label = "Send photos"
+        override val label = "Photos"
         override val icon: ImageVector = Icons.Outlined.BrowseGallery
-    }
-
-    data object SendFoldersScreen : Screen {
-        @Composable
-        override fun UI() = MainScreenUI()
-        override val label = "Send folders"
-        override val icon: ImageVector = Icons.Outlined.FolderZip
     }
 
     data object SendTextScreen : Screen {
         @Composable
         override fun UI() = MainScreenUI()
-        override val label = "Send text"
+        override val label = "Text"
         override val icon: ImageVector = Icons.Outlined.FormatColorText
     }
 

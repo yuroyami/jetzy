@@ -6,7 +6,7 @@ import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.CoroutineDispatcher
 
 enum class Platform(val label: String, val brandColor: Color) {
-    Android("Android", Color(0xffa4c639)),
+    Android("Android", Color(0xff32de84)),
     IOS("iOS", Color(0xffa2aaad)),
     Web("Browser", Color(0xff3778bf)),
     PC("PC", Color(0xfff14f21))
