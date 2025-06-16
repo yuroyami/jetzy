@@ -102,6 +102,7 @@ object P2pUI {
                                 Platform.Android -> p2pCallback.p2pStartNativePlatform()
                                 Platform.IOS -> p2pCallback.p2pStartCrossPlatform()
                                 Platform.Web -> TODO()
+                                Platform.PC -> TODO()
                             }
                         },
                         modifier = Modifier.weight(1f).padding(12.dp),
@@ -133,6 +134,7 @@ object P2pUI {
                                 Platform.IOS -> p2pCallback.p2pStartNativePlatform()
                                 Platform.Android -> p2pCallback.p2pStartCrossPlatform()
                                 Platform.Web -> TODO()
+                                Platform.PC -> TODO()
                             }
 
                         },
@@ -237,6 +239,7 @@ object P2pUI {
                     }
                     Platform.IOS -> "Please select your iOS (iPhone/iPad) peer."
                     Platform.Web -> TODO()
+                    Platform.PC -> TODO()
                 }
                 Text(
                     text = text,

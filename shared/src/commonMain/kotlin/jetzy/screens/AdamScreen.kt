@@ -6,21 +6,17 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -121,39 +117,9 @@ fun AdamScreen() {
                             HorizontalDivider()
                         }
                     },
-                    bottomBar = {
-                        Column {
-                            HorizontalDivider()
-                            BottomAppBar {
-                                ElevatedButton(
-                                    modifier = Modifier.fillMaxWidth().height(64.dp),
-                                    onClick = {
-                                        //TODO
-                                    }
-                                ) {
-                                    Text("Proceed")
-                                }
-                            }
-                            /*NavigationBar {
-                                screens.forEach { screen ->
-                                    NavigationBarItem(
-                                        selected = true,
-                                        icon = {
-                                            Icon(screen.icon, null)
-
-                                        },
-                                        label = { Text(screen.label) },
-                                        onClick = {
-                                            navigator.navigate(screen.label)
-                                        }
-                                    )
-                                }
-                            }*/
-                        }
-                    },
                     content = { pv ->
                         NavHost(
-                            modifier = Modifier.padding(pv),
+                            modifier = Modifier.padding(top = pv.calculateTopPadding()),
                             navController = navigator,
                             startDestination = Screen.MainScreen.label
                         ) {

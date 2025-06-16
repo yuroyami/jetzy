@@ -10,15 +10,21 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import io.github.vinceglb.filekit.core.PlatformFile
 import jetzy.p2p.P2pPeer
+import jetzy.screens.Operation
 import jetzy.theme.NightMode
+import jetzy.utils.Platform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 class JetzyViewmodel: ViewModel() {
     val nightMode = MutableStateFlow(NightMode.SYSTEM)
-
     var nav: NavController? = null
+
+
+    val currentOperation = MutableStateFlow<Operation?>(null)
+    val currentPeerPlatform = MutableStateFlow<Platform?>(null)
+
 
     val files = mutableStateListOf<PlatformFile>()
 
