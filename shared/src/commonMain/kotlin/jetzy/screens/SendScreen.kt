@@ -62,7 +62,7 @@ fun SendScreenUI() {
     ) { pv ->
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier.fillMaxSize().padding(pv),
+            modifier = Modifier.fillMaxSize().padding(bottom = pv.calculateBottomPadding()),
             userScrollEnabled = false
         ) { pageIndex ->
             sendScreens[pageIndex].UI()
