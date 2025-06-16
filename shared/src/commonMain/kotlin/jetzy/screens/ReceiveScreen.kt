@@ -15,21 +15,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.core.PickerMode
 import io.github.vinceglb.filekit.core.PickerType
-import kotlinx.coroutines.launch
 
 
 @Composable
-fun SendScreenUI() {
-    val scope = rememberCoroutineScope()
+fun ReceiveScreenUI() {
     val haptic = LocalHapticFeedback.current
     val viewmodel = LocalViewmodel.current
 
@@ -57,17 +53,16 @@ fun SendScreenUI() {
             Column {
                 HorizontalDivider()
                 NavigationBar {
-                    sendScreens.forEachIndexed { i, screen ->
+                    sendScreens.forEach { screen ->
                         NavigationBarItem(
-                            selected = pagerState.currentPage == i,
+                            selected = true,
                             icon = {
                                 Icon(screen.icon, null)
 
                             },
                             label = { Text(screen.label) },
                             onClick = {
-                                scope.launch { pagerState.scrollToPage(i) }
-                                haptic.performHapticFeedback(HapticFeedbackType.ToggleOn)
+                                //navigator.navigate(screen.label)
                             }
                         )
                     }

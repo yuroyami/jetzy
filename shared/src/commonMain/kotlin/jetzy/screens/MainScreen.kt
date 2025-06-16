@@ -18,7 +18,7 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -44,18 +44,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import compose.icons.FontAwesomeIcons
-import compose.icons.fontawesomeicons.Brands
-import compose.icons.fontawesomeicons.Solid
-import compose.icons.fontawesomeicons.brands.Android
-import compose.icons.fontawesomeicons.brands.Apple
-import compose.icons.fontawesomeicons.brands.Chrome
-import compose.icons.fontawesomeicons.solid.Desktop
-import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
-import io.github.vinceglb.filekit.core.PickerMode
-import io.github.vinceglb.filekit.core.PickerType
 import jetzy.p2p.ComposeUtils.JetzyText
 import jetzy.p2p.ComposeUtils.scheme
+import jetzy.screens.Screen.Companion.navigateTo
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.genos
 import jetzy.utils.Platform
@@ -65,56 +56,43 @@ import org.jetbrains.compose.resources.Font
 fun MainScreenUI() {
     val haptic = LocalHapticFeedback.current
     val viewmodel = LocalViewmodel.current
-
-    val filePicker = rememberFilePickerLauncher(
-        type = PickerType.File(), mode = PickerMode.Multiple(),
-    ) { files ->
-        files?.forEach {
-            viewmodel.files.add(it)
-        }
-    }
+    val nav = LocalNavigator.current
 
     Scaffold(
         bottomBar = {
             Column {
                 HorizontalDivider()
                 BottomAppBar {
-                    ElevatedButton(
+                    FilledTonalButton(
                         modifier = Modifier.fillMaxWidth().height(64.dp),
-                        onClick = {
+                        onClick = c@ {
                             if (viewmodel.currentOperation.value == null) {
                                 viewmodel.snacky("Select an operation!")
                                 haptic.performHapticFeedback(HapticFeedbackType.Reject)
-                                return@ElevatedButton
+                                return@c
                             }
                             if (viewmodel.currentPeerPlatform.value == null) {
                                 viewmodel.snacky("Select which platform your peer has!")
                                 haptic.performHapticFeedback(HapticFeedbackType.Reject)
-                                return@ElevatedButton
+                                return@c
                             }
 
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
 
-                        }
+                            viewmodel.currentOperation.value?.let { operation ->
+                                nav.navigateTo(
+                                    when (operation) {
+                                        Operation.SEND -> Screen.SendScreen
+                                        Operation.RECEIVE -> Screen.SendScreen
+                                    }
+                                )
+                            }
+                        },
+                        shape = RoundedCornerShape(8.dp)
                     ) {
                         Text("Proceed", style = MaterialTheme.typography.titleLarge)
                     }
                 }
-                /*NavigationBar {
-                    screens.forEach { screen ->
-                        NavigationBarItem(
-                            selected = true,
-                            icon = {
-                                Icon(screen.icon, null)
-
-                            },
-                            label = { Text(screen.label) },
-                            onClick = {
-                                navigator.navigate(screen.label)
-                            }
-                        )
-                    }
-                }*/
             }
         }
     ) { pv ->
@@ -131,7 +109,7 @@ fun MainScreenUI() {
                 )
 
                 Text(
-                    text = "Send and receive across different platforms with ease.",
+                    text = "Quickly send & receive files across different platforms",
                         style = MaterialTheme.typography.bodyLargeEmphasized,
                 )
             }
@@ -193,12 +171,6 @@ fun MainScreenUI() {
             }
         }
     }
-
-
-    /*P2pInitialPopup(visibilityState = remember { viewmodel.p2pInitialPopup })
-    P2pQR(visibilityState = remember { viewmodel.p2pQRpopup })
-    P2pChoosePeerPopup(visibilityState = remember { viewmodel.p2pChoosePeerPopup })
-    P2pTransfer(visibilityState = remember { viewmodel.p2pTransferPopup })*/
 }
 
 enum class Operation { SEND, RECEIVE }
@@ -274,23 +246,16 @@ fun PeerPlatformButton(
             modifier = modifier.height(132.dp),
             badge = {
                 if (isSelected) {
-                    Badge {
-
-                    }
+                    Badge {}
                 }
             }
         ) {
             Column (
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally
+                verticalArrangement = Arrangement.Center, horizontalAlignment = CenterHorizontally
             ) {
                 Icon(
-                    imageVector = when (peerPlatform) {
-                        Platform.Android -> FontAwesomeIcons.Brands.Android
-                        Platform.IOS -> FontAwesomeIcons.Brands.Apple
-                        Platform.Web -> FontAwesomeIcons.Brands.Chrome
-                        Platform.PC -> FontAwesomeIcons.Solid.Desktop
-                    },
+                    imageVector = peerPlatform.icon,
                     contentDescription = null,
                     modifier = Modifier.fillMaxWidth(0.9f).aspectRatio(1f).padding(4.dp),
                     tint = if (isSelected) peerPlatform.brandColor else MaterialTheme.colorScheme.outlineVariant

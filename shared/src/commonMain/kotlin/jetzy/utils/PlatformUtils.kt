@@ -2,14 +2,22 @@ package jetzy.utils
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
+import compose.icons.FontAwesomeIcons
+import compose.icons.fontawesomeicons.Brands
+import compose.icons.fontawesomeicons.Solid
+import compose.icons.fontawesomeicons.brands.Android
+import compose.icons.fontawesomeicons.brands.Apple
+import compose.icons.fontawesomeicons.brands.Chrome
+import compose.icons.fontawesomeicons.solid.Desktop
 import kotlinx.coroutines.CoroutineDispatcher
 
-enum class Platform(val label: String, val brandColor: Color) {
-    Android("Android", Color(0xff32de84)),
-    IOS("iOS", Color(0xffa2aaad)),
-    Web("Browser", Color(0xff3778bf)),
-    PC("PC", Color(0xfff14f21))
+enum class Platform(val label: String, val brandColor: Color, val icon: ImageVector) {
+    Android("Android", Color(0xff32de84), FontAwesomeIcons.Brands.Android),
+    IOS("iOS", Color(0xffa2aaad), FontAwesomeIcons.Brands.Apple),
+    Web("Browser", Color(0xff3778bf), FontAwesomeIcons.Brands.Chrome),
+    PC("PC", Color(0xfff14f21), FontAwesomeIcons.Solid.Desktop)
 }
 
 expect val platform: Platform
