@@ -41,7 +41,7 @@ fun SendVideosScreenUI() {
             Text(
                 text = "Select videos to send to your peer.",
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(vertical = 12.dp)
+                modifier = Modifier.padding(bottom = 12.dp, top = 28.dp)
             )
 
             Surface(

@@ -16,6 +16,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment.Companion.BottomEnd
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
@@ -30,6 +31,7 @@ import jetzy.utils.rememberDirectoryPickerLauncher
 
 @Composable
 fun SendFilesScreenUI() {
+    val scope = rememberCoroutineScope()
     val viewmodel = LocalViewmodel.current
 
     val filePicker = rememberFilePickerLauncher(
@@ -51,7 +53,7 @@ fun SendFilesScreenUI() {
             Text(
                 text = "Select files to send to your peer.\nFiles can be of any size and any format.",
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(vertical = 12.dp)
+                modifier = Modifier.padding(bottom = 12.dp, top = 28.dp)
             )
 
             Surface(
@@ -101,4 +103,5 @@ fun SendFilesScreenUI() {
             )
         }
     }
+
 }
