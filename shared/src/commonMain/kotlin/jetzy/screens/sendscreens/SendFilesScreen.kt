@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.FilePresent
 import androidx.compose.material.icons.filled.Folder
@@ -30,14 +31,17 @@ import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment.Companion.BottomEnd
+import androidx.compose.ui.Alignment.Companion.BottomStart
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -79,8 +83,8 @@ fun SendFilesScreenUI() {
         tab = FileFolderViewMode.Folders
     }
 
-    val noFilesSelected by derivedStateOf { viewmodel.files.isEmpty() }
-    val noFoldersSelected by derivedStateOf { viewmodel.folders.isEmpty() }
+    val longClickedFiles = remember { mutableStateListOf<Int>() }
+    val longClickedFolders = remember { mutableStateListOf<Int>() }
 
     Box(modifier = Modifier.fillMaxSize()) {
 
@@ -120,19 +124,17 @@ fun SendFilesScreenUI() {
                         )
                     }
 
-                    //key(tab) {
                     FileFolderGridView(
-                        viewMode = FileFolderViewMode.Files,
-                        isAnythingSelected = when (tab) {
-                            FileFolderViewMode.Files -> noFilesSelected
-                            FileFolderViewMode.Folders -> noFoldersSelected
-                        },
-                        items = when (tab) {
+                        viewMode = tab,
+                        allItems = when (tab) {
                             FileFolderViewMode.Files -> viewmodel.files
                             FileFolderViewMode.Folders -> viewmodel.folders
-                        }
+                        },
+                        highlightedItems = when (tab) {
+                            FileFolderViewMode.Files -> longClickedFiles
+                            FileFolderViewMode.Folders -> longClickedFolders
+                        },
                     )
-                    //}
                 }
             }
         }
@@ -162,20 +164,49 @@ fun SendFilesScreenUI() {
                 expanded = true
             )
         }
+
+        if ((longClickedFiles.isNotEmpty() && tab == FileFolderViewMode.Files) || (longClickedFolders.isNotEmpty() && tab == FileFolderViewMode.Folders))  {
+            SmallExtendedFloatingActionButton(
+                icon = {
+                    Icon(Icons.Filled.ClearAll, null)
+                },
+                onClick = {
+                    val (longClickedItems, items, itemType) = when (tab) {
+                        FileFolderViewMode.Files -> Triple(longClickedFiles, viewmodel.files, "file(s)")
+                        FileFolderViewMode.Folders -> Triple(longClickedFolders, viewmodel.folders, "folder(s)")
+                    }
+
+                    val count = longClickedItems.size
+                    val processedIndices = mutableListOf<Int>()
+
+                    for (index in longClickedItems) {
+                        items.removeAt(index)
+                        processedIndices.add(index)
+                    }
+                    longClickedItems.removeAll(processedIndices)
+
+                    viewmodel.snacky("Excluded $count $itemType from the list")
+                },
+                text = { Text("Exclude", fontSize = 10.ssp) },
+                modifier = Modifier.align(BottomStart).padding(8.dp).padding(bottom = 12.dp),
+                expanded = true
+            )
+        }
     }
 }
 
 @Composable
 fun FileFolderGridView(
     viewMode: FileFolderViewMode,
-    items: SnapshotStateList<PlatformFile>,
-    isAnythingSelected: Boolean
+    allItems: SnapshotStateList<PlatformFile>,
+    highlightedItems: SnapshotStateList<Int>
 ) {
     val viewmodel = LocalViewmodel.current
     val density = LocalDensity.current
 
     var cellWidth by remember { mutableStateOf(1.dp) }
-    if (isAnythingSelected) {
+    val listIsEmpty by derivedStateOf { allItems.isEmpty() }
+    if (listIsEmpty) {
         Text(
             text = when (viewMode) {
                 FileFolderViewMode.Files -> "No file(s) added yet."
@@ -192,12 +223,11 @@ fun FileFolderGridView(
                 cellWidth = with(density) { it.size.width.toDp() / 4 }
             }
         ) {
-            itemsIndexed(items = items) { i, f ->
-                val isHighlighted = true //todo by derivedStateOf { longclickedPhotos.contains(i) }
+            itemsIndexed(items = allItems) { i, f ->
+                val isHighlighted by derivedStateOf { highlightedItems.contains(i) }
                 Box(Modifier.size(cellWidth)) {
-                    Icon(Icons.Filled.Check, null, Modifier.align(TopEnd).padding(12.dp))
-
                     Column(
+                        horizontalAlignment = CenterHorizontally,
                         modifier = Modifier
                             .size(cellWidth)
                             .combinedClickable(
@@ -205,16 +235,17 @@ fun FileFolderGridView(
                                     //TODO
                                 },
                                 onLongClick = {
-                                    if (isHighlighted) {
-                                        //longclickedPhotos.remove(i)
+                                    if (highlightedItems.contains(i)) {
+                                        highlightedItems.remove(i)
                                     } else {
-                                        //longclickedPhotos.add(i)
+                                        highlightedItems.add(i)
                                     }
                                 },
                                 indication = ripple(color = jetzyYellow),
                                 interactionSource = null
-                            ).border((0.1).dp, color = scheme.onSurface.copy(alpha = 0.05f), shape = RectangleShape),
-                        horizontalAlignment = CenterHorizontally
+                            )
+                            .border((0.1).dp, color = scheme.onSurface.copy(alpha = 0.05f), shape = RectangleShape)
+
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Folder, null,
@@ -226,6 +257,11 @@ fun FileFolderGridView(
                             fontSize = 7.ssp,
                             modifier = Modifier.width(cellWidth - 16.dp).basicMarquee(iterations = 3)
                         )
+                    }
+
+                    if (isHighlighted) {
+                        Surface(modifier = Modifier.size(cellWidth), color = Color.DarkGray.copy(alpha = 0.4f)) {  }
+                        Icon(Icons.Filled.Check, null, Modifier.align(TopEnd).padding(12.dp))
                     }
                 }
             }
