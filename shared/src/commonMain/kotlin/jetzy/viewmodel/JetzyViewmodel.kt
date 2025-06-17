@@ -26,6 +26,10 @@ class JetzyViewmodel: ViewModel() {
     val currentPeerPlatform = MutableStateFlow<Platform?>(null)
 
     val files = mutableStateListOf<PlatformFile>()
+    val folders = mutableStateListOf<PlatformFile>()
+    val photos = mutableStateListOf<PlatformFile>()
+    val videos = mutableStateListOf<PlatformFile>()
+    val texts = mutableStateListOf<String>()
 
     val userMode = MutableStateFlow<Boolean?>(null)
 

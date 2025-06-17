@@ -10,6 +10,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavController
 import jetzy.screens.sendscreens.SendFilesScreenUI
+import jetzy.screens.sendscreens.SendPhotosScreenUI
+import jetzy.screens.sendscreens.SendTextScreenUI
+import jetzy.screens.sendscreens.SendVideosScreenUI
 
 sealed interface Screen {
     val label: String
@@ -53,24 +56,23 @@ sealed interface Screen {
         override val label = "Files"
         override val icon: ImageVector = Icons.Outlined.FileCopy
     }
-
-    data object SendVideosScreen : Screen {
-        @Composable
-        override fun UI() = MainScreenUI()
-        override val label = "Videos"
-        override val icon: ImageVector =  Icons.Outlined.Movie
-    }
-
     data object SendPhotosScreen : Screen {
         @Composable
-        override fun UI() = MainScreenUI()
+        override fun UI() = SendPhotosScreenUI()
         override val label = "Photos"
         override val icon: ImageVector =  Icons.Outlined.Collections
     }
 
+    data object SendVideosScreen : Screen {
+        @Composable
+        override fun UI() = SendVideosScreenUI()
+        override val label = "Videos"
+        override val icon: ImageVector =  Icons.Outlined.Movie
+    }
+
     data object SendTextScreen : Screen {
         @Composable
-        override fun UI() = MainScreenUI()
+        override fun UI() = SendTextScreenUI()
         override val label = "Text"
         override val icon: ImageVector =  Icons.Outlined.FormatSize
     }

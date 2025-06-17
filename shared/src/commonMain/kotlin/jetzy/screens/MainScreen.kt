@@ -3,6 +3,7 @@ package jetzy.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.Absolute.Center
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -35,7 +36,6 @@ import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -43,12 +43,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import jetzy.p2p.ComposeUtils.JetzyText
 import jetzy.p2p.ComposeUtils.scheme
 import jetzy.screens.Screen.Companion.navigateTo
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.genos
+import jetzy.theme.sdp
+import jetzy.theme.ssp
 import jetzy.utils.Platform
 import org.jetbrains.compose.resources.Font
 
@@ -64,7 +65,7 @@ fun MainScreenUI() {
                 HorizontalDivider()
                 BottomAppBar {
                     FilledTonalButton(
-                        modifier = Modifier.fillMaxWidth().height(64.dp),
+                        modifier = Modifier.fillMaxWidth().height(58.sdp).padding(4.dp),
                         onClick = c@ {
                             if (viewmodel.currentOperation.value == null) {
                                 viewmodel.snacky("Select an operation!")
@@ -88,7 +89,7 @@ fun MainScreenUI() {
                                 )
                             }
                         },
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(8.sdp)
                     ) {
                         Text("Proceed", style = MaterialTheme.typography.titleLarge)
                     }
@@ -99,38 +100,38 @@ fun MainScreenUI() {
         Column(
             modifier = Modifier.fillMaxSize().padding(pv),
             horizontalAlignment = CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.SpaceEvenly
         ) {
             key(1) {
                 JetzyText(
                     text = "Welcome to Jetzy!",
-                    size = 36.sp,
+                    size = 26.ssp,
                     strokeThickness = 8f,
                 )
 
                 Text(
                     text = "Quickly send & receive files across different platforms",
-                        style = MaterialTheme.typography.bodyLargeEmphasized,
+                        style = MaterialTheme.typography.bodyMediumEmphasized,
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(8.sdp))
 
             Surface(
-                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                modifier = Modifier.fillMaxWidth().padding(8.sdp),
                 tonalElevation = 0.dp,
                 shadowElevation = 8.dp
             ) {
                 Column(
                     horizontalAlignment = CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth().padding(8.dp)
+                    modifier = Modifier.fillMaxWidth().padding(8.sdp)
                 ) {
                     Text(
                         text = "Select Jetzy operation",
-                        modifier = Modifier.fillMaxWidth().padding(8.dp),
-                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.fillMaxWidth().padding(8.sdp),
+                        style = MaterialTheme.typography.titleMedium,
                         textAlign = TextAlign.Center,
-                        color = lerp(Color.White, scheme.outlineVariant, 0.65f)
+                        color = lerp(scheme.onSurface, scheme.outlineVariant, 0.65f)
                     )
 
                     Row(modifier = Modifier.fillMaxWidth()){
@@ -141,24 +142,24 @@ fun MainScreenUI() {
             }
 
             Surface(
-                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                modifier = Modifier.fillMaxWidth().padding(8.sdp),
                 tonalElevation = 0.dp,
                 shadowElevation = 8.dp
             ) {
                 Column(
                     horizontalAlignment = CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth().padding(8.dp)
+                    modifier = Modifier.fillMaxWidth().padding(8.sdp)
                 ) {
                     Text(
                         text = "Your friend's Jetzy is running on",
-                        modifier = Modifier.fillMaxWidth().padding(8.dp),
-                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.fillMaxWidth().padding(8.sdp),
+                        style = MaterialTheme.typography.titleMedium,
                         textAlign = TextAlign.Center,
-                        color = lerp(Color.White, scheme.outlineVariant, 0.65f)
+                        color = lerp(scheme.onSurface, scheme.outlineVariant, 0.65f)
                     )
 
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(8.dp),
+                        modifier = Modifier.fillMaxWidth().padding(8.sdp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         PeerPlatformButton(peerPlatform = Platform.Android, modifier = Modifier.weight(1f))
@@ -188,6 +189,7 @@ fun OperationButton(
     OutlinedToggleButton(
         modifier = modifier.height(96.dp).padding(12.dp),
         checked = isSelected,
+        contentPadding = PaddingValues.Zero,
         onCheckedChange = {
             viewmodel.currentOperation.value = operation
             haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
@@ -213,7 +215,7 @@ fun OperationButton(
                     Operation.SEND -> "Send"
                     Operation.RECEIVE -> "Receive"
                 },
-                fontSize = 24.sp,
+                fontSize = 13.ssp,
                 fontFamily = FontFamily(Font(Res.font.genos)),
                 //color = if (isSelected) Color.White else MaterialTheme.colorScheme.outlineVariant,
                 fontWeight = FontWeight.W800,
@@ -243,7 +245,7 @@ fun PeerPlatformButton(
         }
     ) {
         BadgedBox(
-            modifier = modifier.height(132.dp),
+            modifier = modifier.height(132.sdp),
             badge = {
                 if (isSelected) {
                     Badge {}
@@ -257,15 +259,15 @@ fun PeerPlatformButton(
                 Icon(
                     imageVector = peerPlatform.icon,
                     contentDescription = null,
-                    modifier = Modifier.fillMaxWidth(0.9f).aspectRatio(1f).padding(4.dp),
-                    tint = if (isSelected) peerPlatform.brandColor else MaterialTheme.colorScheme.outlineVariant
+                    modifier = Modifier.fillMaxWidth(0.9f).aspectRatio(1f).padding(4.sdp),
+                    tint = if (isSelected) peerPlatform.brandColor else scheme.outlineVariant
                 )
 
                 Text(
                     text = peerPlatform.label,
-                    fontSize = 16.sp,
+                    fontSize = 10.ssp,
                     fontFamily = FontFamily(Font(Res.font.genos)),
-                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.outlineVariant,
+                    color = if (isSelected) scheme.onSurface else scheme.outlineVariant,
                     fontWeight = FontWeight.W800,
                     maxLines = 1
                 )
