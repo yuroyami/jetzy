@@ -46,8 +46,8 @@ fun SendVideosScreenUI() {
 
             Surface(
                 modifier = Modifier.fillMaxSize().padding(top = 16.dp, start = 8.dp, end = 8.dp, bottom = 92.dp),
-                tonalElevation = 34.dp,
-                shadowElevation = 8.dp,
+                tonalElevation = 28.dp,
+                shadowElevation = 3.dp,
                 shape = RoundedCornerShape(6.dp)
             ) {
                 LazyColumn(

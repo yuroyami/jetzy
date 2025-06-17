@@ -52,7 +52,7 @@ fun SendScreenUI() {
                             label = { Text(screen.label) },
                             onClick = {
                                 scope.launch { pagerState.scrollToPage(i) }
-                                haptic.performHapticFeedback(HapticFeedbackType.ToggleOn)
+                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                             }
                         )
                     }

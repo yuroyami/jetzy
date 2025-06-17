@@ -72,8 +72,8 @@ fun SendTextScreenUI() {
             val listIsEmpty by derivedStateOf { viewmodel.texts.isEmpty() }
             Surface(
                 modifier = Modifier.fillMaxSize().padding(top = 16.dp, start = 8.dp, end = 8.dp, bottom = 92.dp),
-                tonalElevation = 34.dp,
-                shadowElevation = 8.dp,
+                tonalElevation = 28.dp,
+                shadowElevation = 3.dp,
                 shape = RoundedCornerShape(6.dp)
             ) {
                 LazyColumn(
@@ -134,7 +134,7 @@ fun SendTextScreenUI() {
             onClick = {
                 textAddPopup = true
             },
-            text = { Text("Add Text") },
+            text = { Text("Add new text") },
             modifier = Modifier.align(BottomEnd).padding(8.dp).padding(bottom = 12.dp),
             expanded = true
         )

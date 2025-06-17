@@ -105,7 +105,7 @@ fun MainScreenUI() {
             key(1) {
                 JetzyText(
                     text = "Welcome to Jetzy!",
-                    size = 26.ssp,
+                    size = 22.ssp,
                     strokeThickness = 8f,
                 )
 
@@ -124,7 +124,7 @@ fun MainScreenUI() {
             ) {
                 Column(
                     horizontalAlignment = CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth().padding(8.sdp)
+                    modifier = Modifier.fillMaxWidth().padding(8.dp)
                 ) {
                     Text(
                         text = "Select Jetzy operation",
@@ -148,7 +148,7 @@ fun MainScreenUI() {
             ) {
                 Column(
                     horizontalAlignment = CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth().padding(8.sdp)
+                    modifier = Modifier.fillMaxWidth().padding(8.dp)
                 ) {
                     Text(
                         text = "Your friend's Jetzy is running on",
@@ -159,7 +159,7 @@ fun MainScreenUI() {
                     )
 
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(8.sdp),
+                        modifier = Modifier.fillMaxWidth().padding(4.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         PeerPlatformButton(peerPlatform = Platform.Android, modifier = Modifier.weight(1f))
@@ -187,7 +187,7 @@ fun OperationButton(
     val isSelected by derivedStateOf { currentOperation == operation }
 
     OutlinedToggleButton(
-        modifier = modifier.height(96.dp).padding(12.dp),
+        modifier = modifier.height(96.dp).padding(vertical = 12.dp, horizontal = 4.dp),
         checked = isSelected,
         contentPadding = PaddingValues.Zero,
         onCheckedChange = {
@@ -236,7 +236,7 @@ fun PeerPlatformButton(
     val isSelected by derivedStateOf { currentPeerPlatform == peerPlatform }
 
     OutlinedCard(
-        modifier = modifier.height(132.dp).padding(4.dp),
+        modifier = modifier.height(132.dp).padding(vertical = 4.dp, horizontal = 2.dp),
         border = CardDefaults.outlinedCardBorder(enabled = isSelected),
         shape = RoundedCornerShape(if (isSelected) 16.dp else 8.dp),
         onClick = {

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -21,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -33,7 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.NavHost
@@ -42,10 +43,14 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import jetzy.p2p.P2pCallback
 import jetzy.p2p.P2pHandler
+import jetzy.screens.Screen.Companion.matches
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.jetzy_vector
 import jetzy.theme.JetzyTheme
 import jetzy.theme.NightMode
+import jetzy.theme.sdp
+import jetzy.theme.ssp
+import jetzy.utils.InitializeCoilSupportForFileKit
 import jetzy.viewmodel.JetzyViewmodel
 import jetzy.viewmodel.jetzyModule
 import org.jetbrains.compose.resources.vectorResource
@@ -67,6 +72,8 @@ fun AdamScreen() {
             modules(jetzyModule)
         }
     ) {
+        InitializeCoilSupportForFileKit() //Allows us to display composable images from FileKit's PlatformFile
+
         val viewmodel = koinViewModel<JetzyViewmodel>()
         val scope = rememberCoroutineScope()
         val navigator = rememberNavController()
@@ -99,39 +106,55 @@ fun AdamScreen() {
                                     )
                                 },
                                 title = {
-                                    if (navEntry?.destination?.route != Screen.MainScreen.label) {
+                                    if (!navEntry.matches(Screen.MainScreen)) {
                                         val op by viewmodel.currentOperation.collectAsState()
                                         val prp by viewmodel.currentPeerPlatform.collectAsState()
                                         if (op != null && prp != null) {
                                             val s1 = when (op) {
                                                 Operation.SEND -> "Sending to"
-                                                Operation.RECEIVE -> "Receive from"
+                                                Operation.RECEIVE -> "Receiving from"
                                                 null -> ""
                                             }
 
                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text("$s1 ${prp?.label}", modifier = Modifier.padding(horizontal = 4.dp), fontSize = 18.sp)
+                                                Text("$s1 ", modifier = Modifier.padding(horizontal = 4.sdp), fontSize = 10.ssp)
 
-                                                Icon(imageVector = prp!!.icon, tint = prp!!.brandColor, contentDescription = null, modifier = Modifier.size(24.dp))
+                                                Icon(imageVector = prp!!.icon, tint = prp!!.brandColor, contentDescription = null, modifier = Modifier.size(16.sdp))
                                             }
                                         }
 
                                     }
                                 },
                                 actions = {
-                                    IconButton(
-                                        onClick = {
-                                            viewmodel.nightMode.value = when (nightMode) {
-                                                NightMode.SYSTEM -> if (isSystemInDarkMode) NightMode.LIGHT else NightMode.DARK
-                                                NightMode.DARK -> NightMode.LIGHT
-                                                NightMode.LIGHT -> NightMode.DARK
+                                    if (navEntry.matches(Screen.MainScreen)) {
+                                        IconButton(
+                                            onClick = {
+                                                viewmodel.nightMode.value = when (nightMode) {
+                                                    NightMode.SYSTEM -> if (isSystemInDarkMode) NightMode.LIGHT else NightMode.DARK
+                                                    NightMode.DARK -> NightMode.LIGHT
+                                                    NightMode.LIGHT -> NightMode.DARK
+                                                }
                                             }
+                                        ) {
+                                            Icon(
+                                                if (nightMode.isDark()) Icons.Filled.LightMode else Icons.Filled.DarkMode,
+                                                null
+                                            )
                                         }
-                                    ) {
-                                        Icon(
-                                            if (nightMode.isDark()) Icons.Filled.LightMode else Icons.Filled.DarkMode,
-                                            null
-                                        )
+                                    }
+
+                                    if (navEntry.matches(Screen.SendScreen)) {
+                                        TextButton(
+                                            onClick = {
+                                                //Continue sending
+                                            }
+                                        ) {
+                                            Text("Continue")
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Default.ArrowForwardIos,
+                                                contentDescription = null
+                                            )
+                                        }
                                     }
                                 }
                             )

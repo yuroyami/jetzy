@@ -8,6 +8,7 @@ import androidx.compose.material.icons.outlined.FormatSize
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import jetzy.screens.sendscreens.SendFilesScreenUI
 import jetzy.screens.sendscreens.SendPhotosScreenUI
@@ -28,6 +29,14 @@ sealed interface Screen {
                 if (noReturn) popUpTo(0,) { inclusive = true }
             }
         }
+
+        fun NavBackStackEntry?.matches(scr: Screen): Boolean = this?.let { destination.route == scr.label } == true
+//
+//        inline val NavBackStackEntry?.screen: Screen?
+//            get() = when (this?.destination?.route) {
+//                MainScreen.label -> MainScreen
+//
+//            }
     }
 
     data object MainScreen : Screen {

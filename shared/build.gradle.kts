@@ -124,6 +124,8 @@ kotlin {
 
             /* FileKit to save/open files */
             implementation(libs.filekit)
+            implementation(libs.filekit.coil)
+            implementation(libs.coil)
 
             /* Dependency Injection */
             implementation(project.dependencies.platform(libs.koin.bom))
