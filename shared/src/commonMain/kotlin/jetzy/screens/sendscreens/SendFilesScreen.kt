@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -14,6 +15,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.CreateNewFolder
@@ -78,7 +80,7 @@ fun SendFilesScreenUI() {
     }
 
     val folderPicker = rememberDirectoryPickerLauncher { folder ->
-        folder?.let { viewmodel.files.add(it) }
+        folder?.let { viewmodel.folders.add(it) }
         viewmodel.snacky("Added folder: ${folder?.name}")
         tab = FileFolderViewMode.Folders
     }
@@ -92,8 +94,7 @@ fun SendFilesScreenUI() {
             Text(
                 text = "Select files (and/or folders) to send to your peer.\nFiles can be of any size and any format.",
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 12.dp, top = 28.dp),
-                fontSize = 10.ssp
+                modifier = Modifier.padding(bottom = 12.dp, top = 28.dp)
             )
 
             Surface(
@@ -201,7 +202,6 @@ fun FileFolderGridView(
     allItems: SnapshotStateList<PlatformFile>,
     highlightedItems: SnapshotStateList<Int>
 ) {
-    val viewmodel = LocalViewmodel.current
     val density = LocalDensity.current
 
     var cellWidth by remember { mutableStateOf(1.dp) }
@@ -248,8 +248,11 @@ fun FileFolderGridView(
 
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Folder, null,
-                            modifier = Modifier.size(cellWidth * 0.75f)
+                            imageVector = when (viewMode) {
+                                FileFolderViewMode.Files -> Icons.AutoMirrored.Filled.InsertDriveFile
+                                FileFolderViewMode.Folders -> Icons.Filled.Folder
+                            }, null,
+                            modifier = Modifier.weight(1f).aspectRatio(1f).padding(8.dp)
                         )
 
                         Text(

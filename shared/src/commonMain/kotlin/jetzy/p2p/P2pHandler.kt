@@ -1,14 +1,10 @@
 package jetzy.p2p
 
 import io.ktor.utils.io.ByteWriteChannel
-import jetzy.utils.getDeviceName
-import jetzy.utils.loggy
 import jetzy.viewmodel.JetzyViewmodel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.io.RawSink
 import kotlinx.io.RawSource
-import kotlinx.io.buffered
-import kotlinx.io.readByteArray
 
 abstract class P2pHandler(
     open val viewmodel: JetzyViewmodel
@@ -25,8 +21,6 @@ abstract class P2pHandler(
     var p2pCrossOutput: ByteWriteChannel? = null //only necessary for iOS-to-Android writing
 
     val receivedSongs = mutableListOf<P2pReceivedFile>()
-
-    enum class P2pMode { ANDROID_TO_ANDROID, IOS_TO_IOS, CROSS_PLATFORM }
 
     open var p2pMode: P2pMode? = null
 
@@ -47,6 +41,7 @@ abstract class P2pHandler(
         runCatching { p2pOutput?.close(); p2pOutput = null }
     }
 
+    /*
     protected suspend fun sendPlaylist() {
         /** Sending mode */
         p2pOutput?.buffered()?.let { output ->
@@ -198,5 +193,5 @@ abstract class P2pHandler(
                 viewmodel.transferStatusText.value = "Received nothing. Please try again."
             }
         }
-    }
+    }*/
 }

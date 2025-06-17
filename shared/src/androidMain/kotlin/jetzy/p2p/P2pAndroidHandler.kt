@@ -2,6 +2,7 @@ package jetzy.p2p
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
@@ -45,10 +46,9 @@ import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
 
-@SuppressLint("MissingPermission", "Recycle")
 class P2pAndroidHandler(
-    private val activity: ComponentActivity,
-    override val viewmodel: JetzyViewmodel
+    val activity: ComponentActivity,
+    //override val viewmodel: JetzyViewmodel
 ) : P2pHandler(viewmodel) {
 
     /* Nearby-Connections client properties */
@@ -90,18 +90,22 @@ class P2pAndroidHandler(
                     }
                 }
 
-                ConnectionsStatusCodes.STATUS_CONNECTION_REJECTED -> activity.toasty("P2P Connection rejected. Check peer device.")
-                ConnectionsStatusCodes.STATUS_ERROR -> activity.toasty("Undefined P2P error")
+                ConnectionsStatusCodes.STATUS_CONNECTION_REJECTED -> {
+                    //activity.toasty("P2P Connection rejected. Check peer device.")
+                }
+                ConnectionsStatusCodes.STATUS_ERROR -> {
+                    //activity.toasty("Undefined P2P error")
+                }
                 else -> {
                     stopP2pOperations()
-                    activity.toasty("Unknown P2P error")
+                    //activity.toasty("Unknown P2P error")
                 }
             }
         }
 
         override fun onDisconnected(p0: String) {
             stopP2pOperations()
-            activity.toasty("Disconnected from P2P peer.")
+            //activity.toasty("Disconnected from P2P peer.")
         }
     }
     override var p2pMode: P2pMode? = P2pMode.ANDROID_TO_ANDROID

@@ -168,9 +168,7 @@ kotlin {
         iosMain.dependencies {
 
         }
-
     }
-
 }
 
 android {
@@ -187,7 +185,7 @@ android {
     }
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 28
         targetSdk = 36
 
         applicationId = "com.yuroyami.jetzy"

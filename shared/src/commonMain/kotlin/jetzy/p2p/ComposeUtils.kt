@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import jetzy.shared.generated.resources.Res
-import jetzy.shared.generated.resources.broshk4blue
+import jetzy.shared.generated.resources.nauman_heavy
 import jetzy.theme.jetzyYellow
 import org.jetbrains.compose.resources.Font
 import org.jetbrains.compose.resources.FontResource
@@ -55,7 +55,7 @@ object ComposeUtils {
         text: String,
         size: TextUnit,
         strokeThickness: Float = 4f,
-        font: FontResource = Res.font.broshk4blue
+        font: FontResource = Res.font.nauman_heavy
     ) {
         Box {
             val font = FontFamily(Font(font))

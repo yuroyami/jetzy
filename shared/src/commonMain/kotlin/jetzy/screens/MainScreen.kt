@@ -32,7 +32,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
@@ -83,8 +82,9 @@ fun MainScreenUI() {
                             viewmodel.currentOperation.value?.let { operation ->
                                 nav.navigateTo(
                                     when (operation) {
-                                        Operation.SEND -> Screen.SendScreen
-                                        Operation.RECEIVE -> Screen.SendScreen
+                                        //Operation.SEND -> Screen.SendScreen
+                                        Operation.SEND -> Screen.InitiateSendingScreen
+                                        Operation.RECEIVE -> Screen.ReceiveScreen
                                     }
                                 )
                             }
@@ -102,10 +102,13 @@ fun MainScreenUI() {
             horizontalAlignment = CenterHorizontally,
             verticalArrangement = Arrangement.SpaceEvenly
         ) {
-            key(1) {
+            Column(
+                horizontalAlignment = CenterHorizontally,
+                modifier = Modifier.fillMaxWidth().padding(8.dp)
+            ) {
                 JetzyText(
-                    text = "Welcome to Jetzy!",
-                    size = 22.ssp,
+                    text = "Welcome to Jetzy",
+                    size = 18.ssp,
                     strokeThickness = 8f,
                 )
 
@@ -127,7 +130,7 @@ fun MainScreenUI() {
                     modifier = Modifier.fillMaxWidth().padding(8.dp)
                 ) {
                     Text(
-                        text = "Select Jetzy operation",
+                        text = "Select your Jetzy operation",
                         modifier = Modifier.fillMaxWidth().padding(8.sdp),
                         style = MaterialTheme.typography.titleMedium,
                         textAlign = TextAlign.Center,
@@ -170,6 +173,8 @@ fun MainScreenUI() {
                     }
                 }
             }
+
+            Spacer(Modifier.height(70.sdp))
         }
     }
 }

@@ -5,6 +5,7 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -13,14 +14,17 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import jetzy.p2p.P2pAndroidHandler
 import jetzy.p2p.P2pCallback
-import jetzy.theme.NightMode
 import jetzy.screens.AdamScreen
+import jetzy.screens.LocalP2pHandler
+import jetzy.screens.LocalViewmodel
 import jetzy.screens.p2pCallback
+import jetzy.theme.NightMode
 import jetzy.viewmodel.JetzyViewmodel
 import org.koin.android.ext.android.inject
 
-class MainActivity: ComponentActivity(), P2pCallback {
+class MainActivity: ComponentActivity() {
 
     val viewmodel: JetzyViewmodel by inject()
 
@@ -28,8 +32,6 @@ class MainActivity: ComponentActivity(), P2pCallback {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
-
-        p2pCallback = this
 
         /* Tweaking some window UI elements */
         window.attributes = window.attributes.apply {
@@ -42,8 +44,12 @@ class MainActivity: ComponentActivity(), P2pCallback {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
+        val p2pHandler = P2pAndroidHandler(this)
+
         setContent {
-            AdamScreen()
+            CompositionLocalProvider(LocalP2pHandler provides p2pHandler) {
+                AdamScreen()
+            }
 
             val nightMode by viewmodel.nightMode.collectAsState()
             val isSystemInDarkMode = isSystemInDarkTheme()
@@ -57,21 +63,4 @@ class MainActivity: ComponentActivity(), P2pCallback {
             }
         }
     }
-
-    override fun p2pInitialize() {
-
-    }
-
-    override fun p2pStartNativePlatform() {
-
-    }
-
-    override fun p2pStartCrossPlatform() {
-
-    }
-
-    override fun p2pRequestBluetooth() {
-
-    }
-
 }

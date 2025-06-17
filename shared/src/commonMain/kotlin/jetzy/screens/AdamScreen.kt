@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.HorizontalDivider
@@ -29,11 +30,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType.Companion.Reject
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
@@ -41,9 +43,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import jetzy.p2p.P2pCallback
 import jetzy.p2p.P2pHandler
 import jetzy.screens.Screen.Companion.matches
+import jetzy.screens.Screen.Companion.navigateTo
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.jetzy_vector
 import jetzy.theme.JetzyTheme
@@ -57,13 +59,10 @@ import org.jetbrains.compose.resources.vectorResource
 import org.koin.compose.KoinApplication
 import org.koin.compose.viewmodel.koinViewModel
 
-lateinit var p2pCallback: P2pCallback
-var p2pHandler: P2pHandler? = null
-
 val LocalViewmodel = compositionLocalOf<JetzyViewmodel> { error("No Viewmodel provided") }
 val LocalNavigator = compositionLocalOf<NavController> { error("No Navigator provided yet") }
-
-val topLevelScreens = listOf(Screen.MainScreen, Screen.SendScreen)
+val LocalP2pHandler = compositionLocalOf<P2pHandler> { error("No P2p Handler provided yet") }
+val topLevelScreens = listOf(Screen.MainScreen, Screen.SendScreen, Screen.InitiateSendingScreen)
 
 @Composable
 fun AdamScreen() {
@@ -75,7 +74,7 @@ fun AdamScreen() {
         InitializeCoilSupportForFileKit() //Allows us to display composable images from FileKit's PlatformFile
 
         val viewmodel = koinViewModel<JetzyViewmodel>()
-        val scope = rememberCoroutineScope()
+        val haptic = LocalHapticFeedback.current
         val navigator = rememberNavController()
         val navEntry by navigator.currentBackStackEntryAsState()
 
@@ -99,11 +98,25 @@ fun AdamScreen() {
                             //CenterAligned
                             CenterAlignedTopAppBar(
                                 navigationIcon = {
-                                    Image(
-                                        imageVector = vectorResource(Res.drawable.jetzy_vector),
-                                        contentDescription = null,
-                                        modifier = Modifier.height(64.dp)
-                                    )
+                                    if (!navEntry.matches(Screen.MainScreen)) {
+                                        IconButton(
+                                            onClick = {
+                                                viewmodel.clearOperation()
+                                                navigator.navigateTo(Screen.MainScreen, noReturn = true)
+                                            }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.Home,
+                                                contentDescription = null
+                                            )
+                                        }
+                                    } else {
+                                        Image(
+                                            imageVector = vectorResource(Res.drawable.jetzy_vector),
+                                            contentDescription = null,
+                                            modifier = Modifier.height(64.dp)
+                                        )
+                                    }
                                 },
                                 title = {
                                     if (!navEntry.matches(Screen.MainScreen)) {
@@ -145,8 +158,18 @@ fun AdamScreen() {
 
                                     if (navEntry.matches(Screen.SendScreen)) {
                                         TextButton(
-                                            onClick = {
+                                            onClick = c@ {
                                                 //Continue sending
+                                                val nothingToSend = with(viewmodel) {
+                                                    files.isEmpty() && folders.isEmpty() && photos.isEmpty() && videos.isEmpty() && texts.isEmpty()
+                                                }
+                                                if (nothingToSend) {
+                                                    viewmodel.snacky("Sending Error: Nothing to send...")
+                                                    haptic.performHapticFeedback(Reject)
+                                                    return@c
+                                                }
+
+                                                navigator.navigateTo(Screen.InitiateSendingScreen)
                                             }
                                         ) {
                                             Text("Continue")
