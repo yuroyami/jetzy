@@ -15,11 +15,9 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import jetzy.p2p.P2pAndroidHandler
-import jetzy.p2p.P2pCallback
 import jetzy.screens.AdamScreen
 import jetzy.screens.LocalP2pHandler
 import jetzy.screens.LocalViewmodel
-import jetzy.screens.p2pCallback
 import jetzy.theme.NightMode
 import jetzy.viewmodel.JetzyViewmodel
 import org.koin.android.ext.android.inject

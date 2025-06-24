@@ -1,6 +1,5 @@
 package jetzy.viewmodel
 
-import jetzy.p2p.P2pHandler
 import org.koin.dsl.module
 
 val jetzyModule = module {
@@ -8,6 +7,6 @@ val jetzyModule = module {
     //viewModelOf(::JetzyViewmodel) //This will NOT provide the same instance to both Activity and AdamScreen (root composable)
     single { JetzyViewmodel() } //We use one viewmodel for everything
 
-    single { P2pHandler(get()) }
+    //single { P2pHandler(get()) }
 
 }

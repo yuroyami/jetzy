@@ -153,7 +153,7 @@ kotlin {
             /* Support for SAF storage */
             implementation(libs.jetpack.documentfile)
 
-            api("com.google.android.gms:play-services-nearby:19.3.0")
+            //api("com.google.android.gms:play-services-nearby:19.3.0")
         }
 
         jvmMain.dependencies {
