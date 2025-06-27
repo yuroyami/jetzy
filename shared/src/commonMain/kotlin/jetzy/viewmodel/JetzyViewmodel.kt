@@ -18,8 +18,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
-class JetzyViewmodel: ViewModel() {
-    lateinit var p2pHandler: P2pHandler
+class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>): ViewModel() {
+    val p2pHandler: P2pHandler by p2pHandlerProvider
 
     val nightMode = MutableStateFlow(NightMode.SYSTEM)
     var nav: NavController? = null

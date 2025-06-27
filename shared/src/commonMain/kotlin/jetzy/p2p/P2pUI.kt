@@ -45,8 +45,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import jetzy.p2p.ComposeUtils.AppPopup
 import jetzy.screens.LocalViewmodel
-import jetzy.screens.p2pCallback
-import jetzy.screens.p2pHandler
 import jetzy.utils.Platform
 import jetzy.utils.loggy
 import jetzy.utils.platform
@@ -99,8 +97,8 @@ object P2pUI {
 
                             viewmodel.p2pPeers.clear()
                             when (platform) {
-                                Platform.Android -> p2pCallback.p2pStartNativePlatform()
-                                Platform.IOS -> p2pCallback.p2pStartCrossPlatform()
+                                Platform.Android -> TODO() //p2pCallback.p2pStartNativePlatform()
+                                Platform.IOS -> TODO() //p2pCallback.p2pStartCrossPlatform()
                                 Platform.Web -> TODO()
                                 Platform.PC -> TODO()
                             }
@@ -131,8 +129,8 @@ object P2pUI {
 
                             viewmodel.p2pPeers.clear()
                             when (platform) {
-                                Platform.IOS -> p2pCallback.p2pStartNativePlatform()
-                                Platform.Android -> p2pCallback.p2pStartCrossPlatform()
+                                Platform.IOS -> TODO() //p2pCallback.p2pStartNativePlatform()
+                                Platform.Android -> TODO() //p2pCallback.p2pStartCrossPlatform()
                                 Platform.Web -> TODO()
                                 Platform.PC -> TODO()
                             }
@@ -272,7 +270,7 @@ object P2pUI {
                                 onClick = {
                                     visibilityState.value = false
 
-                                    p2pHandler?.connectNativePeer(peer)
+                                    viewmodel.p2pHandler?.connectNativePeer(peer)
                                 }
                             )
                         )
@@ -292,7 +290,7 @@ object P2pUI {
             heightPercent = 0.6f,
             dismissable = false,
             onDismiss = {
-                p2pHandler?.stopP2pOperations()
+                viewmodel.p2pHandler?.stopP2pOperations()
             }
         ) {
 
@@ -417,9 +415,9 @@ object P2pUI {
 
 
                         if (transferButtonShouldSave && viewmodel.userMode.value == true) {
-                            p2pHandler?.promptSavePlaylist()
+                            //TODO viewmodel.p2pHandler?.promptSavePlaylist()
                         } else {
-                            p2pHandler?.stopP2pOperations()
+                            viewmodel.p2pHandler?.stopP2pOperations()
                         }
 
                         transferButtonShouldSave = false

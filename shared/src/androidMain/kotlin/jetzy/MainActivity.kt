@@ -5,7 +5,6 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -14,10 +13,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import jetzy.p2p.P2pAndroidHandler
 import jetzy.screens.AdamScreen
-import jetzy.screens.LocalP2pHandler
-import jetzy.screens.LocalViewmodel
 import jetzy.theme.NightMode
 import jetzy.viewmodel.JetzyViewmodel
 import org.koin.android.ext.android.inject
@@ -42,12 +38,10 @@ class MainActivity: ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        val p2pHandler = P2pAndroidHandler(this)
-
         setContent {
-            CompositionLocalProvider(LocalP2pHandler provides p2pHandler) {
+            //CompositionLocalProvider(LocalP2pHandler provides p2pHandler) {
                 AdamScreen()
-            }
+            //}
 
             val nightMode by viewmodel.nightMode.collectAsState()
             val isSystemInDarkMode = isSystemInDarkTheme()

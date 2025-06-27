@@ -1,44 +1,39 @@
 package jetzy.p2p
 
-import io.ktor.utils.io.ByteWriteChannel
 import jetzy.viewmodel.JetzyViewmodel
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.io.RawSink
-import kotlinx.io.RawSource
 
-abstract class P2pHandler(
-    open val viewmodel: JetzyViewmodel
-) {
+abstract class P2pHandler(open val viewmodel: JetzyViewmodel) {
 
     var selectedPeer: P2pPeer? = null
-    var crossPeer: String = "iPhone"
-    var isP2Ptransferring = false
+    //var crossPeer: String = "iPhone"
+    //var isP2Ptransferring = false
 
     /* The Input and Output streams (Okio/Kotlinx.io) */
-    var p2pInput: RawSource? = null
-    var p2pOutput: RawSink? = null
+    //var p2pInput: RawSource? = null
+    //var p2pOutput: RawSink? = null
 
-    var p2pCrossOutput: ByteWriteChannel? = null //only necessary for iOS-to-Android writing
+    //var p2pCrossOutput: ByteWriteChannel? = null //only necessary for iOS-to-Android writing
 
-    val receivedSongs = mutableListOf<P2pReceivedFile>()
+    //val receivedSongs = mutableListOf<P2pReceivedFile>()
 
-    open var p2pMode: P2pMode? = null
+    var p2pMode: P2pMode? = null
+    var p2pDirection: P2pDirection? = null
 
-    abstract fun startNative()
-    abstract fun startCrossPlatform()
-    abstract fun connectNativePeer(peer: P2pPeer)
+    open fun beginP2p(mode: P2pMode, direction: P2pDirection) {
+        p2pMode = mode
+        p2pDirection = direction
+    }
 
-    abstract suspend fun withinTempFolder(doThis: suspend P2pTempFolder.() -> Unit)
-    abstract fun promptSavePlaylist()
-    abstract fun songSource(uri: String, doLast: CompletableDeferred<() -> Unit>?): CompletableDeferred<Triple<RawSource, Long, String>>
-    abstract fun songSink(tempName: String, scope: P2pTempFolder): CompletableDeferred<Pair<RawSink, P2pReceivedFile?>>
-    abstract fun songRename(oldName: String, scope: P2pTempFolder, tempProduct: P2pReceivedFile, finalName: String): CompletableDeferred<P2pReceivedFile>
+    open fun connectNativePeer(peer: P2pPeer) {
+        selectedPeer = peer
+    }
 
     /** Needs to be overridden */
     open fun stopP2pOperations() {
-        isP2Ptransferring = false
-        runCatching { p2pInput?.close(); p2pInput = null }
-        runCatching { p2pOutput?.close(); p2pOutput = null }
+        selectedPeer = null
+        //isP2Ptransferring = false
+        //runCatching { p2pInput?.close(); p2pInput = null }
+        //runCatching { p2pOutput?.close(); p2pOutput = null }
     }
 
     /*

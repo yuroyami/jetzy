@@ -24,7 +24,6 @@ import io.github.alexzhirkevich.qrose.options.QrShapes
 import io.github.alexzhirkevich.qrose.options.roundCorners
 import io.github.alexzhirkevich.qrose.rememberQrCodePainter
 import jetzy.screens.LocalViewmodel
-import jetzy.screens.p2pHandler
 import jetzy.utils.getDeviceName
 
 @Composable
@@ -40,7 +39,7 @@ actual fun P2pQRcontent(modifier: Modifier) {
         var qrRefreshor by remember { mutableIntStateOf(0) }
 
         LaunchedEffect(qrRefreshor) {
-            val stuff = (p2pHandler as? P2pAndroidHandler)?.hostCrossPlatform()?.await() ?: return@LaunchedEffect
+            val stuff = (viewmodel.p2pHandler as? P2pAndroidHandler)?.hostCrossPlatform()?.await() ?: return@LaunchedEffect
             val p1 = stuff.first
             val p2 = stuff.second
 

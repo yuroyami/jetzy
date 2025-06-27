@@ -1,26 +1,24 @@
 package jetzy
 
-import android.annotation.SuppressLint
 import android.content.Context
-import android.net.wifi.p2p.WifiP2pManager
+import androidx.activity.ComponentActivity
 import jetzy.p2p.P2pAndroidHandler
 import jetzy.p2p.P2pHandler
-import jetzy.viewmodel.jetzyModule
+import jetzy.viewmodel.JetzyViewmodel
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
-
-@SuppressLint("ServiceCast")
-val androidModule =  module {
-    includes(jetzyModule)
+actual val platformModule =  module {
+    includes(commonModule)
 
     // Android-specific dependencies
     single<Context> { androidContext() }
 
-    // Bind the abstract class to concrete implementation
+    // Break the circular dependency by getting activity from context
     single<P2pHandler> {
         P2pAndroidHandler(
-            viewModel = get()
+            activity = get<Context>() as ComponentActivity,
+            viewmodel = get<JetzyViewmodel>(),
         )
     }
 }

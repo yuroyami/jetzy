@@ -43,7 +43,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import jetzy.commonModule
 import jetzy.p2p.P2pHandler
+import jetzy.platformModule
 import jetzy.screens.Screen.Companion.matches
 import jetzy.screens.Screen.Companion.navigateTo
 import jetzy.shared.generated.resources.Res
@@ -54,7 +56,6 @@ import jetzy.theme.sdp
 import jetzy.theme.ssp
 import jetzy.utils.InitializeCoilSupportForFileKit
 import jetzy.viewmodel.JetzyViewmodel
-import jetzy.viewmodel.jetzyModule
 import org.jetbrains.compose.resources.vectorResource
 import org.koin.compose.KoinApplication
 import org.koin.compose.viewmodel.koinViewModel
@@ -68,7 +69,7 @@ val topLevelScreens = listOf(Screen.MainScreen, Screen.SendScreen, Screen.Initia
 fun AdamScreen() {
     KoinApplication(
         application = {
-            modules(jetzyModule)
+            modules(commonModule, platformModule)
         }
     ) {
         InitializeCoilSupportForFileKit() //Allows us to display composable images from FileKit's PlatformFile
