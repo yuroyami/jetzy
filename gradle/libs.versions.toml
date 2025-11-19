@@ -1,26 +1,28 @@
 [versions] ########################################################################################
 ## KMM
 kotlin = "2.2.21"
-agp = "8.13.0"
+agp = "8.13.1"
 coil = "3.3.0"
 filekit = "0.12.0"
 kermit = "2.0.8"
-compose = "1.10.0-alpha03"
+compose-multiplatform = "1.10.0-beta01"
 koin = "4.1.1"
-ktor  = "3.3.1"
-viewmodelCompose = "2.10.0-alpha03"
+ktor  = "3.3.2"
+viewmodelCompose = "2.10.0-alpha04"
 navigationCompose = "2.9.1"
-sqldelight = "2.1.0"
-buildConfig = "5.4.0"
+sqldelight = "2.2.1"
+buildConfig = "5.7.1"
 koroutines = "1.10.2"
 kotlinx-datetime = "0.7.1"
 kotlinx-io = "0.8.0"
-ksp = "2.3.0"
+ksp = "2.3.1"
 qrose = "1.0.1"
+compose-multiplatform-icons = "1.7.3"
+compose-material3 = "1.10.0-alpha04"
 
 ## Android-only
-coreSplashscreen = "1.1.0-rc01"
-activityCompose = "1.12.0-beta01"
+coreSplashscreen = "1.2.0"
+activityCompose = "1.12.0-rc01"
 appcompat = "1.7.1"
 coreKtx = "1.17.0"
 documentfile = "1.1.0"
@@ -36,6 +38,11 @@ kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 filekit = { module = "io.github.vinceglb:filekit-dialogs-compose", version.ref = "filekit" }
 filekit-coil = { module = "io.github.vinceglb:filekit-coil", version.ref = "filekit" }
 coil = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose-multiplatform" }
+compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose-multiplatform" }
+compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "compose-material3" }
+compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "compose-multiplatform-icons" }
+compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose-multiplatform" }
 compose-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "viewmodelCompose" }
 compose-navigation = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
@@ -72,13 +79,16 @@ indexeddb-wrapper = { module = "com.juul.indexeddb:core", version.ref = "indexed
 [bundles] ########################################################################################
 sqldelight = ["sqldelight-runtime", "sqldelight-ktx"]
 koin = ["koin-core", "koin-compose", "koin-compose-viewmodel", "koin-compose-viewmodel-navigation"]
-
+compose-multiplatform = [
+    "compose-foundation", "compose-ui", "compose-material3",
+    "compose-components-resources", "compose-material-icons-extended"
+]
 
 [plugins] ########################################################################################
 multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 cocoapods = { id = "org.jetbrains.kotlin.native.cocoapods", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-compose = { id = "org.jetbrains.compose", version.ref = "compose" }
+compose-plugin = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 buildConfig = { id = "com.github.gmazzo.buildconfig", version.ref = "buildConfig" }
 kSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

@@ -5,9 +5,9 @@ import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalDistributionDsl
 
 plugins {
     alias(libs.plugins.multiplatform)
-    //alias(libs.plugins.cocoapods)
+    alias(libs.plugins.cocoapods)
     alias(libs.plugins.compose.compiler)
-    alias(libs.plugins.compose)
+    alias(libs.plugins.compose.plugin)
     alias(libs.plugins.android.application)
     alias(libs.plugins.buildConfig)
     alias(libs.plugins.kSerialization)
@@ -44,23 +44,21 @@ kotlin {
         useEsModules()
     }
 
-
     iosX64()
     iosArm64()
     iosSimulatorArm64()
 
-
-//    cocoapods {
-//        summary = "Some description for the Shared Module"
-//        homepage = "Link to the Shared Module homepage"
-//        version = "1.0"
-//        ios.deploymentTarget = "14.0"
-//        podfile = project.file("../iosApp/Podfile")
-//        framework {
-//            baseName = "shared"
-//            isStatic = false
-//        }
-//    }
+    cocoapods {
+        summary = "Some description for the Shared Module"
+        homepage = "Link to the Shared Module homepage"
+        version = "1.0"
+        ios.deploymentTarget = "14.0"
+        podfile = project.file("../iosApp/Podfile")
+        framework {
+            baseName = "shared"
+            isStatic = false
+        }
+    }
 
     //jvm()
 
@@ -108,11 +106,7 @@ kotlin {
             implementation(libs.qrose)
 
             /* Compose multiplatform dependencies */
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material3)
-            implementation(compose.materialIconsExtended)
-            implementation(compose.components.resources)
+            implementation(libs.bundles.compose.multiplatform)
 
             implementation("br.com.devsrsouza.compose.icons:font-awesome:1.1.1")
 

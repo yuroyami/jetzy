@@ -63,7 +63,7 @@ object ComposeUtils {
             // Black stroke (background text)
             Text(
                 text,
-                style = MaterialTheme.typography.titleMediumEmphasized.copy(
+                style = MaterialTheme.typography.titleMedium.copy(
                     color = Color.Black,
                     drawStyle = Stroke(width = strokeThickness)
                 ),
@@ -76,7 +76,7 @@ object ComposeUtils {
             // Yellow fill (foreground text)
             Text(
                 text,
-                style = MaterialTheme.typography.titleMediumEmphasized.copy(
+                style = MaterialTheme.typography.titleMedium.copy(
                     color = jetzyYellow
                 ),
                 modifier = modifier,
