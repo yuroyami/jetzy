@@ -1,34 +1,39 @@
 [versions] ########################################################################################
-## KMM
+#KMM-Plugins
 kotlin = "2.2.21"
-agp = "8.13.1"
-coil = "3.3.0"
-filekit = "0.12.0"
-kermit = "2.0.8"
-compose-multiplatform = "1.10.0-beta01"
-koin = "4.1.1"
-ktor  = "3.3.2"
-viewmodelCompose = "2.10.0-alpha04"
-navigationCompose = "2.9.1"
-sqldelight = "2.2.1"
-buildConfig = "5.7.1"
-koroutines = "1.10.2"
-kotlinx-datetime = "0.7.1"
-kotlinx-io = "0.8.0"
+agp = "8.13.1" #"9.0.0-alpha05"
+compose-multiplatform = "1.10.0-beta02"
+kSerialization = "1.9.0"
 ksp = "2.3.1"
-qrose = "1.0.1"
+skie = "0.10.8"
+buildConfig = "5.7.1"
+
+## KMM Libs
+koroutines = "1.10.2"
+koin = "4.2.0-alpha2"
+kermit = "2.0.8"
+ktor  = "3.3.2"
 compose-multiplatform-icons = "1.7.3"
-compose-material3 = "1.10.0-alpha04"
+compose-material3 = "1.10.0-alpha05"
+composeViewmodelNav3 = "2.10.0-alpha04"
+navigation3Runtime = "1.0.0"
+navigation3Ui = "1.0.0-alpha05"
+compose-unstyled = "1.49.0"
+coil = "3.3.0"
+kotlinx-io = "0.8.0"
+filekit = "0.12.0"
+uriKmp = "0.0.21"
+kotlinx-datetime = "0.7.1"
+qrose = "1.0.1"
 
 ## Android-only
 coreSplashscreen = "1.2.0"
-activityCompose = "1.12.0-rc01"
+activityCompose = "1.12.0"
 appcompat = "1.7.1"
 coreKtx = "1.17.0"
 documentfile = "1.1.0"
 desugaring = "2.1.5"
-indexeddb = "0.10.0"
-
+media3 = "1.8.0"
 
 [libraries] #######################################################################################
 ## KMM
@@ -43,10 +48,9 @@ compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", v
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "compose-material3" }
 compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "compose-multiplatform-icons" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose-multiplatform" }
-compose-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "viewmodelCompose" }
-compose-navigation = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
-sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
-sqldelight-ktx = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
+compose-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "composeViewmodelNav3" }
+navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3Runtime" }
+navigation3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "navigation3Ui" }
 ktor-network = { module = "io.ktor:ktor-network", version.ref = "ktor" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 kotlinx-io = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx-io" }
@@ -55,7 +59,7 @@ koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin" }
 koin-core = { module = "io.insert-koin:koin-core" }
 koin-compose = { module = "io.insert-koin:koin-compose" }
 koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel" }
-koin-compose-viewmodel-navigation = { module = "io.insert-koin:koin-compose-viewmodel-navigation" }
+koin-compose-navigation3 = { module = "io.insert-koin:koin-compose-navigation3" }
 
 ## Android-only
 koroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "koroutines" }
@@ -65,24 +69,15 @@ jetpack-splashscreen = { module = "androidx.core:core-splashscreen", version.ref
 jetpack-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 jetpack-documentfile = { module = "androidx.documentfile:documentfile", version.ref = "documentfile" }
 
-sqldelight-androidDriver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
 desugaring = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugaring" }
 
-## iOS-only
-sqldelight-nativeDriver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
-sqldelight-webDriver = { module = "app.cash.sqldelight:web-worker-driver", version.ref = "sqldelight" }
-
-# Web-only
-indexeddb-wrapper = { module = "com.juul.indexeddb:core", version.ref = "indexeddb" }
-
-
 [bundles] ########################################################################################
-sqldelight = ["sqldelight-runtime", "sqldelight-ktx"]
-koin = ["koin-core", "koin-compose", "koin-compose-viewmodel", "koin-compose-viewmodel-navigation"]
+koin = ["koin-core", "koin-compose", "koin-compose-viewmodel", "koin-compose-navigation3"]
 compose-multiplatform = [
     "compose-foundation", "compose-ui", "compose-material3",
     "compose-components-resources", "compose-material-icons-extended"
 ]
+compose-navigation3 = ["navigation3-runtime", "navigation3-ui"]
 
 [plugins] ########################################################################################
 multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
@@ -93,4 +88,3 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 buildConfig = { id = "com.github.gmazzo.buildconfig", version.ref = "buildConfig" }
 kSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
-sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }

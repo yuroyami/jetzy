@@ -24,22 +24,6 @@ sealed interface Screen {
     @Composable
     fun UI()
 
-    companion object {
-        fun NavController.navigateTo(scr: Screen, noReturn: Boolean = false) {
-            navigate(scr.label) {
-                if (noReturn) popUpTo(0,) { inclusive = true }
-            }
-        }
-
-        fun NavBackStackEntry?.matches(scr: Screen): Boolean = this?.let { destination.route == scr.label } == true
-//
-//        inline val NavBackStackEntry?.screen: Screen?
-//            get() = when (this?.destination?.route) {
-//                MainScreen.label -> MainScreen
-//
-//            }
-    }
-
     data object MainScreen : Screen {
         @Composable
         override fun UI() = MainScreenUI()

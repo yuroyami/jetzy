@@ -31,7 +31,7 @@ expect val PreferablyIO: CoroutineDispatcher
 
 /** Picks a directory (folder).
  * Note that this is written in expect/actual fashion because FileKit does NOT provide it in common code when one of the targets
- * does not support it (which in this case is JS
+ * does not support it (which in this case is JS)
  */
 @Composable
 expect fun rememberDirectoryPickerLauncher(onResult: (PlatformFile?) -> Unit): PickerResultLauncher?

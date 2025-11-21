@@ -114,7 +114,7 @@ kotlin {
             implementation(libs.compose.viewmodel)
 
             /* Screen Navigation */
-            implementation(libs.compose.navigation)
+            implementation(libs.bundles.compose.navigation3)
 
             /* FileKit to save/open files */
             implementation(libs.filekit)

@@ -26,10 +26,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -37,17 +38,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType.Companion.Reject
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-import androidx.navigation.NavGraphBuilder
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import androidx.navigation3.ui.NavDisplay
 import jetzy.commonModule
 import jetzy.p2p.P2pHandler
 import jetzy.platformModule
-import jetzy.screens.Screen.Companion.matches
-import jetzy.screens.Screen.Companion.navigateTo
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.jetzy_vector
 import jetzy.theme.JetzyTheme
@@ -61,9 +58,7 @@ import org.koin.compose.KoinApplication
 import org.koin.compose.viewmodel.koinViewModel
 
 val LocalViewmodel = compositionLocalOf<JetzyViewmodel> { error("No Viewmodel provided") }
-val LocalNavigator = compositionLocalOf<NavController> { error("No Navigator provided yet") }
 val LocalP2pHandler = compositionLocalOf<P2pHandler> { error("No P2p Handler provided yet") }
-val topLevelScreens = listOf(Screen.MainScreen, Screen.SendScreen, Screen.InitiateSendingScreen)
 
 @Composable
 fun AdamScreen() {
@@ -76,20 +71,17 @@ fun AdamScreen() {
 
         val viewmodel = koinViewModel<JetzyViewmodel>()
         val haptic = LocalHapticFeedback.current
-        val navigator = rememberNavController()
-        val navEntry by navigator.currentBackStackEntryAsState()
+
+        val backstack = remember { mutableStateListOf<Screen>(Screen.MainScreen) }
+        val currentScreen by viewmodel.currentScreen.collectAsState()
 
         CompositionLocalProvider(
             LocalViewmodel provides viewmodel,
-            LocalNavigator provides navigator
         ) {
             val nightMode by viewmodel.nightMode.collectAsState()
             val isSystemInDarkMode = isSystemInDarkTheme()
 
             JetzyTheme {
-                LaunchedEffect(null) {
-                    viewmodel.nav = navigator
-                }
                 Scaffold(
                     snackbarHost = {
                         SnackbarHost(viewmodel.snack)
@@ -99,11 +91,11 @@ fun AdamScreen() {
                             //CenterAligned
                             CenterAlignedTopAppBar(
                                 navigationIcon = {
-                                    if (!navEntry.matches(Screen.MainScreen)) {
+                                    if (currentScreen is Screen.MainScreen) {
                                         IconButton(
                                             onClick = {
                                                 viewmodel.clearOperation()
-                                                navigator.navigateTo(Screen.MainScreen, noReturn = true)
+                                                viewmodel.navigateTo(Screen.MainScreen)
                                             }
                                         ) {
                                             Icon(
@@ -120,14 +112,14 @@ fun AdamScreen() {
                                     }
                                 },
                                 title = {
-                                    if (!navEntry.matches(Screen.MainScreen)) {
+                                    if (currentScreen !is Screen.MainScreen) {
                                         val op by viewmodel.currentOperation.collectAsState()
                                         val prp by viewmodel.currentPeerPlatform.collectAsState()
                                         if (op != null && prp != null) {
                                             val s1 = when (op) {
                                                 Operation.SEND -> "Sending to"
                                                 Operation.RECEIVE -> "Receiving from"
-                                                null -> ""
+                                                else -> {}
                                             }
 
                                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -140,7 +132,7 @@ fun AdamScreen() {
                                     }
                                 },
                                 actions = {
-                                    if (navEntry.matches(Screen.MainScreen)) {
+                                    if (currentScreen is Screen.MainScreen) {
                                         IconButton(
                                             onClick = {
                                                 viewmodel.nightMode.value = when (nightMode) {
@@ -157,7 +149,7 @@ fun AdamScreen() {
                                         }
                                     }
 
-                                    if (navEntry.matches(Screen.SendScreen)) {
+                                    if (currentScreen == Screen.SendScreen) {
                                         TextButton(
                                             onClick = c@ {
                                                 //Continue sending
@@ -170,7 +162,7 @@ fun AdamScreen() {
                                                     return@c
                                                 }
 
-                                                navigator.navigateTo(Screen.InitiateSendingScreen)
+                                                viewmodel.navigateTo(Screen.InitiateSendingScreen)
                                             }
                                         ) {
                                             Text("Continue")
@@ -186,27 +178,29 @@ fun AdamScreen() {
                         }
                     },
                     content = { pv ->
-                        NavHost(
-                            modifier = Modifier.padding(top = pv.calculateTopPadding()),
-                            navController = navigator,
-                            startDestination = Screen.MainScreen.label
-                        ) {
-                            topLevelScreens.forEach {
-                                addScreen(it)
+                        JetzyBackground()
+                        NavDisplay(
+                            modifier = Modifier.padding(pv),
+                            backStack = backstack,
+                            entryDecorators = listOf(
+                                rememberSaveableStateHolderNavEntryDecorator(),
+                                rememberViewModelStoreNavEntryDecorator()
+                            ),
+                            entryProvider = entryProvider {
+                                entry<Screen.MainScreen> { home ->
+                                    home.UI()
+                                }
+                                entry<Screen.SendScreen> { home ->
+                                    home.UI()
+                                }
+                                entry<Screen.InitiateSendingScreen> { home ->
+                                    home.UI()
+                                }
                             }
-                        }
+                        )
                     }
                 )
             }
-        }
-    }
-}
-
-fun NavGraphBuilder.addScreen(screen: Screen) {
-    with(screen) {
-        composable(label) {
-            //JetzyBackground()
-            UI()
         }
     }
 }

@@ -5,24 +5,37 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.NavController
 import io.github.vinceglb.filekit.PlatformFile
 import jetzy.p2p.P2pHandler
 import jetzy.p2p.P2pPeer
 import jetzy.screens.Operation
+import jetzy.screens.Screen
 import jetzy.theme.NightMode
 import jetzy.utils.Platform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>): ViewModel() {
+
+    val backstack = mutableStateListOf<Screen>(Screen.MainScreen)
+
+    val currentScreen = snapshotFlow { backstack.lastOrNull() ?: Screen.MainScreen }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, Screen.MainScreen)
+
+    //TODO Sophisticatize
+    fun navigateTo(screen: Screen) {
+        backstack.add(screen)
+    }
+
     val p2pHandler: P2pHandler by p2pHandlerProvider
 
     val nightMode = MutableStateFlow(NightMode.SYSTEM)
-    var nav: NavController? = null
 
     val currentOperation = MutableStateFlow<Operation?>(null)
     val currentPeerPlatform = MutableStateFlow<Platform?>(null)
