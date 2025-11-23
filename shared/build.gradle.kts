@@ -80,6 +80,7 @@ kotlin {
                 optIn("kotlin.io.encoding.ExperimentalEncodingApi")
                 optIn("kotlin.ExperimentalStdlibApi")
                 optIn("kotlin.time.ExperimentalTime")
+                enableLanguageFeature("ContextParameters")
             }
         }
 
@@ -116,10 +117,12 @@ kotlin {
             /* Screen Navigation */
             implementation(libs.bundles.compose.navigation3)
 
+            /* Image viewing library */
+            implementation(libs.coil)
+
             /* FileKit to save/open files */
             implementation(libs.filekit)
-            implementation(libs.filekit.coil)
-            implementation(libs.coil)
+            implementation(libs.filekit.coil) //Extension for coil support with filekit
 
             /* Dependency Injection */
             implementation(project.dependencies.platform(libs.koin.bom))
@@ -151,7 +154,7 @@ kotlin {
         }
 
         jvmMain.dependencies {
-            implementation(compose.desktop.common)
+            implementation(libs.compose.desktop)
             implementation(compose.desktop.currentOs)
         }
 

@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
-import jetzy.screens.LocalViewmodel
+import jetzy.screens.adam.LocalViewmodel
 
 @Composable
 fun SendVideosScreenUI() {

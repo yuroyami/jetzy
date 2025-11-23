@@ -1,4 +1,4 @@
-package jetzy.screens
+package jetzy.screens.main
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.Absolute.Center
@@ -44,7 +44,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import jetzy.p2p.ComposeUtils.JetzyText
 import jetzy.p2p.ComposeUtils.scheme
-import jetzy.screens.Screen.Companion.navigateTo
+import jetzy.screens.Screen
+import jetzy.screens.adam.LocalViewmodel
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.genos
 import jetzy.theme.sdp
@@ -56,7 +57,6 @@ import org.jetbrains.compose.resources.Font
 fun MainScreenUI() {
     val haptic = LocalHapticFeedback.current
     val viewmodel = LocalViewmodel.current
-    val nav = LocalNavigator.current
 
     Scaffold(
         bottomBar = {
@@ -80,7 +80,7 @@ fun MainScreenUI() {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
 
                             viewmodel.currentOperation.value?.let { operation ->
-                                nav.navigateTo(
+                                viewmodel.navigateTo(
                                     when (operation) {
                                         //Operation.SEND -> Screen.SendScreen
                                         Operation.SEND -> Screen.InitiateSendingScreen

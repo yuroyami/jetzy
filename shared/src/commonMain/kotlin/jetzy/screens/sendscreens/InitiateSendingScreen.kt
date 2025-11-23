@@ -22,7 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import jetzy.p2p.ComposeUtils.JetzyText
 import jetzy.p2p.ComposeUtils.font
-import jetzy.screens.LocalViewmodel
+import jetzy.screens.adam.LocalViewmodel
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.notosans
 import jetzy.theme.sdp

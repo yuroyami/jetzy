@@ -55,7 +55,7 @@ import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.name
 import jetzy.p2p.ComposeUtils.scheme
-import jetzy.screens.LocalViewmodel
+import jetzy.screens.adam.LocalViewmodel
 import jetzy.theme.jetzyYellow
 import jetzy.theme.ssp
 import jetzy.utils.rememberDirectoryPickerLauncher

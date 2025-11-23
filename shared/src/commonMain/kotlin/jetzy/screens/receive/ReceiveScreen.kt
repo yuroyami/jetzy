@@ -1,5 +1,6 @@
-package jetzy.screens
+package jetzy.screens.receive
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -14,17 +15,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import kotlinx.coroutines.launch
+import androidx.compose.ui.unit.dp
+import jetzy.screens.Screen
+import jetzy.screens.adam.LocalViewmodel
 
 
 @Composable
-fun SendScreenUI() {
-    val scope = rememberCoroutineScope()
+fun ReceiveScreenUI() {
     val haptic = LocalHapticFeedback.current
+    val viewmodel = LocalViewmodel.current
 
     val sendScreens by derivedStateOf {
         buildList {
@@ -42,30 +44,34 @@ fun SendScreenUI() {
             Column {
                 HorizontalDivider()
                 NavigationBar {
-                    sendScreens.forEachIndexed { i, screen ->
+                    sendScreens.forEach { screen ->
                         NavigationBarItem(
-                            selected = pagerState.currentPage == i,
+                            selected = true,
                             icon = {
                                 Icon(screen.icon, null)
 
                             },
                             label = { Text(screen.label) },
                             onClick = {
-                                scope.launch { pagerState.scrollToPage(i) }
-                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                //navigator.navigate(screen.label)
                             }
                         )
                     }
                 }
             }
-        },
+        }
     ) { pv ->
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize().padding(bottom = pv.calculateBottomPadding()),
-            userScrollEnabled = false
-        ) { pageIndex ->
-            sendScreens[pageIndex].UI()
+        Column(
+            modifier = Modifier.fillMaxSize().padding(pv),
+            horizontalAlignment = CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize().padding(pv),
+                userScrollEnabled = false
+            ) { pageIndex ->
+            }
         }
     }
 }

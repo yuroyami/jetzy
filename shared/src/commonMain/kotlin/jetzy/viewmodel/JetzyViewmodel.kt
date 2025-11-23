@@ -11,8 +11,8 @@ import androidx.lifecycle.viewModelScope
 import io.github.vinceglb.filekit.PlatformFile
 import jetzy.p2p.P2pHandler
 import jetzy.p2p.P2pPeer
-import jetzy.screens.Operation
 import jetzy.screens.Screen
+import jetzy.screens.main.Operation
 import jetzy.theme.NightMode
 import jetzy.utils.Platform
 import kotlinx.coroutines.Dispatchers
@@ -48,7 +48,6 @@ class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>): ViewModel() {
 
     val p2pPeers = mutableStateListOf<P2pPeer>()
 
-
     val userMode = MutableStateFlow<Boolean?>(null)
 
     /* Popups */
@@ -77,7 +76,7 @@ class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>): ViewModel() {
     }
 
     var snack = SnackbarHostState()
-    fun snacky(string: String, queue: Boolean = true) {
+    fun snacky(string: String, queue: Boolean = false) {
         if (!queue) snack.currentSnackbarData?.dismiss()
         viewModelScope.launch(Dispatchers.Main) {
             snack.showSnackbar(

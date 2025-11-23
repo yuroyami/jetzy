@@ -51,7 +51,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import jetzy.p2p.ComposeUtils.scheme
-import jetzy.screens.LocalViewmodel
+import jetzy.screens.adam.LocalViewmodel
 
 @Composable
 fun SendTextScreenUI() {

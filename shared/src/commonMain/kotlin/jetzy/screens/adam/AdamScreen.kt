@@ -1,4 +1,4 @@
-package jetzy.screens
+package jetzy.screens.adam
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -45,6 +45,9 @@ import androidx.navigation3.ui.NavDisplay
 import jetzy.commonModule
 import jetzy.p2p.P2pHandler
 import jetzy.platformModule
+import jetzy.screens.Screen
+import jetzy.screens.Screen.Companion.nav3Entry
+import jetzy.screens.main.Operation
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.jetzy_vector
 import jetzy.theme.JetzyTheme
@@ -187,15 +190,14 @@ fun AdamScreen() {
                                 rememberViewModelStoreNavEntryDecorator()
                             ),
                             entryProvider = entryProvider {
-                                entry<Screen.MainScreen> { home ->
-                                    home.UI()
-                                }
-                                entry<Screen.SendScreen> { home ->
-                                    home.UI()
-                                }
-                                entry<Screen.InitiateSendingScreen> { home ->
-                                    home.UI()
-                                }
+                                nav3Entry<Screen.MainScreen>()
+                                nav3Entry<Screen.SendScreen>()
+                                nav3Entry<Screen.InitiateSendingScreen>()
+                                nav3Entry<Screen.ReceiveScreen>()
+                                nav3Entry<Screen.SendFilesScreen>()
+                                nav3Entry<Screen.SendTextScreen>()
+                                nav3Entry<Screen.SendVideosScreen>()
+                                nav3Entry<Screen.SendPhotosScreen>()
                             }
                         )
                     }

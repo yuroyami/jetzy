@@ -44,7 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import jetzy.p2p.ComposeUtils.AppPopup
-import jetzy.screens.LocalViewmodel
+import jetzy.screens.adam.LocalViewmodel
 import jetzy.utils.Platform
 import jetzy.utils.loggy
 import jetzy.utils.platform
