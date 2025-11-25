@@ -10,10 +10,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.vinceglb.filekit.PlatformFile
 import jetzy.p2p.P2pHandler
+import jetzy.p2p.P2pMethod
 import jetzy.p2p.P2pPeer
-import jetzy.screens.Screen
-import jetzy.screens.main.Operation
 import jetzy.theme.NightMode
+import jetzy.ui.Screen
+import jetzy.ui.main.Operation
 import jetzy.utils.Platform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +25,6 @@ import kotlinx.coroutines.launch
 class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>): ViewModel() {
 
     val backstack = mutableStateListOf<Screen>(Screen.MainScreen)
-
     val currentScreen = snapshotFlow { backstack.lastOrNull() ?: Screen.MainScreen }
         .stateIn(viewModelScope, SharingStarted.Eagerly, Screen.MainScreen)
 
@@ -39,6 +39,7 @@ class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>): ViewModel() {
 
     val currentOperation = MutableStateFlow<Operation?>(null)
     val currentPeerPlatform = MutableStateFlow<Platform?>(null)
+    val currentTransferMethod = MutableStateFlow<P2pMethod?>(null)
 
     val files = mutableStateListOf<PlatformFile>()
     val folders = mutableStateListOf<PlatformFile>()

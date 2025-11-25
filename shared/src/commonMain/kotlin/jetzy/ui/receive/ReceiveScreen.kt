@@ -1,4 +1,4 @@
-package jetzy.screens.receive
+package jetzy.ui.receive
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,8 +19,8 @@ import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import jetzy.screens.Screen
-import jetzy.screens.adam.LocalViewmodel
+import jetzy.ui.Screen
+import jetzy.ui.adam.LocalViewmodel
 
 
 @Composable

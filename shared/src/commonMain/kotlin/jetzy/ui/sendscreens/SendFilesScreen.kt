@@ -1,4 +1,4 @@
-package jetzy.screens.sendscreens
+package jetzy.ui.sendscreens
 
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
@@ -54,8 +54,8 @@ import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.name
-import jetzy.p2p.ComposeUtils.scheme
-import jetzy.screens.adam.LocalViewmodel
+import jetzy.utils.ComposeUtils.scheme
+import jetzy.ui.adam.LocalViewmodel
 import jetzy.theme.jetzyYellow
 import jetzy.theme.ssp
 import jetzy.utils.rememberDirectoryPickerLauncher

@@ -1,4 +1,4 @@
-package jetzy.screens.adam
+package jetzy.ui.adam
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -29,8 +29,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -45,9 +43,9 @@ import androidx.navigation3.ui.NavDisplay
 import jetzy.commonModule
 import jetzy.p2p.P2pHandler
 import jetzy.platformModule
-import jetzy.screens.Screen
-import jetzy.screens.Screen.Companion.nav3Entry
-import jetzy.screens.main.Operation
+import jetzy.ui.Screen
+import jetzy.ui.Screen.Companion.nav3Entry
+import jetzy.ui.main.Operation
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.jetzy_vector
 import jetzy.theme.JetzyTheme
@@ -75,7 +73,6 @@ fun AdamScreen() {
         val viewmodel = koinViewModel<JetzyViewmodel>()
         val haptic = LocalHapticFeedback.current
 
-        val backstack = remember { mutableStateListOf<Screen>(Screen.MainScreen) }
         val currentScreen by viewmodel.currentScreen.collectAsState()
 
         CompositionLocalProvider(
@@ -181,10 +178,11 @@ fun AdamScreen() {
                         }
                     },
                     content = { pv ->
-                        JetzyBackground()
+                        //JetzyBackground()
+
                         NavDisplay(
                             modifier = Modifier.padding(pv),
-                            backStack = backstack,
+                            backStack = viewmodel.backstack,
                             entryDecorators = listOf(
                                 rememberSaveableStateHolderNavEntryDecorator(),
                                 rememberViewModelStoreNavEntryDecorator()

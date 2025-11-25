@@ -1,4 +1,4 @@
-package jetzy.screens
+package jetzy.ui
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ElectricBike
@@ -9,14 +9,14 @@ import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation3.runtime.EntryProviderScope
-import jetzy.screens.main.MainScreenUI
-import jetzy.screens.receive.ReceiveScreenUI
-import jetzy.screens.send.SendScreenUI
-import jetzy.screens.sendscreens.InitiateSendingScreenUI
-import jetzy.screens.sendscreens.SendFilesScreenUI
-import jetzy.screens.sendscreens.SendPhotosScreenUI
-import jetzy.screens.sendscreens.SendTextScreenUI
-import jetzy.screens.sendscreens.SendVideosScreenUI
+import jetzy.ui.main.MainScreenUI
+import jetzy.ui.receive.ReceiveScreenUI
+import jetzy.ui.send.SendScreenUI
+import jetzy.ui.sendscreens.InitiateSendingScreenUI
+import jetzy.ui.sendscreens.SendFilesScreenUI
+import jetzy.ui.sendscreens.SendPhotosScreenUI
+import jetzy.ui.sendscreens.SendTextScreenUI
+import jetzy.ui.sendscreens.SendVideosScreenUI
 
 sealed interface Screen {
     val label: String

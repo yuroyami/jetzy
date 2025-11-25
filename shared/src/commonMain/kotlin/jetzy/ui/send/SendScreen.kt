@@ -1,4 +1,4 @@
-package jetzy.screens.send
+package jetzy.ui.send
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,7 +18,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import jetzy.screens.Screen
+import jetzy.ui.Screen
 import kotlinx.coroutines.launch
 
 

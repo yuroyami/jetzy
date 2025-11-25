@@ -1,4 +1,4 @@
-package jetzy.screens.sendscreens
+package jetzy.ui.sendscreens
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
@@ -49,8 +49,8 @@ import coil3.compose.AsyncImage
 import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
-import jetzy.p2p.ComposeUtils.scheme
-import jetzy.screens.adam.LocalViewmodel
+import jetzy.utils.ComposeUtils.scheme
+import jetzy.ui.adam.LocalViewmodel
 import jetzy.theme.jetzyYellow
 import jetzy.theme.ssp
 import kotlinx.coroutines.delay

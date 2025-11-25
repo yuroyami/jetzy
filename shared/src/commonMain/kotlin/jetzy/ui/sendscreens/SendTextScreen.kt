@@ -1,4 +1,4 @@
-package jetzy.screens.sendscreens
+package jetzy.ui.sendscreens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -50,8 +50,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import jetzy.p2p.ComposeUtils.scheme
-import jetzy.screens.adam.LocalViewmodel
+import jetzy.utils.ComposeUtils.scheme
+import jetzy.ui.adam.LocalViewmodel
 
 @Composable
 fun SendTextScreenUI() {

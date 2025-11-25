@@ -6,5 +6,6 @@
         <item name="windowSplashScreenAnimatedIcon">@drawable/jetzy_splash_icon</item>
         <item name="windowSplashScreenBackground">#1D1D1D</item>
         <item name="postSplashScreenTheme">@style/Theme.AppCompat.DayNight.NoActionBar</item>
+        <item name="android:enforceNavigationBarContrast" tools:ignore="NewApi">false</item>
     </style>
 </resources>

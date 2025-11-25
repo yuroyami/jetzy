@@ -1,4 +1,4 @@
-package jetzy.p2p
+package jetzy.utils
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -13,7 +13,6 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,7 +50,7 @@ object ComposeUtils {
 
     @Composable
     fun JetzyText(
-        modifier: Modifier = Modifier,
+        modifier: Modifier = Modifier.Companion,
         text: String,
         size: TextUnit,
         strokeThickness: Float = 4f,
@@ -64,11 +63,11 @@ object ComposeUtils {
             Text(
                 text,
                 style = MaterialTheme.typography.titleMedium.copy(
-                    color = Color.Black,
+                    color = Color.Companion.Black,
                     drawStyle = Stroke(width = strokeThickness)
                 ),
                 modifier = modifier,
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Companion.Center,
                 fontSize = size,
                 fontFamily = font
             )
@@ -80,7 +79,7 @@ object ComposeUtils {
                     color = jetzyYellow
                 ),
                 modifier = modifier,
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Companion.Center,
                 fontSize = size,
                 fontFamily = font
             )
@@ -95,9 +94,9 @@ object ComposeUtils {
                 onDrawWithContent {
                     drawContent()
                     drawRect(
-                        brush = Brush.linearGradient(
+                        brush = Brush.Companion.linearGradient(
                             colors = clrs!!
-                        ), blendMode = BlendMode.SrcAtop
+                        ), blendMode = BlendMode.Companion.SrcAtop
                     )
                 }
             }
@@ -112,7 +111,7 @@ object ComposeUtils {
                     drawContent()
                     drawRect(
                         color = color,
-                        blendMode = BlendMode.SrcAtop
+                        blendMode = BlendMode.Companion.SrcAtop
                     )
                 }
             }
@@ -123,7 +122,7 @@ object ComposeUtils {
      * When this is false, the dialog is not rendered at all.
      * @param widthPercent Width it occupies relative to the screen's width. 0f by default (wraps content).
      * @param heightPercent Percentage of screen's height it occupies. 0f by default (wraps content).
-     * @param blurState A [MutableState] variable we should pass to control blur on other composables
+     * @param blurState A [androidx.compose.runtime.MutableState] variable we should pass to control blur on other composables
      * using Cloudy. The dialog will control the mutable state for us and all we have to do is wrap
      * our Composables in Cloudy composables with the value of said mutable state.
      * @param dismissable Whether the popup dialog can be dismissed or not (via outside click or backpress).
@@ -154,7 +153,7 @@ object ComposeUtils {
                     dismissOnBackPress = dismissable
                 )
             ) {
-                var modifier: Modifier = Modifier
+                var modifier: Modifier = Modifier.Companion
                 modifier = if (widthPercent == 0f) {
                     modifier.wrapContentWidth()
                 } else {
@@ -171,8 +170,8 @@ object ComposeUtils {
                     shape = RoundedCornerShape(size = cardCornerRadius.dp),
                 ) {
                     Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
+                        contentAlignment = Alignment.Companion.Center,
+                        modifier = Modifier.Companion
                             .fillMaxSize()
                     ) {
                         content()

@@ -1,4 +1,4 @@
-package jetzy.screens.sendscreens
+package jetzy.ui.sendscreens
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
-import jetzy.screens.adam.LocalViewmodel
+import jetzy.ui.adam.LocalViewmodel
 
 @Composable
 fun SendVideosScreenUI() {

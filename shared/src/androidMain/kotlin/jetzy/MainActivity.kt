@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import jetzy.screens.adam.AdamScreen
+import jetzy.ui.adam.AdamScreen
 import jetzy.theme.NightMode
 import jetzy.viewmodel.JetzyViewmodel
 import org.koin.android.ext.android.inject

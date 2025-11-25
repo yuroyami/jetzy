@@ -1,4 +1,4 @@
-package jetzy.screens.sendscreens
+package jetzy.ui.sendscreens
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,9 +20,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import jetzy.p2p.ComposeUtils.JetzyText
-import jetzy.p2p.ComposeUtils.font
-import jetzy.screens.adam.LocalViewmodel
+import jetzy.utils.ComposeUtils.JetzyText
+import jetzy.utils.ComposeUtils.font
+import jetzy.ui.adam.LocalViewmodel
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.notosans
 import jetzy.theme.sdp
