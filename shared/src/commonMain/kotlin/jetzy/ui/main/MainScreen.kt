@@ -311,8 +311,8 @@ fun MainScreenUI() {
 
                                                 ) {
                                                     val (emoji, label, color) = when (method.priority) {
-                                                        MethodPriority.RECOMMENDED -> Triple("⚡", "Recommended", scheme.primary)
-                                                        MethodPriority.ACCEPTABLE -> Triple("✓", "Fine", scheme.tertiary)
+                                                        MethodPriority.RECOMMENDED -> Triple("⚡", "Fast", scheme.primary)
+                                                        MethodPriority.ACCEPTABLE -> Triple("✓", "Good", scheme.tertiary)
                                                         MethodPriority.FALLBACK -> Triple("⚠", "Slow", scheme.error)
                                                     }
 
@@ -331,6 +331,10 @@ fun MainScreenUI() {
                                             viewmodel.currentTransferMethod.value = method
                                         }
                                     )
+                                }
+
+                                LaunchedEffect(null, peerPlatform) {
+                                   viewmodel.currentTransferMethod.value = transferMethods.firstOrNull()
                                 }
                             }
                         }
