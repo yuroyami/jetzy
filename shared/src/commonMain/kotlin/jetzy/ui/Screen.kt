@@ -9,7 +9,7 @@ import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation3.runtime.EntryProviderScope
-import jetzy.ui.filepicking.FilePickingScreenUI
+import jetzy.ui.filepicking.ElementPickingScreen
 import jetzy.ui.filepicking.PickFilesSubscreenUI
 import jetzy.ui.filepicking.PickPhotosSubscreen
 import jetzy.ui.filepicking.PickTextSubscreen
@@ -43,7 +43,7 @@ sealed interface Screen {
 
     data object FilePickingScreen : Screen {
         @Composable
-        override fun UI() = FilePickingScreenUI()
+        override fun UI() = ElementPickingScreen()
     }
 
     data object ReceiveScreen : Screen {

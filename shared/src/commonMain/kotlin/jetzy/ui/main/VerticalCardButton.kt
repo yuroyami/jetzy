@@ -2,6 +2,7 @@ package jetzy.ui.main
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -39,6 +40,7 @@ fun VerticalCardButton(
     icon: ImageVector,
     selectedIconTint: Color,
     isSelected: Boolean,
+    upperSupportingContent: @Composable (ColumnScope.() -> Unit)? = null,
     onClick: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
@@ -65,6 +67,8 @@ fun VerticalCardButton(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = CenterHorizontally
             ) {
+                upperSupportingContent?.invoke(this@Column)
+
                 Icon(
                     modifier = Modifier.fillMaxWidth(0.9f).weight(1f).padding(4.sdp),
                     imageVector = icon,

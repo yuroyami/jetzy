@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 
 
 @Composable
-fun FilePickingScreenUI() {
+fun ElementPickingScreen() {
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
 

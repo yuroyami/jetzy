@@ -22,10 +22,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,6 +37,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import jetzy.p2p.MethodPriority
 import jetzy.p2p.P2PMethodRegistry
 import jetzy.theme.sdp
 import jetzy.theme.ssp
@@ -42,11 +46,13 @@ import jetzy.ui.adam.LocalViewmodel
 import jetzy.utils.ComposeUtils.JetzyText
 import jetzy.utils.ComposeUtils.scheme
 import jetzy.utils.Platform
+import kotlinx.coroutines.delay
 
 @Composable
 fun MainScreenUI() {
     val haptic = LocalHapticFeedback.current
     val viewmodel = LocalViewmodel.current
+    val scope = rememberCoroutineScope()
 
     val operation by viewmodel.currentOperation.collectAsState()
     val peerPlatform by viewmodel.currentPeerPlatform.collectAsState()
@@ -296,6 +302,31 @@ fun MainScreenUI() {
                                         icon = method.icon,
                                         selectedIconTint = Color(10, 50, 200),
                                         isSelected = isSelected,
+                                        upperSupportingContent = {
+                                            if (isSelected) {
+                                                Row(
+                                                    modifier = Modifier.padding(4.dp).fillMaxWidth(),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.Center
+
+                                                ) {
+                                                    val (emoji, label, color) = when (method.priority) {
+                                                        MethodPriority.RECOMMENDED -> Triple("⚡", "Recommended", scheme.primary)
+                                                        MethodPriority.ACCEPTABLE -> Triple("✓", "Fine", scheme.tertiary)
+                                                        MethodPriority.FALLBACK -> Triple("⚠", "Slow", scheme.error)
+                                                    }
+
+                                                    Text(emoji, style = MaterialTheme.typography.labelMedium)
+                                                    Text(
+                                                        text = label,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = color,
+                                                        textAlign = TextAlign.Center,
+                                                        modifier = Modifier.padding(start = 4.dp)
+                                                    )
+                                                }
+                                            }
+                                        },
                                         onClick = {
                                             viewmodel.currentTransferMethod.value = method
                                         }
@@ -304,6 +335,11 @@ fun MainScreenUI() {
                             }
                         }
                     }
+                }
+
+                LaunchedEffect(null) {
+                    delay(200)
+                    parentScrollState.animateScrollTo(parentScrollState.maxValue)
                 }
             }
 
