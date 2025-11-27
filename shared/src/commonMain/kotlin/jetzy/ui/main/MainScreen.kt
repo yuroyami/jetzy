@@ -59,7 +59,7 @@ fun MainScreenUI() {
                 BottomAppBar {
                     FilledTonalButton(
                         modifier = Modifier.fillMaxWidth().height(58.sdp).padding(4.dp),
-                        onClick = c@ {
+                        onClick = c@{
                             if (viewmodel.currentOperation.value == null) {
                                 viewmodel.snacky("Select an operation!")
                                 haptic.performHapticFeedback(HapticFeedbackType.Reject)
@@ -76,7 +76,7 @@ fun MainScreenUI() {
                             viewmodel.currentOperation.value?.let { operation ->
                                 viewmodel.navigateTo(
                                     when (operation) {
-                                        Operation.SEND -> Screen.SendScreen
+                                        Operation.SEND -> Screen.FilePickingScreen
                                         Operation.RECEIVE -> Screen.ReceiveScreen
                                     }
                                 )
@@ -136,14 +136,82 @@ fun MainScreenUI() {
                         )
                     }
 
-                    Row(modifier = Modifier.fillMaxWidth()){
+                    Row(modifier = Modifier.fillMaxWidth()) {
                         OperationButton(operation = Operation.SEND, modifier = Modifier.weight(1f).padding(horizontal = 4.dp))
                         OperationButton(operation = Operation.RECEIVE, modifier = Modifier.weight(1f).padding(horizontal = 4.dp))
                     }
                 }
             }
 
-            AnimatedVisibility(operation != null) {
+            AnimatedVisibility(operation == Operation.SEND) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(8.sdp),
+                    tonalElevation = 0.dp,
+                    shadowElevation = 8.dp
+                ) {
+                    Column(
+                        horizontalAlignment = CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth().padding(8.dp)
+                    ) {
+                        Text(
+                            text = "Pick the files to send",
+                            modifier = Modifier.fillMaxWidth().padding(8.sdp),
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center,
+                            color = lerp(scheme.onSurface, scheme.outlineVariant, 0.65f)
+                        )
+
+                        FilledTonalButton(
+                            modifier = Modifier.fillMaxWidth(0.7f).padding(4.dp),
+                            onClick = {
+                                viewmodel.navigateTo(Screen.FilePickingScreen)
+                            },
+                            shape = RoundedCornerShape(20)
+                        ) {
+                            Text("Choose files", style = MaterialTheme.typography.titleLarge)
+                        }
+
+                        val filesForSending by viewmodel.file2Send.collectAsState()
+                        val foldersForSending by viewmodel.folders2Send.collectAsState()
+                        val photosForSending by viewmodel.photos2Send.collectAsState()
+                        val videosForSending by viewmodel.videos2Send.collectAsState()
+                        val textForSending by viewmodel.texts2Send.collectAsState()
+
+                        val countText = remember(
+                            filesForSending.size,
+                            foldersForSending.size,
+                            photosForSending.size,
+                            videosForSending.size,
+                            textForSending.size
+                        ) {
+                            buildList {
+                                if (filesForSending.isNotEmpty()) add("${filesForSending.size} file${if (filesForSending.size > 1) "s" else ""}")
+                                if (foldersForSending.isNotEmpty()) add("${foldersForSending.size} folder${if (foldersForSending.size > 1) "s" else ""}")
+                                if (photosForSending.isNotEmpty()) add("${photosForSending.size} photo${if (photosForSending.size > 1) "s" else ""}")
+                                if (videosForSending.isNotEmpty()) add("${videosForSending.size} video${if (videosForSending.size > 1) "s" else ""}")
+                                if (textForSending.isNotEmpty()) add("${textForSending.size} text${if (textForSending.size > 1) "s" else ""}")
+                            }.joinToString(", ").let {
+                                if (it.isEmpty()) "0 files selected"
+                                else "Sending: $it"
+                            }
+                        }
+
+                        Text(
+                            text = countText,
+                            modifier = Modifier.fillMaxWidth().padding(8.sdp),
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center,
+                            color = lerp(scheme.onSurface, scheme.outlineVariant, 0.65f)
+                        )
+                    }
+                }
+            }
+
+            val showPeerPlatform by derivedStateOf {
+                (operation == Operation.SEND && viewmodel.elementsToSend.isNotEmpty()) || operation == Operation.RECEIVE
+            }
+
+            AnimatedVisibility(showPeerPlatform) {
                 operation?.let {
                     Surface(
                         modifier = Modifier.fillMaxWidth().padding(8.sdp),

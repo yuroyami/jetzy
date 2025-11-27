@@ -9,14 +9,14 @@ import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation3.runtime.EntryProviderScope
+import jetzy.ui.filepicking.FilePickingScreenUI
+import jetzy.ui.filepicking.PickFilesSubscreenUI
+import jetzy.ui.filepicking.PickPhotosSubscreen
+import jetzy.ui.filepicking.PickTextSubscreen
+import jetzy.ui.filepicking.PickVideosSubscreen
 import jetzy.ui.main.MainScreenUI
 import jetzy.ui.receive.ReceiveScreenUI
-import jetzy.ui.send.SendScreenUI
-import jetzy.ui.sendscreens.InitiateSendingScreenUI
-import jetzy.ui.sendscreens.SendFilesScreenUI
-import jetzy.ui.sendscreens.SendPhotosScreenUI
-import jetzy.ui.sendscreens.SendTextScreenUI
-import jetzy.ui.sendscreens.SendVideosScreenUI
+import jetzy.ui.sendscreens.SelectPeerScreenUI
 
 sealed interface Screen {
     val label: String
@@ -41,9 +41,9 @@ sealed interface Screen {
         override fun UI() = MainScreenUI()
     }
 
-    data object SendScreen : Screen {
+    data object FilePickingScreen : Screen {
         @Composable
-        override fun UI() = SendScreenUI()
+        override fun UI() = FilePickingScreenUI()
     }
 
     data object ReceiveScreen : Screen {
@@ -51,35 +51,36 @@ sealed interface Screen {
         override fun UI() = ReceiveScreenUI()
     }
 
-    data object InitiateSendingScreen : Screen {
+    data object SelectPeerScreen : Screen {
         @Composable
-        override fun UI() = InitiateSendingScreenUI()
+        override fun UI() = SelectPeerScreenUI()
     }
 
-    data object SendFilesScreen : Screen {
+    /** Subscreens */
+    data object PickFilesSubscreen : Screen {
         @Composable
-        override fun UI() = SendFilesScreenUI()
+        override fun UI() = PickFilesSubscreenUI()
         override val label = "Files"
         override val icon: ImageVector = Icons.Outlined.FileCopy
     }
 
-    data object SendPhotosScreen : Screen {
+    data object PickPhotosSubscreen : Screen {
         @Composable
-        override fun UI() = SendPhotosScreenUI()
+        override fun UI() = PickPhotosSubscreen()
         override val label = "Photos"
         override val icon: ImageVector = Icons.Outlined.Collections
     }
 
-    data object SendVideosScreen : Screen {
+    data object PickVideosSubscreen : Screen {
         @Composable
-        override fun UI() = SendVideosScreenUI()
+        override fun UI() = PickVideosSubscreen()
         override val label = "Videos"
         override val icon: ImageVector = Icons.Outlined.Movie
     }
 
-    data object SendTextScreen : Screen {
+    data object PickTextSubscreen : Screen {
         @Composable
-        override fun UI() = SendTextScreenUI()
+        override fun UI() = PickTextSubscreen()
         override val label = "Text"
         override val icon: ImageVector = Icons.Outlined.FormatSize
     }

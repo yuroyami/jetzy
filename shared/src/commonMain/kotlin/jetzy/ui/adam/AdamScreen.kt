@@ -43,15 +43,15 @@ import androidx.navigation3.ui.NavDisplay
 import jetzy.commonModule
 import jetzy.p2p.P2pHandler
 import jetzy.platformModule
-import jetzy.ui.Screen
-import jetzy.ui.Screen.Companion.nav3Entry
-import jetzy.ui.main.Operation
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.jetzy_vector
 import jetzy.theme.JetzyTheme
 import jetzy.theme.NightMode
 import jetzy.theme.sdp
 import jetzy.theme.ssp
+import jetzy.ui.Screen
+import jetzy.ui.Screen.Companion.nav3Entry
+import jetzy.ui.main.Operation
 import jetzy.utils.InitializeCoilSupportForFileKit
 import jetzy.viewmodel.JetzyViewmodel
 import org.jetbrains.compose.resources.vectorResource
@@ -149,20 +149,17 @@ fun AdamScreen() {
                                         }
                                     }
 
-                                    if (currentScreen == Screen.SendScreen) {
+                                    if (currentScreen == Screen.FilePickingScreen) {
                                         TextButton(
                                             onClick = c@ {
                                                 //Continue sending
-                                                val nothingToSend = with(viewmodel) {
-                                                    sendFiles.isEmpty() && sendFolders.isEmpty() && sendPhotos.isEmpty() && sendVideos.isEmpty() && sendTexts.isEmpty()
-                                                }
-                                                if (nothingToSend) {
+                                                if (viewmodel.elementsToSend.isEmpty()) {
                                                     viewmodel.snacky("Sending Error: Nothing to send...")
                                                     haptic.performHapticFeedback(Reject)
                                                     return@c
                                                 }
 
-                                                viewmodel.navigateTo(Screen.InitiateSendingScreen)
+                                                viewmodel.navigateTo(Screen.MainScreen)
                                             }
                                         ) {
                                             Text("Continue")
@@ -189,13 +186,13 @@ fun AdamScreen() {
                             ),
                             entryProvider = entryProvider {
                                 nav3Entry<Screen.MainScreen>()
-                                nav3Entry<Screen.SendScreen>()
-                                nav3Entry<Screen.InitiateSendingScreen>()
+                                nav3Entry<Screen.FilePickingScreen>()
+                                nav3Entry<Screen.SelectPeerScreen>()
                                 nav3Entry<Screen.ReceiveScreen>()
-                                nav3Entry<Screen.SendFilesScreen>()
-                                nav3Entry<Screen.SendTextScreen>()
-                                nav3Entry<Screen.SendVideosScreen>()
-                                nav3Entry<Screen.SendPhotosScreen>()
+                                nav3Entry<Screen.PickFilesSubscreen>()
+                                nav3Entry<Screen.PickTextSubscreen>()
+                                nav3Entry<Screen.PickVideosSubscreen>()
+                                nav3Entry<Screen.PickPhotosSubscreen>()
                             }
                         )
                     }

@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import jetzy.models.JetzyElement
@@ -19,6 +20,7 @@ import jetzy.utils.Platform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -42,6 +44,13 @@ class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>): ViewModel() {
     val currentTransferMethod = MutableStateFlow<P2pMethod?>(null)
 
     val elementsToSend = mutableStateListOf<JetzyElement>()
+
+    val file2Send = elementsToSend.filterAsStateFlow<JetzyElement.File>()
+    val folders2Send = elementsToSend.filterAsStateFlow<JetzyElement.Folder>()
+    val photos2Send = elementsToSend.filterAsStateFlow<JetzyElement.Photo>()
+    val videos2Send = elementsToSend.filterAsStateFlow<JetzyElement.Video>()
+    val texts2Send = elementsToSend.filterAsStateFlow<JetzyElement.Text>()
+
     val elementsReceived = mutableStateListOf<JetzyElement>()
 
     val p2pPeers = mutableStateListOf<P2pPeer>()
@@ -78,5 +87,11 @@ class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>): ViewModel() {
                 duration = SnackbarDuration.Short
             )
         }
+    }
+
+    inline fun <reified T : JetzyElement> SnapshotStateList<JetzyElement>.filterAsStateFlow(): StateFlow<List<T>> {
+        return snapshotFlow {
+            filterIsInstance<T>()
+        }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
     }
 }

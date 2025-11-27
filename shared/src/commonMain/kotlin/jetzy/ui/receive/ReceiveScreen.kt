@@ -30,10 +30,10 @@ fun ReceiveScreenUI() {
 
     val sendScreens by derivedStateOf {
         buildList {
-            add(Screen.SendFilesScreen)
-            add(Screen.SendPhotosScreen)
-            add(Screen.SendVideosScreen)
-            add(Screen.SendTextScreen)
+            add(Screen.PickFilesSubscreen)
+            add(Screen.PickPhotosSubscreen)
+            add(Screen.PickVideosSubscreen)
+            add(Screen.PickTextSubscreen)
         }
     }
 

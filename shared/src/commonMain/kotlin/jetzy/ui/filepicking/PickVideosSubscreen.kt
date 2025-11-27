@@ -1,4 +1,4 @@
-package jetzy.ui.sendscreens
+package jetzy.ui.filepicking
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,7 +25,7 @@ import jetzy.models.JetzyElement
 import jetzy.ui.adam.LocalViewmodel
 
 @Composable
-fun SendVideosScreenUI() {
+fun PickVideosSubscreen() {
     val viewmodel = LocalViewmodel.current
 
     val videoPicker = rememberFilePickerLauncher(

@@ -1,4 +1,4 @@
-package jetzy.ui.sendscreens
+package jetzy.ui.filepicking
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
@@ -57,7 +57,7 @@ import jetzy.utils.ComposeUtils.scheme
 import kotlinx.coroutines.delay
 
 @Composable
-fun SendPhotosScreenUI() {
+fun PickPhotosSubscreen() {
     val viewmodel = LocalViewmodel.current
     val density = LocalDensity.current
     val onePx = remember(density) { with(density) { 1.toDp() } }

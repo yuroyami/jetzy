@@ -1,4 +1,4 @@
-package jetzy.ui.send
+package jetzy.ui.filepicking
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,16 +23,16 @@ import kotlinx.coroutines.launch
 
 
 @Composable
-fun SendScreenUI() {
+fun FilePickingScreenUI() {
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
 
     val sendScreens by derivedStateOf {
         buildList {
-            add(Screen.SendFilesScreen)
-            add(Screen.SendPhotosScreen)
-            add(Screen.SendVideosScreen)
-            add(Screen.SendTextScreen)
+            add(Screen.PickFilesSubscreen)
+            add(Screen.PickPhotosSubscreen)
+            add(Screen.PickVideosSubscreen)
+            add(Screen.PickTextSubscreen)
         }
     }
 

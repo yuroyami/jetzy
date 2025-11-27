@@ -1,4 +1,4 @@
-package jetzy.ui.sendscreens
+package jetzy.ui.filepicking
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,7 +55,7 @@ import jetzy.ui.adam.LocalViewmodel
 import jetzy.utils.ComposeUtils.scheme
 
 @Composable
-fun SendTextScreenUI() {
+fun PickTextSubscreen() {
     val viewmodel = LocalViewmodel.current
     val haptic = LocalHapticFeedback.current
 

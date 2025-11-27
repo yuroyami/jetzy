@@ -29,7 +29,7 @@ import jetzy.theme.sdp
 import jetzy.theme.ssp
 
 @Composable
-fun InitiateSendingScreenUI() {
+fun SelectPeerScreenUI() {
     val viewmodel = LocalViewmodel.current
 
     LaunchedEffect(null) {

@@ -1,4 +1,4 @@
-package jetzy.ui.sendscreens
+package jetzy.ui.filepicking
 
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
@@ -31,6 +31,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -64,7 +65,7 @@ import jetzy.utils.rememberDirectoryPickerLauncher
 enum class FileFolderViewMode { Files, Folders }
 
 @Composable
-fun SendFilesScreenUI() {
+fun PickFilesSubscreenUI() {
     val viewmodel = LocalViewmodel.current
 
     var tab by remember { mutableStateOf(FileFolderViewMode.Files) }
@@ -125,8 +126,8 @@ fun SendFilesScreenUI() {
                         )
                     }
 
-                    val filesForSending by derivedStateOf { viewmodel.elementsToSend.filter { it is JetzyElement.File } }
-                    val foldersForSending by derivedStateOf { viewmodel.elementsToSend.filter { it is JetzyElement.Folder } }
+                    val filesForSending by viewmodel.file2Send.collectAsState()
+                    val foldersForSending by viewmodel.folders2Send.collectAsState()
 
                     FileFolderGridView(
                         viewMode = tab,
