@@ -27,7 +27,7 @@ sealed class P2pMethod(
         displayName = "Local Network",
         description = "Connect via WiFi network",
         supportedPlatforms = setOf(Platform.Android, Platform.IOS, Platform.Web, Platform.PC),
-        priority = MethodPriority.RECOMMENDED,
+        priority = MethodPriority.ACCEPTABLE,
         icon = Icons.Outlined.Lan
     ) {
         override fun isAvailable(currentPlatform: Platform, targetPlatform: Platform): Boolean {
@@ -103,7 +103,7 @@ sealed class P2pMethod(
         displayName = "Hotspot Transfer",
         description = "Create WiFi hotspot for transfer",
         supportedPlatforms = setOf(Platform.Android, Platform.IOS),
-        priority = MethodPriority.ACCEPTABLE,
+        priority = MethodPriority.RECOMMENDED,
         icon = Icons.Outlined.WifiTethering
     ) {
         override fun isAvailable(currentPlatform: Platform, targetPlatform: Platform): Boolean {

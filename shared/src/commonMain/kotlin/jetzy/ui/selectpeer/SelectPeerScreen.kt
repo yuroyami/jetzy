@@ -1,4 +1,4 @@
-package jetzy.ui.sendscreens
+package jetzy.ui.selectpeer
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,20 +20,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import jetzy.utils.ComposeUtils.JetzyText
-import jetzy.utils.ComposeUtils.font
-import jetzy.ui.adam.LocalViewmodel
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.notosans
 import jetzy.theme.sdp
 import jetzy.theme.ssp
+import jetzy.ui.adam.LocalViewmodel
+import jetzy.utils.ComposeUtils.JetzyText
+import jetzy.utils.ComposeUtils.font
 
 @Composable
 fun SelectPeerScreenUI() {
     val viewmodel = LocalViewmodel.current
 
-    LaunchedEffect(null) {
+    val method by viewmodel.currentTransferMethod.collectAsState()
 
+    LaunchedEffect(null) {
+        method?.initiate()
     }
 
     Column(

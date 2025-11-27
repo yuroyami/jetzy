@@ -77,12 +77,18 @@ fun MainScreenUI() {
                                 return@c
                             }
 
+                            if (viewmodel.currentOperation.value == Operation.SEND && viewmodel.elementsToSend.isEmpty()) {
+                                viewmodel.snacky("Select files to send!")
+                                haptic.performHapticFeedback(HapticFeedbackType.Reject)
+                                return@c
+                            }
+
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
 
                             viewmodel.currentOperation.value?.let { operation ->
                                 viewmodel.navigateTo(
                                     when (operation) {
-                                        Operation.SEND -> Screen.FilePickingScreen
+                                        Operation.SEND -> Screen.SelectPeerScreen
                                         Operation.RECEIVE -> Screen.ReceiveScreen
                                     }
                                 )

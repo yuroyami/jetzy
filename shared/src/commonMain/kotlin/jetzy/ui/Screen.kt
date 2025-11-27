@@ -16,7 +16,7 @@ import jetzy.ui.filepicking.PickTextSubscreen
 import jetzy.ui.filepicking.PickVideosSubscreen
 import jetzy.ui.main.MainScreenUI
 import jetzy.ui.receive.ReceiveScreenUI
-import jetzy.ui.sendscreens.SelectPeerScreenUI
+import jetzy.ui.selectpeer.SelectPeerScreenUI
 
 sealed interface Screen {
     val label: String
