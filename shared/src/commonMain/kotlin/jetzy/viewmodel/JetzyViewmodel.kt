@@ -8,7 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.github.vinceglb.filekit.PlatformFile
+import jetzy.models.JetzyElement
 import jetzy.p2p.P2pHandler
 import jetzy.p2p.P2pMethod
 import jetzy.p2p.P2pPeer
@@ -41,11 +41,8 @@ class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>): ViewModel() {
     val currentPeerPlatform = MutableStateFlow<Platform?>(null)
     val currentTransferMethod = MutableStateFlow<P2pMethod?>(null)
 
-    val files = mutableStateListOf<PlatformFile>()
-    val folders = mutableStateListOf<PlatformFile>()
-    val photos = mutableStateListOf<PlatformFile>()
-    val videos = mutableStateListOf<PlatformFile>()
-    val texts = mutableStateListOf<String>()
+    val elementsToSend = mutableStateListOf<JetzyElement>()
+    val elementsReceived = mutableStateListOf<JetzyElement>()
 
     val p2pPeers = mutableStateListOf<P2pPeer>()
 
@@ -67,11 +64,7 @@ class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>): ViewModel() {
     val transferStatusText = mutableStateOf("") //status of transfer
 
     fun clearOperation() {
-        files.clear()
-        folders.clear()
-        photos.clear()
-        videos.clear()
-        texts.clear()
+        elementsToSend.clear()
         currentOperation.value = null
         currentPeerPlatform.value = null
     }

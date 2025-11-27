@@ -76,8 +76,7 @@ fun MainScreenUI() {
                             viewmodel.currentOperation.value?.let { operation ->
                                 viewmodel.navigateTo(
                                     when (operation) {
-                                        //Operation.SEND -> Screen.SendScreen
-                                        Operation.SEND -> Screen.InitiateSendingScreen
+                                        Operation.SEND -> Screen.SendScreen
                                         Operation.RECEIVE -> Screen.ReceiveScreen
                                     }
                                 )

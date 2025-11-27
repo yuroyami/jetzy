@@ -154,7 +154,7 @@ fun AdamScreen() {
                                             onClick = c@ {
                                                 //Continue sending
                                                 val nothingToSend = with(viewmodel) {
-                                                    files.isEmpty() && folders.isEmpty() && photos.isEmpty() && videos.isEmpty() && texts.isEmpty()
+                                                    sendFiles.isEmpty() && sendFolders.isEmpty() && sendPhotos.isEmpty() && sendVideos.isEmpty() && sendTexts.isEmpty()
                                                 }
                                                 if (nothingToSend) {
                                                     viewmodel.snacky("Sending Error: Nothing to send...")

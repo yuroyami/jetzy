@@ -59,30 +59,29 @@ sealed interface Screen {
     data object SendFilesScreen : Screen {
         @Composable
         override fun UI() = SendFilesScreenUI()
-        override val label = "SendFiles"
+        override val label = "Files"
         override val icon: ImageVector = Icons.Outlined.FileCopy
     }
 
     data object SendPhotosScreen : Screen {
         @Composable
         override fun UI() = SendPhotosScreenUI()
-        override val label = "SendPhotos"
+        override val label = "Photos"
         override val icon: ImageVector = Icons.Outlined.Collections
     }
 
     data object SendVideosScreen : Screen {
         @Composable
         override fun UI() = SendVideosScreenUI()
-        override val label = "SendVideos"
+        override val label = "Videos"
         override val icon: ImageVector = Icons.Outlined.Movie
     }
 
     data object SendTextScreen : Screen {
         @Composable
         override fun UI() = SendTextScreenUI()
-        override val label = "SendText"
+        override val label = "Text"
         override val icon: ImageVector = Icons.Outlined.FormatSize
     }
-
 
 }

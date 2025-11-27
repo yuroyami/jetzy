@@ -50,8 +50,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import jetzy.utils.ComposeUtils.scheme
+import jetzy.models.JetzyElement
 import jetzy.ui.adam.LocalViewmodel
+import jetzy.utils.ComposeUtils.scheme
 
 @Composable
 fun SendTextScreenUI() {
@@ -69,7 +70,9 @@ fun SendTextScreenUI() {
                 modifier = Modifier.padding(bottom = 12.dp, top = 28.dp)
             )
 
-            val listIsEmpty by derivedStateOf { viewmodel.texts.isEmpty() }
+            val stringsForSending by derivedStateOf { viewmodel.elementsToSend.filter { it is JetzyElement.Text } }
+            val listIsEmpty by derivedStateOf { stringsForSending.isEmpty() }
+
             Surface(
                 modifier = Modifier.fillMaxSize().padding(top = 16.dp, start = 8.dp, end = 8.dp, bottom = 92.dp),
                 tonalElevation = 28.dp,
@@ -90,7 +93,7 @@ fun SendTextScreenUI() {
                             )
                         }
                     }
-                    itemsIndexed(viewmodel.texts) { i, text ->
+                    itemsIndexed(stringsForSending) { i, text ->
                         var expanded by remember { mutableStateOf(false ) }
                         TextButton(
                             shape = if (expanded) RectangleShape else ButtonDefaults.textShape,
@@ -112,7 +115,7 @@ fun SendTextScreenUI() {
 
                             IconButton(
                                 onClick = {
-                                    viewmodel.texts.remove(text)
+                                    viewmodel.elementsToSend.remove(text)
                                     haptic.performHapticFeedback(HapticFeedbackType.Reject)
                                     viewmodel.snacky("Text was removed from the list.")
                                 }
@@ -161,7 +164,9 @@ fun SendTextScreenUI() {
                 TextButton(
                     onClick = {
                         if (txt2add.isNotBlank()) {
-                            viewmodel.texts.add(txt2add)
+                            viewmodel.elementsToSend.add(
+                                JetzyElement.Text(txt2add)
+                            )
                             textAddPopup = false
                         } else {
                             isError = true

@@ -49,15 +49,15 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.name
-import jetzy.utils.ComposeUtils.scheme
-import jetzy.ui.adam.LocalViewmodel
+import jetzy.models.JetzyElement
 import jetzy.theme.jetzyYellow
 import jetzy.theme.ssp
+import jetzy.ui.adam.LocalViewmodel
+import jetzy.utils.ComposeUtils.scheme
 import jetzy.utils.rememberDirectoryPickerLauncher
 
 
@@ -72,15 +72,15 @@ fun SendFilesScreenUI() {
     val filePicker = rememberFilePickerLauncher(
         type = FileKitType.File(), mode = FileKitMode.Multiple(),
     ) { files ->
-        files?.forEach {
-            viewmodel.files.add(it)
+        files?.map { JetzyElement.File(it) }?.forEach {
+            viewmodel.elementsToSend.add(it)
         }
         viewmodel.snacky("Added ${files?.size} item(s)")
         tab = FileFolderViewMode.Files
     }
 
     val folderPicker = rememberDirectoryPickerLauncher { folder ->
-        folder?.let { viewmodel.folders.add(it) }
+        folder?.let { viewmodel.elementsToSend.add(JetzyElement.Folder(it)) }
         viewmodel.snacky("Added folder: ${folder?.name}")
         tab = FileFolderViewMode.Folders
     }
@@ -125,11 +125,14 @@ fun SendFilesScreenUI() {
                         )
                     }
 
+                    val filesForSending by derivedStateOf { viewmodel.elementsToSend.filter { it is JetzyElement.File } }
+                    val foldersForSending by derivedStateOf { viewmodel.elementsToSend.filter { it is JetzyElement.Folder } }
+
                     FileFolderGridView(
                         viewMode = tab,
                         allItems = when (tab) {
-                            FileFolderViewMode.Files -> viewmodel.files
-                            FileFolderViewMode.Folders -> viewmodel.folders
+                            FileFolderViewMode.Files -> filesForSending
+                            FileFolderViewMode.Folders -> foldersForSending
                         },
                         highlightedItems = when (tab) {
                             FileFolderViewMode.Files -> longClickedFiles
@@ -166,15 +169,15 @@ fun SendFilesScreenUI() {
             )
         }
 
-        if ((longClickedFiles.isNotEmpty() && tab == FileFolderViewMode.Files) || (longClickedFolders.isNotEmpty() && tab == FileFolderViewMode.Folders))  {
+        if ((longClickedFiles.isNotEmpty() && tab == FileFolderViewMode.Files) || (longClickedFolders.isNotEmpty() && tab == FileFolderViewMode.Folders)) {
             SmallExtendedFloatingActionButton(
                 icon = {
                     Icon(Icons.Filled.ClearAll, null)
                 },
                 onClick = {
                     val (longClickedItems, items, itemType) = when (tab) {
-                        FileFolderViewMode.Files -> Triple(longClickedFiles, viewmodel.files, "file(s)")
-                        FileFolderViewMode.Folders -> Triple(longClickedFolders, viewmodel.folders, "folder(s)")
+                        FileFolderViewMode.Files -> Triple(longClickedFiles, viewmodel.elementsToSend, "file(s)")
+                        FileFolderViewMode.Folders -> Triple(longClickedFolders, viewmodel.elementsToSend, "folder(s)")
                     }
 
                     val count = longClickedItems.size
@@ -199,7 +202,7 @@ fun SendFilesScreenUI() {
 @Composable
 fun FileFolderGridView(
     viewMode: FileFolderViewMode,
-    allItems: SnapshotStateList<PlatformFile>,
+    allItems: List<JetzyElement>,
     highlightedItems: SnapshotStateList<Int>
 ) {
     val density = LocalDensity.current
@@ -256,14 +259,14 @@ fun FileFolderGridView(
                         )
 
                         Text(
-                            text = f.name,
+                            text = (f as? JetzyElement.File)?.file?.name ?: (f as? JetzyElement.Folder)?.folder?.name ?: "",
                             fontSize = 7.ssp,
                             modifier = Modifier.width(cellWidth - 16.dp).basicMarquee(iterations = 3)
                         )
                     }
 
                     if (isHighlighted) {
-                        Surface(modifier = Modifier.size(cellWidth), color = Color.DarkGray.copy(alpha = 0.4f)) {  }
+                        Surface(modifier = Modifier.size(cellWidth), color = Color.DarkGray.copy(alpha = 0.4f)) { }
                         Icon(Icons.Filled.Check, null, Modifier.align(TopEnd).padding(12.dp))
                     }
                 }

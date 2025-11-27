@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
+import jetzy.models.JetzyElement
 import jetzy.ui.adam.LocalViewmodel
 
 @Composable
@@ -30,8 +31,8 @@ fun SendVideosScreenUI() {
     val videoPicker = rememberFilePickerLauncher(
         type = FileKitType.Video, mode = FileKitMode.Multiple(),
     ) { files ->
-        files?.forEach {
-            viewmodel.files.add(it)
+        files?.map { JetzyElement.Video(it) }?.forEach {
+            viewmodel.elementsToSend.add(it)
         }
     }
 

@@ -49,10 +49,11 @@ import coil3.compose.AsyncImage
 import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
-import jetzy.utils.ComposeUtils.scheme
-import jetzy.ui.adam.LocalViewmodel
+import jetzy.models.JetzyElement
 import jetzy.theme.jetzyYellow
 import jetzy.theme.ssp
+import jetzy.ui.adam.LocalViewmodel
+import jetzy.utils.ComposeUtils.scheme
 import kotlinx.coroutines.delay
 
 @Composable
@@ -67,12 +68,14 @@ fun SendPhotosScreenUI() {
 
     val photoPicker = rememberFilePickerLauncher(
         type = FileKitType.Image, mode = FileKitMode.Multiple(),
-    ) { it?.forEach { photo ->
-            viewmodel.photos.add(photo)
+    ) {
+        it?.map { image -> JetzyElement.Photo(image) }?.forEach { photo ->
+            viewmodel.elementsToSend.add(photo)
         }
     }
 
-    val listIsEmpty by derivedStateOf { viewmodel.photos.isEmpty() }
+    val photosForSending by derivedStateOf { viewmodel.elementsToSend.filter { it is JetzyElement.Photo } }
+    val listIsEmpty by derivedStateOf { photosForSending.isEmpty() }
 
     Box(modifier = Modifier.fillMaxSize()) {
 
@@ -99,13 +102,13 @@ fun SendPhotosScreenUI() {
                     )
                 } else {
                     LazyVerticalGrid(
-                        columns = GridCells.Adaptive(cellWidth ),
+                        columns = GridCells.Adaptive(cellWidth),
                         modifier = Modifier.fillMaxSize().onGloballyPositioned {
                             cellWidth = with(density) { it.size.width.toDp() / 3 }
                         },
                         state = gridState
                     ) {
-                        itemsIndexed(viewmodel.photos) { i, photoFile ->
+                        itemsIndexed(viewmodel.elementsToSend ) { i, photoFile ->
                             val isHighlighted by derivedStateOf { longclickedPhotos.contains(i) }
                             Box(Modifier.size(cellWidth)) {
                                 Icon(Icons.Filled.Check, null, Modifier.align(TopEnd).padding(12.dp))
@@ -174,7 +177,7 @@ fun SendPhotosScreenUI() {
 
                     val processedIndices = mutableListOf<Int>()
                     for (photoIndex in longclickedPhotos) {
-                        viewmodel.photos.removeAt(photoIndex)
+                        viewmodel.elementsToSend.removeAt(photoIndex)
                         processedIndices.add(photoIndex)
                     }
                     longclickedPhotos.removeAll(processedIndices)
