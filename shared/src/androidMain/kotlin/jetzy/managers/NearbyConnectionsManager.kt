@@ -8,40 +8,21 @@ import kotlinx.coroutines.flow.StateFlow
 
 class NearbyConnectionsManager(
     private val context: Context
-) : DiscoverableP2PManager {
-    
-    private val _transferProgress = MutableStateFlow(0f)
-    override val transferProgress: StateFlow<Float> = _transferProgress
-    
-    private val _transferStatus = MutableStateFlow("")
-    override val transferStatus: StateFlow<String> = _transferStatus
-    
-    private val _isConnected = MutableStateFlow(false)
-    override val isConnected: StateFlow<Boolean> = _isConnected
-    
-    private val _availablePeers = MutableStateFlow<List<P2pPeer>>(emptyList())
-    override val availablePeers: StateFlow<List<P2pPeer>> = _availablePeers
-    
-    private val _isDiscovering = MutableStateFlow(false)
-    override val isDiscovering: StateFlow<Boolean> = _isDiscovering
-    
-    private val _isAdvertising = MutableStateFlow(false)
-    override val isAdvertising: StateFlow<Boolean> = _isAdvertising
-    
+) : DiscoverableP2PManager() {
     override suspend fun initialize() {
-        _transferStatus.value = "Nearby Connections initialized"
+        transferStatus.value = "Nearby Connections initialized"
     }
     
     override suspend fun startDiscoveryAndAdvertising(deviceName: String) {
-        _isAdvertising.value = true
-        _isDiscovering.value = true
-        _transferStatus.value = "Broadcasting and discovering as $deviceName..."
+        isAdvertising.value = true
+        isDiscovering.value = true
+        transferStatus.value = "Broadcasting and discovering as $deviceName..."
         // Both devices advertise AND discover simultaneously
     }
     
     override suspend fun stopDiscoveryAndAdvertising() {
-        _isAdvertising.value = false
-        _isDiscovering.value = false
+        isAdvertising.value = false
+        isDiscovering.value = false
     }
     
     override suspend fun connectToPeer(peer: P2pPeer): Result<Unit> {
@@ -57,7 +38,7 @@ class NearbyConnectionsManager(
     }
     
     override suspend fun disconnect() {
-        _isConnected.value = false
+        isConnected.value = false
     }
     
     override suspend fun cleanup() {

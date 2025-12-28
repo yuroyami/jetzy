@@ -81,6 +81,7 @@ kotlin {
                 optIn("kotlin.ExperimentalStdlibApi")
                 optIn("kotlin.time.ExperimentalTime")
                 enableLanguageFeature("ContextParameters")
+                enableLanguageFeature("ExplicitBackingFields")
             }
         }
 

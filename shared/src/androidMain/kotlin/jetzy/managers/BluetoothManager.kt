@@ -30,26 +30,8 @@ import java.util.UUID
 
 class BluetoothManager(
     private val context: Context
-) : DiscoverableP2PManager {
-    
-    private val _transferProgress = MutableStateFlow(0f)
-    override val transferProgress: StateFlow<Float> = _transferProgress
-    
-    private val _transferStatus = MutableStateFlow("")
-    override val transferStatus: StateFlow<String> = _transferStatus
-    
-    private val _isConnected = MutableStateFlow(false)
-    override val isConnected: StateFlow<Boolean> = _isConnected
-    
-    private val _availablePeers = MutableStateFlow<List<P2pPeer>>(emptyList())
-    override val availablePeers: StateFlow<List<P2pPeer>> = _availablePeers
-    
-    private val _isDiscovering = MutableStateFlow(false)
-    override val isDiscovering: StateFlow<Boolean> = _isDiscovering
-    
-    private val _isAdvertising = MutableStateFlow(false)
-    override val isAdvertising: StateFlow<Boolean> = _isAdvertising
-    
+) : DiscoverableP2PManager() {
+
     private val bluetoothAdapter: BluetoothAdapter? by lazy {
         BluetoothAdapter.getDefaultAdapter()
     }
@@ -69,12 +51,12 @@ class BluetoothManager(
     
     override suspend fun initialize() {
         if (bluetoothAdapter == null) {
-            _transferStatus.value = "Bluetooth not supported"
+            transferStatus.value = "Bluetooth not supported"
             throw IllegalStateException("Bluetooth not supported on this device")
         }
         
         if (!bluetoothAdapter!!.isEnabled) {
-            _transferStatus.value = "Bluetooth is disabled"
+            transferStatus.value = "Bluetooth is disabled"
             throw IllegalStateException("Bluetooth is disabled")
         }
         
@@ -82,7 +64,7 @@ class BluetoothManager(
             throw SecurityException("Bluetooth permissions not granted")
         }
         
-        _transferStatus.value = "Bluetooth ready"
+        transferStatus.value = "Bluetooth ready"
     }
     
     private fun hasPermissions(): Boolean {
@@ -119,13 +101,13 @@ class BluetoothManager(
         // Start listening for incoming connections
         startAcceptThread()
         
-        _transferStatus.value = "Looking for nearby Bluetooth devices..."
+        transferStatus.value = "Looking for nearby Bluetooth devices..."
     }
     
     private fun makeDiscoverable() {
         if (!hasPermissions()) return
         
-        _isAdvertising.value = true
+        isAdvertising.value = true
         
         // Make device discoverable for 300 seconds
         val discoverableIntent = Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE).apply {
@@ -136,7 +118,7 @@ class BluetoothManager(
         try {
             context.startActivity(discoverableIntent)
         } catch (e: Exception) {
-            _transferStatus.value = "Could not make device discoverable: ${e.message}"
+            transferStatus.value = "Could not make device discoverable: ${e.message}"
         }
     }
     
@@ -167,8 +149,8 @@ class BluetoothManager(
                     }
                     
                     BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
-                        _isDiscovering.value = false
-                        _transferStatus.value = "Discovery finished. Found ${_availablePeers.value.size} device(s)"
+                        isDiscovering.value = false
+                        transferStatus.value = "Discovery finished. Found ${availablePeers.value.size} device(s)"
                     }
                 }
             }
@@ -182,7 +164,7 @@ class BluetoothManager(
         context.registerReceiver(discoveryReceiver, filter)
         
         // Start discovery
-        _isDiscovering.value = adapter.startDiscovery()
+        isDiscovering.value = adapter.startDiscovery()
     }
     
     private fun addDiscoveredDevice(device: BluetoothDevice) {
@@ -195,18 +177,18 @@ class BluetoothManager(
             //signalStrength = null
         )
         
-        val currentPeers = _availablePeers.value.toMutableList()
+        val currentPeers = availablePeers.value.toMutableList()
         if (currentPeers.none { it.id == peer.id }) {
             currentPeers.add(peer)
-            _availablePeers.value = currentPeers
+            availablePeers.value = currentPeers
         }
     }
     
 
     override suspend fun stopDiscoveryAndAdvertising() {
         bluetoothAdapter?.cancelDiscovery()
-        _isDiscovering.value = false
-        _isAdvertising.value = false
+        isDiscovering.value = false
+        isAdvertising.value = false
         
         discoveryReceiver?.let {
             try {
@@ -231,7 +213,7 @@ class BluetoothManager(
         
         val device = adapter.getRemoteDevice(peer.id)
         
-        _transferStatus.value = "Connecting to ${peer.name}..."
+        transferStatus.value = "Connecting to ${peer.name}..."
         
         connectThread = ConnectThread(device)
         connectThread?.start()
@@ -343,8 +325,8 @@ class BluetoothManager(
         }
         
         connectedSocket = null
-        _isConnected.value = false
-        _transferStatus.value = "Disconnected"
+        isConnected.value = false
+        transferStatus.value = "Disconnected"
         
         connectThread?.cancel()
         connectThread = null
@@ -370,8 +352,8 @@ class BluetoothManager(
                     val socket = serverSocket?.accept()
                     socket?.let {
                         scope.launch {
-                            _transferStatus.value = "Connected to ${it.remoteDevice.name}"
-                            _isConnected.value = true
+                            transferStatus.value = "Connected to ${it.remoteDevice.name}"
+                            isConnected.value = true
                             connectedSocket = it
                         }
                         shouldLoop = false
@@ -408,14 +390,14 @@ class BluetoothManager(
                 socket?.connect()
                 socket?.let {
                     scope.launch {
-                        _transferStatus.value = "Connected to ${device.name}"
-                        _isConnected.value = true
+                        transferStatus.value = "Connected to ${device.name}"
+                        isConnected.value = true
                         connectedSocket = it
                     }
                 }
             } catch (e: IOException) {
                 scope.launch {
-                    _transferStatus.value = "Connection failed: ${e.message}"
+                    transferStatus.value = "Connection failed: ${e.message}"
                 }
                 try {
                     socket?.close()

@@ -1,5 +1,14 @@
+
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.ComposeUIViewController
-import jetzy.ui.ScreenUI
+import jetzy.ui.adam.AdamScreen
 import platform.UIKit.UIViewController
 
-fun MainViewController(): UIViewController = ComposeUIViewController { ScreenUI() }
+@OptIn(ExperimentalComposeUiApi::class)
+fun MainViewController(): UIViewController = ComposeUIViewController(
+    configure = {
+        parallelRendering = true
+    }
+) {
+    AdamScreen()
+}
