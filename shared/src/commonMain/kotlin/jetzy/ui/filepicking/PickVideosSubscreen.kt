@@ -22,7 +22,7 @@ import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import jetzy.models.JetzyElement
-import jetzy.ui.adam.LocalViewmodel
+import jetzy.ui.LocalViewmodel
 
 @Composable
 fun PickVideosSubscreen() {

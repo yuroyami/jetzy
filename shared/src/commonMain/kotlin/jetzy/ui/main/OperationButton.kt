@@ -25,19 +25,19 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import jetzy.p2p.P2pOperation
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.genos
 import jetzy.theme.ssp
-import jetzy.ui.adam.LocalViewmodel
+import jetzy.ui.LocalViewmodel
 import org.jetbrains.compose.resources.Font
 
 
-enum class Operation { SEND, RECEIVE }
 
 @Composable
 fun OperationButton(
     modifier: Modifier = Modifier,
-    operation: Operation
+    operation: P2pOperation
 ) {
     val haptic = LocalHapticFeedback.current
     val viewmodel = LocalViewmodel.current
@@ -62,8 +62,8 @@ fun OperationButton(
         ) {
             Icon(
                 imageVector = when (operation) {
-                    Operation.SEND -> Icons.Filled.PresentToAll
-                    Operation.RECEIVE -> Icons.Filled.Downloading
+                    P2pOperation.SEND -> Icons.Filled.PresentToAll
+                    P2pOperation.RECEIVE -> Icons.Filled.Downloading
                 },
                 contentDescription = null,
                 modifier = Modifier.padding(horizontal = 4.dp),
@@ -73,8 +73,8 @@ fun OperationButton(
 
             Text(
                 text = when (operation) {
-                    Operation.SEND -> "Send"
-                    Operation.RECEIVE -> "Receive"
+                    P2pOperation.SEND -> "Send"
+                    P2pOperation.RECEIVE -> "Receive"
                 },
                 fontSize = 13.ssp,
                 fontFamily = FontFamily(Font(Res.font.genos)),

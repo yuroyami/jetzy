@@ -43,8 +43,8 @@ class P2pAndroidHandler(val activity: ComponentActivity, override val viewmodel:
         }
     }
 
-    override fun beginP2p(mode: P2pMode, direction: P2pDirection) {
-        super.beginP2p(mode, direction)
+    override fun beginP2p(mode: P2pMode, operation: P2pOperation) {
+        super.beginP2p(mode, operation)
 
 
     }

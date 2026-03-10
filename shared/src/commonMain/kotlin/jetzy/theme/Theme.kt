@@ -8,7 +8,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
-import jetzy.ui.adam.LocalViewmodel
+import jetzy.ui.LocalViewmodel
 
 private val lightScheme = lightColorScheme(
     primary = primaryLight,

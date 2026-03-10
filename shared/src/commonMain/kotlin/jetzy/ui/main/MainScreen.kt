@@ -3,14 +3,12 @@ package jetzy.ui.main
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -22,31 +20,26 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import jetzy.p2p.MethodPriority
-import jetzy.p2p.P2PMethodRegistry
+import jetzy.p2p.P2pOperation
 import jetzy.theme.sdp
 import jetzy.theme.ssp
+import jetzy.ui.LocalViewmodel
 import jetzy.ui.Screen
-import jetzy.ui.adam.LocalViewmodel
 import jetzy.utils.ComposeUtils.JetzyText
 import jetzy.utils.ComposeUtils.scheme
 import jetzy.utils.Platform
-import kotlinx.coroutines.delay
 
 @Composable
 fun MainScreenUI() {
@@ -56,7 +49,7 @@ fun MainScreenUI() {
 
     val operation by viewmodel.currentOperation.collectAsState()
     val peerPlatform by viewmodel.currentPeerPlatform.collectAsState()
-    val transferMethod by viewmodel.currentTransferMethod.collectAsState()
+    //val transferMethod by viewmodel.currentTransferMethod.collectAsState()
 
     Scaffold(
         bottomBar = {
@@ -77,7 +70,7 @@ fun MainScreenUI() {
                                 return@c
                             }
 
-                            if (viewmodel.currentOperation.value == Operation.SEND && viewmodel.elementsToSend.isEmpty()) {
+                            if (viewmodel.currentOperation.value == P2pOperation.SEND && viewmodel.elementsToSend.isEmpty()) {
                                 viewmodel.snacky("Select files to send!")
                                 haptic.performHapticFeedback(HapticFeedbackType.Reject)
                                 return@c
@@ -86,12 +79,9 @@ fun MainScreenUI() {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
 
                             viewmodel.currentOperation.value?.let { operation ->
-                                viewmodel.navigateTo(
-                                    when (operation) {
-                                        Operation.SEND -> Screen.SelectPeerScreen
-                                        Operation.RECEIVE -> Screen.ReceiveScreen
-                                    }
-                                )
+                                viewmodel.currentPeerPlatform.value?.let { platform ->
+                                    viewmodel.proceedFromMainScreen(platform, operation)
+                                }
                             }
                         },
                         shape = RoundedCornerShape(8.sdp)
@@ -103,6 +93,7 @@ fun MainScreenUI() {
         }
     ) { pv ->
         val parentScrollState = rememberScrollState()
+
         Column(
             modifier = Modifier.fillMaxSize().padding(pv).verticalScroll(parentScrollState),
             horizontalAlignment = CenterHorizontally,
@@ -149,13 +140,13 @@ fun MainScreenUI() {
                     }
 
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        OperationButton(operation = Operation.SEND, modifier = Modifier.weight(1f).padding(horizontal = 4.dp))
-                        OperationButton(operation = Operation.RECEIVE, modifier = Modifier.weight(1f).padding(horizontal = 4.dp))
+                        OperationButton(operation = P2pOperation.SEND, modifier = Modifier.weight(1f).padding(horizontal = 4.dp))
+                        OperationButton(operation = P2pOperation.RECEIVE, modifier = Modifier.weight(1f).padding(horizontal = 4.dp))
                     }
                 }
             }
 
-            AnimatedVisibility(operation == Operation.SEND) {
+            AnimatedVisibility(operation == P2pOperation.SEND) {
                 Surface(
                     modifier = Modifier.fillMaxWidth().padding(8.sdp),
                     tonalElevation = 0.dp,
@@ -220,7 +211,7 @@ fun MainScreenUI() {
             }
 
             val showPeerPlatform by derivedStateOf {
-                (operation == Operation.SEND && viewmodel.elementsToSend.isNotEmpty()) || operation == Operation.RECEIVE
+                (operation == P2pOperation.SEND && viewmodel.elementsToSend.isNotEmpty()) || operation == P2pOperation.RECEIVE
             }
 
             AnimatedVisibility(showPeerPlatform) {
@@ -234,27 +225,24 @@ fun MainScreenUI() {
                             horizontalAlignment = CenterHorizontally,
                             modifier = Modifier.fillMaxWidth().padding(8.dp)
                         ) {
-                            AnimatedVisibility(peerPlatform == null) {
-                                val text = when (it) {
-                                    Operation.SEND -> "Sending to..."
-                                    Operation.RECEIVE -> "Receiving from..."
-                                }
-
-                                Text(
-                                    text = text,
-                                    modifier = Modifier.fillMaxWidth().padding(8.sdp),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    textAlign = TextAlign.Center,
-                                    color = lerp(scheme.onSurface, scheme.outlineVariant, 0.65f)
-                                )
+                            val text = when (it) {
+                                P2pOperation.SEND -> "Sending to..."
+                                P2pOperation.RECEIVE -> "Receiving from..."
                             }
 
+                            Text(
+                                text = text,
+                                modifier = Modifier.fillMaxWidth().padding(8.sdp),
+                                style = MaterialTheme.typography.titleMedium,
+                                textAlign = TextAlign.Center,
+                                color = lerp(scheme.onSurface, scheme.outlineVariant, 0.65f)
+                            )
 
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(4.dp),
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
-                                val platforms = listOf(Platform.Android, Platform.IOS, Platform.PC, Platform.Web)
+                                val platforms = listOf(Platform.Android, Platform.IOS/*, Platform.PC, Platform.Web*/)
                                 platforms.forEach { platform ->
                                     val isSelected by derivedStateOf { platform == peerPlatform }
                                     VerticalCardButton(
@@ -274,84 +262,84 @@ fun MainScreenUI() {
                 }
             }
 
-            AnimatedVisibility(peerPlatform != null) {
-                peerPlatform?.let { pp ->
-                    Surface(
-                        modifier = Modifier.fillMaxWidth().padding(8.sdp),
-                        tonalElevation = 0.dp,
-                        shadowElevation = 8.dp
-                    ) {
-                        Column(
-                            horizontalAlignment = CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth().padding(8.dp)
-                        ) {
-                            Text(
-                                text = "Select transfer technology",
-                                modifier = Modifier.fillMaxWidth().padding(8.sdp),
-                                style = MaterialTheme.typography.titleMedium,
-                                textAlign = TextAlign.Center,
-                                color = lerp(scheme.onSurface, scheme.outlineVariant, 0.65f)
-                            )
-
-                            FlowRow(
-                                modifier = Modifier.fillMaxWidth().padding(4.dp),
-                                horizontalArrangement = Arrangement.SpaceEvenly,
-                                maxItemsInEachRow = 4,
-                                maxLines = 2
-                            ) {
-                                val transferMethods = remember(peerPlatform) { P2PMethodRegistry.getAvailableMethods(pp) }
-                                transferMethods.forEach { method ->
-                                    val isSelected by derivedStateOf { method == transferMethod }
-                                    VerticalCardButton(
-                                        modifier = Modifier.width(82.dp),
-                                        text = method.displayName,
-                                        icon = method.icon,
-                                        selectedIconTint = Color(10, 50, 200),
-                                        isSelected = isSelected,
-                                        upperSupportingContent = {
-                                            if (isSelected) {
-                                                Row(
-                                                    modifier = Modifier.padding(4.dp).fillMaxWidth(),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.Center
-
-                                                ) {
-                                                    val (emoji, label, color) = when (method.priority) {
-                                                        MethodPriority.RECOMMENDED -> Triple("⚡", "Fast", scheme.primary)
-                                                        MethodPriority.ACCEPTABLE -> Triple("✓", "Good", scheme.tertiary)
-                                                        MethodPriority.FALLBACK -> Triple("⚠", "Slow", scheme.error)
-                                                    }
-
-                                                    Text(emoji, style = MaterialTheme.typography.labelMedium)
-                                                    Text(
-                                                        text = label,
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = color,
-                                                        textAlign = TextAlign.Center,
-                                                        modifier = Modifier.padding(start = 4.dp)
-                                                    )
-                                                }
-                                            }
-                                        },
-                                        onClick = {
-                                            viewmodel.currentTransferMethod.value = method
-                                        }
-                                    )
-                                }
-
-                                LaunchedEffect(null, peerPlatform) {
-                                   viewmodel.currentTransferMethod.value = transferMethods.firstOrNull()
-                                }
-                            }
-                        }
-                    }
-                }
-
-                LaunchedEffect(null) {
-                    delay(200)
-                    parentScrollState.animateScrollTo(parentScrollState.maxValue)
-                }
-            }
+//            AnimatedVisibility(peerPlatform != null) {
+//                peerPlatform?.let { pp ->
+//                    Surface(
+//                        modifier = Modifier.fillMaxWidth().padding(8.sdp),
+//                        tonalElevation = 0.dp,
+//                        shadowElevation = 8.dp
+//                    ) {
+//                        Column(
+//                            horizontalAlignment = CenterHorizontally,
+//                            modifier = Modifier.fillMaxWidth().padding(8.dp)
+//                        ) {
+//                            Text(
+//                                text = "Select transfer technology",
+//                                modifier = Modifier.fillMaxWidth().padding(8.sdp),
+//                                style = MaterialTheme.typography.titleMedium,
+//                                textAlign = TextAlign.Center,
+//                                color = lerp(scheme.onSurface, scheme.outlineVariant, 0.65f)
+//                            )
+//
+//                            FlowRow(
+//                                modifier = Modifier.fillMaxWidth().padding(4.dp),
+//                                horizontalArrangement = Arrangement.SpaceEvenly,
+//                                maxItemsInEachRow = 4,
+//                                maxLines = 2
+//                            ) {
+//                                val transferMethods = remember(peerPlatform) { getAvailableMethods(pp) }
+//                                transferMethods.forEach { method ->
+//                                    val isSelected by derivedStateOf { method == transferMethod }
+//                                    VerticalCardButton(
+//                                        modifier = Modifier.width(82.dp),
+//                                        text = method.displayName,
+//                                        icon = method.icon,
+//                                        selectedIconTint = Color(10, 50, 200),
+//                                        isSelected = isSelected,
+//                                        upperSupportingContent = {
+//                                            if (isSelected) {
+//                                                Row(
+//                                                    modifier = Modifier.padding(4.dp).fillMaxWidth(),
+//                                                    verticalAlignment = Alignment.CenterVertically,
+//                                                    horizontalArrangement = Arrangement.Center
+//
+//                                                ) {
+//                                                    val (emoji, label, color) = when (method.priority) {
+//                                                        MethodPriority.RECOMMENDED -> Triple("⚡", "Fast", scheme.primary)
+//                                                        MethodPriority.ACCEPTABLE -> Triple("✓", "Good", scheme.tertiary)
+//                                                        MethodPriority.FALLBACK -> Triple("⚠", "Slow", scheme.error)
+//                                                    }
+//
+//                                                    Text(emoji, style = MaterialTheme.typography.labelMedium)
+//                                                    Text(
+//                                                        text = label,
+//                                                        style = MaterialTheme.typography.labelSmall,
+//                                                        color = color,
+//                                                        textAlign = TextAlign.Center,
+//                                                        modifier = Modifier.padding(start = 4.dp)
+//                                                    )
+//                                                }
+//                                            }
+//                                        },
+//                                        onClick = {
+//                                            viewmodel.currentTransferMethod.value = method
+//                                        }
+//                                    )
+//                                }
+//
+//                                LaunchedEffect(null, peerPlatform) {
+//                                   viewmodel.currentTransferMethod.value = transferMethods.firstOrNull()
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//
+//                LaunchedEffect(null) {
+//                    delay(200)
+//                    parentScrollState.animateScrollTo(parentScrollState.maxValue)
+//                }
+//            }
 
             Spacer(Modifier.height(70.sdp))
         }

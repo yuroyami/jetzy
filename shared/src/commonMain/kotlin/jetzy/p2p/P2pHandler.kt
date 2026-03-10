@@ -17,11 +17,11 @@ abstract class P2pHandler(open val viewmodel: JetzyViewmodel) {
     //val receivedSongs = mutableListOf<P2pReceivedFile>()
 
     var p2pMode: P2pMode? = null
-    var p2pDirection: P2pDirection? = null
+    var p2pOperation: P2pOperation? = null
 
-    open fun beginP2p(mode: P2pMode, direction: P2pDirection) {
+    open fun beginP2p(mode: P2pMode, operation: P2pOperation) {
         p2pMode = mode
-        p2pDirection = direction
+        p2pOperation = operation
     }
 
     open fun connectNativePeer(peer: P2pPeer) {

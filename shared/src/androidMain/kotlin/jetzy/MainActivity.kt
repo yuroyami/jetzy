@@ -13,12 +13,18 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import jetzy.ui.adam.AdamScreen
+import jetzy.managers.HotspotP2PM
+import jetzy.managers.P2PManager
+import jetzy.managers.P2PManager.Companion.platformCallback
+import jetzy.managers.WiFiDirectP2PM
+import jetzy.p2p.P2pPlatformCallback
 import jetzy.theme.NightMode
+import jetzy.ui.AdamScreen
+import jetzy.utils.Platform
 import jetzy.viewmodel.JetzyViewmodel
 import org.koin.android.ext.android.inject
 
-class MainActivity: ComponentActivity() {
+class MainActivity: ComponentActivity(), P2pPlatformCallback {
 
     val viewmodel: JetzyViewmodel by inject()
 
@@ -38,10 +44,10 @@ class MainActivity: ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
+        platformCallback = this
+
         setContent {
-            //CompositionLocalProvider(LocalP2pHandler provides p2pHandler) {
-                AdamScreen()
-            //}
+            AdamScreen()
 
             val nightMode by viewmodel.nightMode.collectAsState()
             val isSystemInDarkMode = isSystemInDarkTheme()
@@ -53,6 +59,14 @@ class MainActivity: ComponentActivity() {
                     NightMode.SYSTEM -> !isSystemInDarkMode
                 }
             }
+        }
+    }
+
+    override fun getSuitableP2pManager(peerPlatform: Platform): P2PManager? {
+        return when (peerPlatform) {
+            Platform.Android -> WiFiDirectP2PM(this) as P2PManager
+            Platform.IOS -> HotspotP2PM(this) as P2PManager
+            else -> null
         }
     }
 }

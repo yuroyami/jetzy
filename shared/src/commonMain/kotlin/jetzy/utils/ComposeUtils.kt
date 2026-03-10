@@ -63,11 +63,11 @@ object ComposeUtils {
             Text(
                 text,
                 style = MaterialTheme.typography.titleMedium.copy(
-                    color = Color.Companion.Black,
+                    color = Color.Black,
                     drawStyle = Stroke(width = strokeThickness)
                 ),
                 modifier = modifier,
-                textAlign = TextAlign.Companion.Center,
+                textAlign = TextAlign.Center,
                 fontSize = size,
                 fontFamily = font
             )
@@ -79,7 +79,7 @@ object ComposeUtils {
                     color = jetzyYellow
                 ),
                 modifier = modifier,
-                textAlign = TextAlign.Companion.Center,
+                textAlign = TextAlign.Center,
                 fontSize = size,
                 fontFamily = font
             )
@@ -94,9 +94,9 @@ object ComposeUtils {
                 onDrawWithContent {
                     drawContent()
                     drawRect(
-                        brush = Brush.Companion.linearGradient(
+                        brush = Brush.linearGradient(
                             colors = clrs!!
-                        ), blendMode = BlendMode.Companion.SrcAtop
+                        ), blendMode = BlendMode.SrcAtop
                     )
                 }
             }
@@ -111,7 +111,7 @@ object ComposeUtils {
                     drawContent()
                     drawRect(
                         color = color,
-                        blendMode = BlendMode.Companion.SrcAtop
+                        blendMode = BlendMode.SrcAtop
                     )
                 }
             }
@@ -170,8 +170,8 @@ object ComposeUtils {
                     shape = RoundedCornerShape(size = cardCornerRadius.dp),
                 ) {
                     Box(
-                        contentAlignment = Alignment.Companion.Center,
-                        modifier = Modifier.Companion
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
                             .fillMaxSize()
                     ) {
                         content()

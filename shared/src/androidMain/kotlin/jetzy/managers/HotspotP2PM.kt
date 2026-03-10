@@ -1,19 +1,17 @@
-package jetzy
+package jetzy.managers
 
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.wifi.WifiManager
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.annotation.RequiresPermission
+import jetzy.models.JetzyElement
 
-@RequiresApi(Build.VERSION_CODES.O)
-class HotspotManager(private val context: Context) {
-    
+class HotspotP2PM(context: Context): QRDiscoveryP2PManager() {
+
     private val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
     private var reservation: WifiManager.LocalOnlyHotspotReservation? = null
-    
+
     @SuppressLint("MissingPermission")
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES])
     fun startLocalHotspot(
@@ -22,19 +20,19 @@ class HotspotManager(private val context: Context) {
     ) {
         wifiManager.startLocalOnlyHotspot(object : WifiManager.LocalOnlyHotspotCallback() {
             override fun onStarted(reservation: WifiManager.LocalOnlyHotspotReservation?) {
-                this@HotspotManager.reservation = reservation
-                
+                this@HotspotP2PM.reservation = reservation
+
                 reservation?.wifiConfiguration?.let { config ->
                     val ssid = config.SSID
                     val password = config.preSharedKey
                     onStarted(ssid, password)
                 }
             }
-            
+
             override fun onStopped() {
                 // Hotspot stopped
             }
-            
+
             override fun onFailed(reason: Int) {
                 onFailed(reason)
                 // Reasons:
@@ -45,9 +43,28 @@ class HotspotManager(private val context: Context) {
             }
         }, null)
     }
-    
+
     fun stopLocalHotspot() {
         reservation?.close()
         reservation = null
+    }
+
+    override suspend fun initialize() {
+
+    }
+
+    override suspend fun cleanup() {
+    }
+
+    override suspend fun sendFiles(files: List<JetzyElement>): Result<Unit> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun receiveFiles(outputDir: JetzyElement): Result<List<JetzyElement>> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun disconnect() {
+        TODO("Not yet implemented")
     }
 }

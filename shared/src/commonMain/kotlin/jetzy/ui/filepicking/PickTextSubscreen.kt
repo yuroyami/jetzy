@@ -51,7 +51,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import jetzy.models.JetzyElement
-import jetzy.ui.adam.LocalViewmodel
+import jetzy.ui.LocalViewmodel
 import jetzy.utils.ComposeUtils.scheme
 
 @Composable

@@ -9,13 +9,16 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import jetzy.managers.P2PManager
+import jetzy.managers.P2PManager.Companion.platformCallback
 import jetzy.models.JetzyElement
+import jetzy.p2p.P2pDiscoveryMode
 import jetzy.p2p.P2pHandler
-import jetzy.p2p.P2pMethod
+import jetzy.p2p.P2pOperation
 import jetzy.p2p.P2pPeer
 import jetzy.theme.NightMode
 import jetzy.ui.Screen
-import jetzy.ui.main.Operation
+import jetzy.utils.NavigationDsl
 import jetzy.utils.Platform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,18 +33,49 @@ class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>): ViewModel() {
     val currentScreen = snapshotFlow { backstack.lastOrNull() ?: Screen.MainScreen }
         .stateIn(viewModelScope, SharingStarted.Eagerly, Screen.MainScreen)
 
-    //TODO Sophisticatize
-    fun navigateTo(screen: Screen) {
-        backstack.add(screen)
+    var p2pManager: P2PManager? = null
+
+    @NavigationDsl
+    fun navigateTo(screen: Screen, doRefresh: Boolean = false, noWayToReturn: Boolean = false) {
+        if (noWayToReturn) {
+            // Clear everything and add only the new screen
+            backstack.clear()
+            backstack.add(screen)
+        } else {
+            // Check if we're already on this screen
+            if (backstack.lastOrNull() == screen) {
+                if (doRefresh) {
+                    // Remove and re-add to trigger refresh
+                    backstack.removeLast()
+                    backstack.add(screen)
+                } else {
+                    // else: do nothing, we're already there
+                }
+            } else {
+                // Navigate to new screen
+                backstack.add(screen)
+            }
+        }
+    }
+
+    fun proceedFromMainScreen(peerPlatform: Platform, operation: P2pOperation) {
+       platformCallback.getSuitableP2pManager(peerPlatform)?.let { manager ->
+           p2pManager = manager
+
+           when (manager.discoveryMode) {
+               P2pDiscoveryMode.PeerDiscovery -> navigateTo(Screen.PeerDiscoveryScreen)
+               P2pDiscoveryMode.QRCode -> navigateTo(Screen.QRDiscoveryScreen)
+           }
+       }
     }
 
     val p2pHandler: P2pHandler by p2pHandlerProvider
 
     val nightMode = MutableStateFlow(NightMode.SYSTEM)
 
-    val currentOperation = MutableStateFlow<Operation?>(null)
+    val currentOperation = MutableStateFlow<P2pOperation?>(null)
     val currentPeerPlatform = MutableStateFlow<Platform?>(null)
-    val currentTransferMethod = MutableStateFlow<P2pMethod?>(null)
+    //val currentTransferMethod = MutableStateFlow<P2pTechnology?>(null)
 
     val elementsToSend = mutableStateListOf<JetzyElement>()
 

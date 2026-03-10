@@ -1,4 +1,4 @@
-package jetzy.ui.selectpeer
+package jetzy.ui.handshake
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,7 +14,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -24,19 +23,19 @@ import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.notosans
 import jetzy.theme.sdp
 import jetzy.theme.ssp
-import jetzy.ui.adam.LocalViewmodel
+import jetzy.ui.LocalViewmodel
 import jetzy.utils.ComposeUtils.JetzyText
 import jetzy.utils.ComposeUtils.font
 
 @Composable
-fun SelectPeerScreenUI() {
+fun PeerDiscoveryScreenUI() {
     val viewmodel = LocalViewmodel.current
 
-    val method by viewmodel.currentTransferMethod.collectAsState()
-
-    LaunchedEffect(null) {
-        method?.initiate()
-    }
+//    val method by viewmodel.currentTransferMethod.collectAsState()
+//
+//    LaunchedEffect(null) {
+//        method?.initiate()
+//    }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(8.dp),

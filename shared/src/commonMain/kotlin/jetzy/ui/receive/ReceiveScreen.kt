@@ -19,8 +19,8 @@ import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import jetzy.ui.LocalViewmodel
 import jetzy.ui.Screen
-import jetzy.ui.adam.LocalViewmodel
 
 
 @Composable

@@ -14,9 +14,10 @@ import jetzy.ui.filepicking.PickFilesSubscreenUI
 import jetzy.ui.filepicking.PickPhotosSubscreen
 import jetzy.ui.filepicking.PickTextSubscreen
 import jetzy.ui.filepicking.PickVideosSubscreen
+import jetzy.ui.handshake.PeerDiscoveryScreenUI
+import jetzy.ui.handshake.QRDiscoveryScreenUI
 import jetzy.ui.main.MainScreenUI
 import jetzy.ui.receive.ReceiveScreenUI
-import jetzy.ui.selectpeer.SelectPeerScreenUI
 
 sealed interface Screen {
     val label: String
@@ -51,9 +52,14 @@ sealed interface Screen {
         override fun UI() = ReceiveScreenUI()
     }
 
-    data object SelectPeerScreen : Screen {
+    data object PeerDiscoveryScreen : Screen {
         @Composable
-        override fun UI() = SelectPeerScreenUI()
+        override fun UI() = PeerDiscoveryScreenUI()
+    }
+
+    data object QRDiscoveryScreen : Screen {
+        @Composable
+        override fun UI() = QRDiscoveryScreenUI()
     }
 
     /** Subscreens */

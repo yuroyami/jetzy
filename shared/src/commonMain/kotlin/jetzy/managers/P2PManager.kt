@@ -1,22 +1,25 @@
 package jetzy.managers
 
 import jetzy.models.JetzyElement
+import jetzy.p2p.P2pDiscoveryMode
+import jetzy.p2p.P2pPlatformCallback
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Base interface for all P2P transfer methods
  */
 abstract class P2PManager {
-    val transferProgress: StateFlow<Float>
-        field = MutableStateFlow(0f)
 
-    final val transferStatus: StateFlow<String>
-         field: MutableStateFlow<String> = MutableStateFlow("")
+    companion object {
+        lateinit var platformCallback: P2pPlatformCallback
+    }
 
-    val isConnected: StateFlow<Boolean>
-        field = MutableStateFlow(false)
-    
+    val transferProgress = MutableStateFlow(0f)
+    val transferStatus = MutableStateFlow("")
+    val isConnected  = MutableStateFlow(false)
+
+    abstract val discoveryMode: P2pDiscoveryMode
+
     /**
      * Initialize the manager and prepare for connections
      */

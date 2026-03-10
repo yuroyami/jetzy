@@ -43,9 +43,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import jetzy.utils.ComposeUtils.AppPopup
-import jetzy.ui.adam.LocalViewmodel
+import jetzy.ui.LocalViewmodel
 import jetzy.utils.ComposeUtils
+import jetzy.utils.ComposeUtils.AppPopup
 import jetzy.utils.Platform
 import jetzy.utils.loggy
 import jetzy.utils.platform

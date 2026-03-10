@@ -52,7 +52,7 @@ import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import jetzy.models.JetzyElement
 import jetzy.theme.jetzyYellow
 import jetzy.theme.ssp
-import jetzy.ui.adam.LocalViewmodel
+import jetzy.ui.LocalViewmodel
 import jetzy.utils.ComposeUtils.scheme
 import kotlinx.coroutines.delay
 

@@ -2,10 +2,6 @@ package jetzy.utils
 
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.compose.runtime.Composable
-import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.dialogs.compose.PickerResultLauncher
-import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import kotlinx.coroutines.Dispatchers
 import java.net.InetAddress
 import java.net.NetworkInterface
@@ -45,11 +41,3 @@ fun ComponentActivity.toasty(s: String) {
         Toast.makeText(this@toasty, s, Toast.LENGTH_SHORT).show()
     }
 }
-
-@Composable
-actual fun rememberDirectoryPickerLauncher(
-    onResult: (PlatformFile?) -> Unit
-): PickerResultLauncher? = rememberDirectoryPickerLauncher(
-    title = "Picker a folder to send", //TODO
-    onResult = onResult
-)

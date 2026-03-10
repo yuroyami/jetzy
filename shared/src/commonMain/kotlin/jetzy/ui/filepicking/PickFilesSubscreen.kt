@@ -52,15 +52,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.FileKitType
+import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.name
 import jetzy.models.JetzyElement
 import jetzy.theme.jetzyYellow
 import jetzy.theme.ssp
-import jetzy.ui.adam.LocalViewmodel
+import jetzy.ui.LocalViewmodel
 import jetzy.utils.ComposeUtils.scheme
-import jetzy.utils.rememberDirectoryPickerLauncher
-
 
 enum class FileFolderViewMode { Files, Folders }
 
