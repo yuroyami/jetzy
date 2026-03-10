@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * Manager that supports automatic peer discovery/advertising
  * Both sides can discover each other (Wi-Fi Direct, Bluetooth, Nearby, MultipeerConnectivity)
  */
-abstract class PeerDiscoveryP2PManager : P2PManager() {
+abstract class PeerDiscoveryP2PM : P2PManager() {
 
     val availablePeers = MutableStateFlow(listOf<P2pPeer>())
 

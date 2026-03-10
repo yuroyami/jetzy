@@ -42,6 +42,7 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import jetzy.commonModule
 import jetzy.p2p.P2pHandler
+import jetzy.p2p.P2pOperation
 import jetzy.platformModule
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.jetzy_vector
@@ -50,7 +51,6 @@ import jetzy.theme.NightMode
 import jetzy.theme.sdp
 import jetzy.theme.ssp
 import jetzy.ui.Screen.Companion.nav3Entry
-import jetzy.ui.main.Operation
 import jetzy.utils.InitializeCoilSupportForFileKit
 import jetzy.viewmodel.JetzyViewmodel
 import org.jetbrains.compose.resources.vectorResource
@@ -119,8 +119,8 @@ fun AdamScreen() {//JetzyBackground()
                                             val prp by viewmodel.currentPeerPlatform.collectAsState()
                                             if (op != null && prp != null) {
                                                 val s1 = when (op) {
-                                                    Operation.SEND -> "Sending to"
-                                                    Operation.RECEIVE -> "Receiving from"
+                                                    P2pOperation.SEND -> "Sending to"
+                                                    P2pOperation.RECEIVE -> "Receiving from"
                                                     else -> {}
                                                 }
 
@@ -189,7 +189,8 @@ fun AdamScreen() {//JetzyBackground()
                                 entryProvider = entryProvider {
                                     nav3Entry<Screen.MainScreen>()
                                     nav3Entry<Screen.FilePickingScreen>()
-                                    nav3Entry<Screen.SelectPeerScreen>()
+                                    nav3Entry<Screen.PeerDiscoveryScreen>()
+                                    nav3Entry<Screen.QRDiscoveryScreen>()
                                     nav3Entry<Screen.ReceiveScreen>()
                                     nav3Entry<Screen.PickFilesSubscreen>()
                                     nav3Entry<Screen.PickTextSubscreen>()

@@ -7,7 +7,7 @@ import android.net.wifi.WifiManager
 import androidx.annotation.RequiresPermission
 import jetzy.models.JetzyElement
 
-class HotspotP2PM(context: Context): QRDiscoveryP2PManager() {
+class HotspotP2PM(context: Context): QRDiscoveryP2PM() {
 
     private val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
     private var reservation: WifiManager.LocalOnlyHotspotReservation? = null

@@ -11,6 +11,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import jetzy.managers.P2PManager
 import jetzy.managers.P2PManager.Companion.platformCallback
+import jetzy.managers.PeerDiscoveryP2PM
+import jetzy.managers.QRDiscoveryP2PM
 import jetzy.models.JetzyElement
 import jetzy.p2p.P2pDiscoveryMode
 import jetzy.p2p.P2pHandler
@@ -63,8 +65,8 @@ class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>): ViewModel() {
            p2pManager = manager
 
            when (manager.discoveryMode) {
-               P2pDiscoveryMode.PeerDiscovery -> navigateTo(Screen.PeerDiscoveryScreen)
-               P2pDiscoveryMode.QRCode -> navigateTo(Screen.QRDiscoveryScreen)
+               P2pDiscoveryMode.PeerDiscovery -> navigateTo(Screen.PeerDiscoveryScreen(manager as PeerDiscoveryP2PM))
+               P2pDiscoveryMode.QRCode -> navigateTo(Screen.QRDiscoveryScreen(manager as QRDiscoveryP2PM))
            }
        }
     }

@@ -9,6 +9,8 @@ import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation3.runtime.EntryProviderScope
+import jetzy.managers.PeerDiscoveryP2PM
+import jetzy.managers.QRDiscoveryP2PM
 import jetzy.ui.filepicking.ElementPickingScreen
 import jetzy.ui.filepicking.PickFilesSubscreenUI
 import jetzy.ui.filepicking.PickPhotosSubscreen
@@ -52,14 +54,14 @@ sealed interface Screen {
         override fun UI() = ReceiveScreenUI()
     }
 
-    data object PeerDiscoveryScreen : Screen {
+    data class PeerDiscoveryScreen(val manager: PeerDiscoveryP2PM) : Screen {
         @Composable
-        override fun UI() = PeerDiscoveryScreenUI()
+        override fun UI() = PeerDiscoveryScreenUI(manager)
     }
 
-    data object QRDiscoveryScreen : Screen {
+    data class QRDiscoveryScreen(val manager: QRDiscoveryP2PM) : Screen {
         @Composable
-        override fun UI() = QRDiscoveryScreenUI()
+        override fun UI() = QRDiscoveryScreenUI(manager)
     }
 
     /** Subscreens */

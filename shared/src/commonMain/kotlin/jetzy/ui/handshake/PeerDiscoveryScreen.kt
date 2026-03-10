@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import jetzy.managers.PeerDiscoveryP2PM
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.notosans
 import jetzy.theme.sdp
@@ -28,14 +29,10 @@ import jetzy.utils.ComposeUtils.JetzyText
 import jetzy.utils.ComposeUtils.font
 
 @Composable
-fun PeerDiscoveryScreenUI() {
+fun PeerDiscoveryScreenUI(manager: PeerDiscoveryP2PM) {
     val viewmodel = LocalViewmodel.current
 
-//    val method by viewmodel.currentTransferMethod.collectAsState()
-//
-//    LaunchedEffect(null) {
-//        method?.initiate()
-//    }
+    val availablePeers by manager.availablePeers.collectAsState()
 
     Column(
         modifier = Modifier.fillMaxSize().padding(8.dp),

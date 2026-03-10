@@ -6,7 +6,7 @@ import jetzy.p2p.P2pPeer
 
 class WiFiDirectP2PM(
     private val context: Context
-) : PeerDiscoveryP2PManager() {
+) : PeerDiscoveryP2PM() {
 
     // Wi-Fi Direct platform object
     private val wifiP2pManager by lazy {
