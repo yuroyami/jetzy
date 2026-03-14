@@ -107,6 +107,7 @@ class HotspotP2PM(context: Context, viewmodel: JetzyViewmodel) : QRDiscoveryP2PM
             // launch the blocking accept() independently so it doesn't hold up the return
             socketJob = coroutineScope.launch(PreferablyIO) {
                 try {
+                    loggy("######### Is waiting for serverSocket Acceptance #########")
                     socket = serverSocket.accept()
                     isConnected.value = true
                     // carry on with transfer here, or signal via a StateFlow

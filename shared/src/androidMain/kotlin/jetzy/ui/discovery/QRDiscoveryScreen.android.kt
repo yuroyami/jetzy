@@ -24,6 +24,7 @@ import io.github.alexzhirkevich.qrose.options.roundCorners
 import io.github.alexzhirkevich.qrose.rememberQrCodePainter
 import jetzy.managers.HotspotP2PM
 import jetzy.managers.QRDiscoveryP2PM
+import jetzy.models.QRData
 import jetzy.ui.LocalViewmodel
 
 @Composable
@@ -35,28 +36,29 @@ actual fun P2pQrContent(modifier: Modifier, manager: QRDiscoveryP2PM) {
         horizontalAlignment = CenterHorizontally,
         verticalArrangement = Arrangement.SpaceEvenly
     ) {
-        var qrData by remember { mutableStateOf("") }
+        var qrData by remember { mutableStateOf<QRData?>(null) }
         var qrRefreshor by remember { mutableIntStateOf(0) }
 
         LaunchedEffect(qrRefreshor) {
-            val data = (manager as? HotspotP2PM)?.establishTcpServer()?.await() ?: return@LaunchedEffect //TODO Throw error
+            qrData = (manager as? HotspotP2PM)?.establishTcpServer()?.await() //TODO Throw error
 
-            qrData = data.toString()
         }
+        qrData?.let {
+            val qrcodePainter = rememberQrCodePainter(
+                data = qrData?.toString() ?: "",
+                shapes = QrShapes(darkPixel = QrPixelShape.roundCorners())
+            )
 
-        val qrcodePainter = rememberQrCodePainter(
-            data = qrData,
-            shapes = QrShapes(darkPixel = QrPixelShape.roundCorners())
-        )
+            Spacer(Modifier)
 
-        Spacer(Modifier)
+            Image(
+                painter = qrcodePainter, "",
+                modifier = Modifier.size(164.dp)
+            )
 
-        Image(
-            painter = qrcodePainter, "",
-            modifier = Modifier.size(164.dp)
-        )
+            Text("Your IP address is: ${qrData?.ipAddress}:${qrData?.port}", textAlign = TextAlign.Center)
 
-        Text("Your IP address is: " + qrData.ifBlank { "Not connected to any network" }, textAlign = TextAlign.Center)
+        }
 
         TextButton(onClick = {
             //viewmodel.p2pQRpopup.value = false
