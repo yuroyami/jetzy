@@ -1,4 +1,4 @@
-package jetzy.ui.handshake
+package jetzy.ui.discovery
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize

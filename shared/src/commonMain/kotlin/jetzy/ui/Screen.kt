@@ -11,13 +11,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation3.runtime.EntryProviderScope
 import jetzy.managers.PeerDiscoveryP2PM
 import jetzy.managers.QRDiscoveryP2PM
+import jetzy.ui.discovery.PeerDiscoveryScreenUI
+import jetzy.ui.discovery.QRDiscoveryScreenUI
 import jetzy.ui.filepicking.ElementPickingScreen
 import jetzy.ui.filepicking.PickFilesSubscreenUI
 import jetzy.ui.filepicking.PickPhotosSubscreen
 import jetzy.ui.filepicking.PickTextSubscreen
 import jetzy.ui.filepicking.PickVideosSubscreen
-import jetzy.ui.handshake.PeerDiscoveryScreenUI
-import jetzy.ui.handshake.QRDiscoveryScreenUI
 import jetzy.ui.main.MainScreenUI
 import jetzy.ui.receive.ReceiveScreenUI
 

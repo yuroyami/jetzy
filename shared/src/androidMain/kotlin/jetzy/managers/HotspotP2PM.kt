@@ -5,12 +5,29 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.net.wifi.WifiManager
 import androidx.annotation.RequiresPermission
+import androidx.lifecycle.viewModelScope
 import jetzy.models.JetzyElement
+import jetzy.utils.loggy
+import jetzy.viewmodel.JetzyViewmodel
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import java.net.InetSocketAddress
+import java.net.ServerSocket
+import java.net.Socket
 
-class HotspotP2PM(context: Context): QRDiscoveryP2PM() {
+class HotspotP2PM(context: Context, viewmodel: JetzyViewmodel): QRDiscoveryP2PM() {
+
+    override val coroutineScope: CoroutineScope = viewmodel.viewModelScope
 
     private val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
     private var reservation: WifiManager.LocalOnlyHotspotReservation? = null
+
+    private var socket: Socket? = null
+    private var socketJob: Job? = null
 
     @SuppressLint("MissingPermission")
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES])
@@ -51,6 +68,45 @@ class HotspotP2PM(context: Context): QRDiscoveryP2PM() {
 
     override suspend fun initialize() {
 
+    }
+
+    fun initServerTCP() {
+        val future: CompletableDeferred<Pair<String, Int>> = CompletableDeferred()
+        runCatching { socketJob?.cancel() }
+        socketJob = GlobalScope.launch(Dispatchers.IO) {
+            try {
+                val localAddress = "" //todo getLocalIpAddress()
+
+                if (localAddress == null) {
+                    future.complete(Pair("", 0))
+                    return@launch
+                }
+
+                val serverSocket = ServerSocket()
+                serverSocket.reuseAddress = true
+                val boundAddress = InetSocketAddress("0.0.0.0", 0)
+                serverSocket.bind(boundAddress)
+                serverSocket.soTimeout = 0
+
+                future.complete(Pair(localAddress, serverSocket.localPort))
+
+                socket = serverSocket.accept()
+
+                if (viewmodel.userMode.value == true) {
+                    //p2pInput = socket?.getInputStream()?.asSource()
+                } else {
+                    //p2pOutput = socket?.getOutputStream()?.asSink()
+                }
+
+                //At this point we're connected by QR code on LAN
+                //carryOnP2PCross()
+
+            } catch (e: Exception) {
+                loggy(e.stackTraceToString())
+                future.complete(Pair("", 0))
+            }
+        }
+        return future
     }
 
     override suspend fun cleanup() {

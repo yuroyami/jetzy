@@ -29,7 +29,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>): ViewModel() {
+class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>) : ViewModel() {
 
     val backstack = mutableStateListOf<Screen>(Screen.MainScreen)
     val currentScreen = snapshotFlow { backstack.lastOrNull() ?: Screen.MainScreen }
@@ -61,14 +61,17 @@ class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>): ViewModel() {
     }
 
     fun proceedFromMainScreen(peerPlatform: Platform, operation: P2pOperation) {
-       platformCallback.getSuitableP2pManager(peerPlatform)?.let { manager ->
-           p2pManager = manager
+        val manager = platformCallback.getSuitableP2pManager(peerPlatform) ?: return
+        p2pManager = manager
 
-           when (manager.discoveryMode) {
-               P2pDiscoveryMode.PeerDiscovery -> navigateTo(Screen.PeerDiscoveryScreen(manager as PeerDiscoveryP2PM))
-               P2pDiscoveryMode.QRCode -> navigateTo(Screen.QRDiscoveryScreen(manager as QRDiscoveryP2PM))
-           }
-       }
+        navigateTo(
+            screen = when (manager.discoveryMode) {
+                P2pDiscoveryMode.PeerDiscovery -> Screen.PeerDiscoveryScreen(manager as PeerDiscoveryP2PM)
+                P2pDiscoveryMode.QRCode -> Screen.QRDiscoveryScreen(manager as QRDiscoveryP2PM)
+            },
+            doRefresh = true,
+            noWayToReturn = true
+        )
     }
 
     val p2pHandler: P2pHandler by p2pHandlerProvider

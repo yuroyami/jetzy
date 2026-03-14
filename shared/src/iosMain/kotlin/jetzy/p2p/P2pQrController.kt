@@ -2,6 +2,8 @@ package jetzy.p2p
 
 import jetz.common.ui.p2pHandler
 import jetz.common.utils.loggy
+import jetzy.ui.discovery.cameraContainer
+import jetzy.utils.loggy
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.AVFoundation.AVCaptureConnection
 import platform.AVFoundation.AVCaptureDevice

@@ -2,7 +2,6 @@ package jetzy
 
 import android.content.Context
 import androidx.activity.ComponentActivity
-import jetzy.p2p.P2pAndroidHandler
 import jetzy.p2p.P2pHandler
 import jetzy.viewmodel.JetzyViewmodel
 import org.koin.android.ext.koin.androidContext

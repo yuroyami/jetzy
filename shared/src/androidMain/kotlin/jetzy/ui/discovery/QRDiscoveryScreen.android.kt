@@ -1,4 +1,4 @@
-package jetzy.p2p
+package jetzy.ui.discovery
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -23,11 +23,11 @@ import io.github.alexzhirkevich.qrose.options.QrPixelShape
 import io.github.alexzhirkevich.qrose.options.QrShapes
 import io.github.alexzhirkevich.qrose.options.roundCorners
 import io.github.alexzhirkevich.qrose.rememberQrCodePainter
+import jetzy.managers.QRDiscoveryP2PM
 import jetzy.ui.LocalViewmodel
-import jetzy.utils.getDeviceName
 
 @Composable
-actual fun P2pQRcontent(modifier: Modifier) {
+actual fun P2pQrContent(modifier: Modifier, manager: QRDiscoveryP2PM) {
     val viewmodel = LocalViewmodel.current
 
     Column(
@@ -39,14 +39,15 @@ actual fun P2pQRcontent(modifier: Modifier) {
         var qrRefreshor by remember { mutableIntStateOf(0) }
 
         LaunchedEffect(qrRefreshor) {
-            val stuff = (viewmodel.p2pHandler as? P2pAndroidHandler)?.hostCrossPlatform()?.await() ?: return@LaunchedEffect
-            val p1 = stuff.first
-            val p2 = stuff.second
-
-            if (p1.isBlank()) return@LaunchedEffect
-
-            val p3 = getDeviceName()
-            qrData = "$p1:$p2:$p3"
+//            val stuff = (viewmodel.p2pHandler as? P2pAndroidHandler)?.hostCrossPlatform()?.await() ?: return@LaunchedEffect
+//
+//            val p1 = stuff.first
+//            val p2 = stuff.second
+//
+//            if (p1.isBlank()) return@LaunchedEffect
+//
+//            val p3 = getDeviceName()
+//            qrData = "$p1:$p2:$p3"
         }
 
         val qrcodePainter = rememberQrCodePainter(

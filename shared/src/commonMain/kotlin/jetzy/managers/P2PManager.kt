@@ -3,12 +3,15 @@ package jetzy.managers
 import jetzy.models.JetzyElement
 import jetzy.p2p.P2pDiscoveryMode
 import jetzy.p2p.P2pPlatformCallback
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * Base interface for all P2P transfer methods
  */
 abstract class P2PManager {
+
+    abstract val coroutineScope: CoroutineScope //the viewModelScope should be passed down to this
 
     companion object {
         lateinit var platformCallback: P2pPlatformCallback
