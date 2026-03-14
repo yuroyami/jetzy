@@ -10,7 +10,6 @@ import jetzy.models.JetzyElement
 import jetzy.models.QRData
 import jetzy.utils.PreferablyIO
 import jetzy.utils.getDeviceName
-import jetzy.utils.getLocalIpAddress
 import jetzy.utils.loggy
 import jetzy.viewmodel.JetzyViewmodel
 import kotlinx.coroutines.CoroutineScope
@@ -19,9 +18,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import java.net.Inet4Address
+import java.net.InetAddress
 import java.net.InetSocketAddress
+import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
+import java.util.Enumeration
 import kotlin.coroutines.resumeWithException
 
 class HotspotP2PM(context: Context, viewmodel: JetzyViewmodel) : QRDiscoveryP2PM() {
@@ -93,7 +96,7 @@ class HotspotP2PM(context: Context, viewmodel: JetzyViewmodel) : QRDiscoveryP2PM
         try {
             val (ssid, password) = startLocalHotspotAsync()
 
-            val localAddress = getLocalIpAddress() ?: return@async null
+            val localAddress = getHotspotIpAddress() ?: return@async null
 
             val serverSocket = ServerSocket().apply {
                 reuseAddress = true
@@ -123,6 +126,38 @@ class HotspotP2PM(context: Context, viewmodel: JetzyViewmodel) : QRDiscoveryP2PM
             loggy(e.stackTraceToString())
             null
         }
+    }
+
+    fun getHotspotIpAddress(): String? {
+        try {
+            val interfaces: Enumeration<NetworkInterface> = NetworkInterface.getNetworkInterfaces()
+            while (interfaces.hasMoreElements()) {
+                val networkInterface: NetworkInterface = interfaces.nextElement()
+                val name = networkInterface.name
+                loggy("Interface: $name")
+
+                // hotspot interfaces are typically ap0, wlan1, wlan2, swlan0 etc.
+                // but NOT wlan0 which is the regular Wi-Fi client interface
+                val isHotspotInterface = (name.startsWith("ap") ||
+                        name.startsWith("swlan") ||
+                        (name.startsWith("wlan") && name != "wlan0"))
+
+                if (!isHotspotInterface) continue
+
+                val addresses: Enumeration<InetAddress> = networkInterface.inetAddresses
+                while (addresses.hasMoreElements()) {
+                    val address: InetAddress = addresses.nextElement()
+                    val ip = address.hostAddress ?: continue
+                    loggy("  -> $ip")
+                    if (!address.isLoopbackAddress && address is Inet4Address) {
+                        return ip
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            loggy(e.stackTraceToString())
+        }
+        return null
     }
 
     override suspend fun cleanup() {

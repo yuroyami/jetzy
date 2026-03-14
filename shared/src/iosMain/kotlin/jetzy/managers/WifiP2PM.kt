@@ -10,16 +10,21 @@ import jetzy.models.JetzyElement
 import jetzy.models.QRData
 import jetzy.utils.PreferablyIO
 import jetzy.utils.loggy
+import jetzy.viewmodel
 import jetzy.viewmodel.JetzyViewmodel
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import platform.Foundation.NSError
 import platform.NetworkExtension.NEHotspotConfiguration
 import platform.NetworkExtension.NEHotspotConfigurationManager
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.time.Duration.Companion.seconds
 
 class WifiP2PM(viewmodel: JetzyViewmodel) : QRDiscoveryP2PM() {
 
@@ -37,12 +42,16 @@ class WifiP2PM(viewmodel: JetzyViewmodel) : QRDiscoveryP2PM() {
 
             loggy("Trying to connect to '${qrData.ipAddress}' on port '${qrData.port}")
 
-            val ktor = aSocket(SelectorManager(coroutineContext))
+            delay(2.seconds)
+
+            val ktor = aSocket(SelectorManager(Dispatchers.IO))
                 .tcp()
                 .connect(qrData.ipAddress, qrData.port)
 
             //Successfully connected by QR code
             ktorConnection = ktor.connection()
+
+            viewmodel.snacky("Successfully connected via QR!")
 
             loggy("Successfully connected!")
         } catch (e: Exception) {

@@ -126,14 +126,14 @@ kotlin {
             //api("com.google.android.gms:play-services-nearby:19.3.0")
         }
 
-        jvmMain.dependencies {
-            implementation(libs.compose.desktop)
-            implementation(compose.desktop.currentOs)
-        }
-
-        jsMain.dependencies {
-
-        }
+//        jvmMain.dependencies {
+//            implementation(libs.compose.desktop)
+//            implementation(compose.desktop.currentOs)
+//        }
+//
+//        jsMain.dependencies {
+//
+//        }
 
         iosMain.dependencies {
 

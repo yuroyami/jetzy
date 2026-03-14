@@ -58,7 +58,9 @@ actual fun P2pQrContent(modifier: Modifier, manager: QRDiscoveryP2PM) {
 
         Text("Your IP address is: " + qrData.ifBlank { "Not connected to any network" }, textAlign = TextAlign.Center)
 
-        TextButton(onClick = { viewmodel.p2pQRpopup.value = false }) {
+        TextButton(onClick = {
+            //viewmodel.p2pQRpopup.value = false
+        }) {
             Text("Cancel")
         }
 

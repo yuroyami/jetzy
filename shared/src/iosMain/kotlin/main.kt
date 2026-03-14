@@ -1,3 +1,5 @@
+package jetzy
+
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.ComposeUIViewController
 import jetzy.managers.MpcP2PM
