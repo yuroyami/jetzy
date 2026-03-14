@@ -3,15 +3,10 @@ package jetzy.managers
 import android.Manifest
 import android.content.Context
 import android.os.Build
-import androidx.lifecycle.viewModelScope
 import jetzy.models.JetzyElement
 import jetzy.p2p.P2pPeer
-import jetzy.viewmodel.JetzyViewmodel
-import kotlinx.coroutines.CoroutineScope
 
-class WiFiDirectP2PM(private val context: Context, viewmodel: JetzyViewmodel) : PeerDiscoveryP2PM() {
-
-    override val coroutineScope: CoroutineScope = viewmodel.viewModelScope
+class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
 
     // Wi-Fi Direct platform object
     private val wifiP2pManager by lazy {
@@ -55,25 +50,16 @@ class WiFiDirectP2PM(private val context: Context, viewmodel: JetzyViewmodel) : 
         return Result.success(Unit)
     }
     
-    override suspend fun sendFiles(files: List<JetzyElement>): Result<Unit> {
+    override suspend fun sendFiles(files: List<JetzyElement>) {
         transferStatus.value = "Sending ${files.size} files..."
-        // Implement send
-        return Result.success(Unit)
     }
     
-    override suspend fun receiveFiles(outputDir: JetzyElement): Result<List<JetzyElement>> {
+    override suspend fun receiveFiles(outputDir: JetzyElement) {
         transferStatus.value = "Waiting to receive files..."
-        // Implement receive
-        return Result.success(emptyList())
+
     }
-    
-    override suspend fun disconnect() {
-        isConnected.value = false
-        transferStatus.value = "Disconnected"
-    }
-    
+
     override suspend fun cleanup() {
         stopDiscoveryAndAdvertising()
-        disconnect()
     }
 }

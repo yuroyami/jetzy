@@ -192,7 +192,7 @@ fun AdamScreen(onViewmodel: (JetzyViewmodel) -> Unit ) {
                                     nav3Entry<Screen.FilePickingScreen>()
                                     nav3Entry<Screen.PeerDiscoveryScreen>()
                                     nav3Entry<Screen.QRDiscoveryScreen>()
-                                    nav3Entry<Screen.ReceiveScreen>()
+                                    nav3Entry<Screen.TransferScreen>()
                                     nav3Entry<Screen.PickFilesSubscreen>()
                                     nav3Entry<Screen.PickTextSubscreen>()
                                     nav3Entry<Screen.PickVideosSubscreen>()

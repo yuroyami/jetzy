@@ -3,16 +3,26 @@ package jetzy.managers
 import androidx.annotation.CallSuper
 import jetzy.models.JetzyElement
 import jetzy.p2p.P2pDiscoveryMode
+import jetzy.p2p.P2pIoApi
+import jetzy.p2p.P2pOperation
 import jetzy.p2p.P2pPlatformCallback
+import jetzy.ui.Screen
+import jetzy.utils.PreferablyIO
+import jetzy.viewmodel.JetzyViewmodel
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 /**
  * Base interface for all P2P transfer methods
  */
 abstract class P2PManager {
 
-    abstract val coroutineScope: CoroutineScope //the viewModelScope should be passed down to this
+    lateinit var viewmodel: JetzyViewmodel
+
+    private val coroutineSupervisor = SupervisorJob()
+    protected val coroutineScope = CoroutineScope(PreferablyIO + coroutineSupervisor)
 
     companion object {
         lateinit var platformCallback: P2pPlatformCallback
@@ -30,9 +40,26 @@ abstract class P2PManager {
      * Initialize the manager and prepare for connections
      */
     @CallSuper
-    open fun initialize() {
+    open fun initialize(viewmodel: JetzyViewmodel) {
+        this.viewmodel = viewmodel
         platformCallback.ensurePermissions(requiredPermissions)
     }
+
+    @P2pIoApi
+    fun beginTransfer() {
+        viewmodel.navigateTo(
+            Screen.TransferScreen, noWayToReturn = true
+        )
+
+        coroutineScope.launch {
+            when (viewmodel.currentOperation.value) {
+                P2pOperation.SEND -> sendFiles(viewmodel.elementsToSend)
+                P2pOperation.RECEIVE -> receiveFiles()
+                else -> throw Exception("What are we trying to do here?")
+            }
+        }
+    }
+
 
     /**
      * Clean up resources and disconnect
@@ -42,15 +69,11 @@ abstract class P2PManager {
     /**
      * Send files to the connected peer
      */
-    abstract suspend fun sendFiles(files: List<JetzyElement>): Result<Unit>
+    abstract suspend fun sendFiles(files: List<JetzyElement>)
     
     /**
      * Receive files from the connected peer
      */
-    abstract suspend fun receiveFiles(outputDir: JetzyElement): Result<List<JetzyElement>>
-    
-    /**
-     * Disconnect from current peer
-     */
-    abstract suspend fun disconnect()
+    abstract suspend fun receiveFiles()
+
 }

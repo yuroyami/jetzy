@@ -29,8 +29,9 @@ import jetzy.utils.ComposeUtils.JetzyText
 import jetzy.utils.ComposeUtils.font
 
 @Composable
-fun PeerDiscoveryScreenUI(manager: PeerDiscoveryP2PM) {
+fun PeerDiscoveryScreenUI() {
     val viewmodel = LocalViewmodel.current
+    val manager = viewmodel.p2pManager as? PeerDiscoveryP2PM ?: return
 
     val availablePeers by manager.availablePeers.collectAsState()
 
@@ -79,7 +80,7 @@ fun PeerDiscoveryScreenUI(manager: PeerDiscoveryP2PM) {
                         }
                     }
 
-                    items(viewmodel.p2pPeers) {
+                    items(availablePeers) {
                         TextButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {

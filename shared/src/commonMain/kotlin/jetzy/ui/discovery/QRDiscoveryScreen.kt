@@ -10,8 +10,9 @@ import jetzy.managers.QRDiscoveryP2PM
 import jetzy.ui.LocalViewmodel
 
 @Composable
-fun QRDiscoveryScreenUI(manager: QRDiscoveryP2PM) {
+fun QRDiscoveryScreenUI() {
     val viewmodel = LocalViewmodel.current
+    val manager = viewmodel.p2pManager as? QRDiscoveryP2PM ?: return
 
     Column(
         modifier = Modifier.fillMaxSize(),

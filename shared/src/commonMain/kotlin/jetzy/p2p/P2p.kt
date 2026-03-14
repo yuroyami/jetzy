@@ -8,3 +8,5 @@ expect class P2pReceivedFile
 expect class P2pTempFolder
 
 expect fun P2pPeer.peerName(): String
+
+@DslMarker annotation class P2pIoApi

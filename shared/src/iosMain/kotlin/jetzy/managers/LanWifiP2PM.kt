@@ -1,20 +1,13 @@
 package jetzy.managers
 
-import androidx.lifecycle.viewModelScope
 import io.ktor.network.selector.SelectorManager
-import io.ktor.network.sockets.Connection
-import io.ktor.network.sockets.Socket
 import io.ktor.network.sockets.aSocket
 import io.ktor.network.sockets.connection
-import jetzy.models.JetzyElement
 import jetzy.models.QRData
 import jetzy.utils.PreferablyIO
 import jetzy.utils.loggy
-import jetzy.viewmodel.JetzyViewmodel
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -25,13 +18,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.time.Duration.Companion.seconds
 
-class WifiP2PM(viewmodel: JetzyViewmodel) : QRDiscoveryP2PM() {
-
-    override val coroutineScope: CoroutineScope = viewmodel.viewModelScope
-
-    private var socket: Socket? = null
-    private var socketJob: Job? = null
-    private var ktorConnection: Connection? = null
+class LanWifiP2PM : QRDiscoveryP2PM() {
 
     fun establishTcpClient(qrData: QRData) = coroutineScope.async(PreferablyIO) {
         try {
@@ -40,13 +27,14 @@ class WifiP2PM(viewmodel: JetzyViewmodel) : QRDiscoveryP2PM() {
             connectToWifi(qrData)
             delay(3.seconds)
 
-            while (ktorConnection == null) {
+            while (connection == null) {
                 loggy("Trying to connect to '${qrData.ipAddress}' on port '${qrData.port}'")
                 runCatching {
                     val ktor = aSocket(SelectorManager(Dispatchers.IO))
                         .tcp()
                         .connect(qrData.ipAddress, qrData.port)
-                    ktorConnection = ktor.connection()
+
+                    connection = ktor.connection()
                 }.onFailure { e ->
                     loggy("Connection attempt failed: ${e.message}, retrying in 2s...")
                     delay(2.seconds)
@@ -76,20 +64,5 @@ class WifiP2PM(viewmodel: JetzyViewmodel) : QRDiscoveryP2PM() {
         cont.invokeOnCancellation {
             NEHotspotConfigurationManager.sharedManager.removeConfigurationForSSID(qrData.hotspotSSID)
         }
-    }
-
-    override suspend fun cleanup() {
-    }
-
-    override suspend fun sendFiles(files: List<JetzyElement>): Result<Unit> {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun receiveFiles(outputDir: JetzyElement): Result<List<JetzyElement>> {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun disconnect() {
-        TODO("Not yet implemented")
     }
 }

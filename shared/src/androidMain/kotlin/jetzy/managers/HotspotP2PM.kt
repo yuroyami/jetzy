@@ -5,37 +5,28 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.net.wifi.WifiManager
 import android.os.Build
-import androidx.lifecycle.viewModelScope
-import jetzy.models.JetzyElement
+import io.ktor.network.selector.SelectorManager
+import io.ktor.network.sockets.aSocket
+import io.ktor.network.sockets.connection
+import io.ktor.network.sockets.port
 import jetzy.models.QRData
 import jetzy.utils.PreferablyIO
 import jetzy.utils.getDeviceName
 import jetzy.utils.loggy
-import jetzy.viewmodel.JetzyViewmodel
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.net.Inet4Address
 import java.net.InetAddress
-import java.net.InetSocketAddress
 import java.net.NetworkInterface
-import java.net.ServerSocket
-import java.net.Socket
 import java.util.Enumeration
 import kotlin.coroutines.resumeWithException
 
-class HotspotP2PM(context: Context, viewmodel: JetzyViewmodel) : QRDiscoveryP2PM() {
-
-    override val coroutineScope: CoroutineScope = viewmodel.viewModelScope
+class HotspotP2PM(context: Context) : QRDiscoveryP2PM() {
 
     private val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
     private var reservation: WifiManager.LocalOnlyHotspotReservation? = null
-
-    private var socket: Socket? = null
-    private var socketJob: Job? = null
 
     override val requiredPermissions: List<String> = buildList {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -98,19 +89,20 @@ class HotspotP2PM(context: Context, viewmodel: JetzyViewmodel) : QRDiscoveryP2PM
 
             val localAddress = getHotspotIpAddress() ?: return@async null
 
-            val serverSocket = ServerSocket().apply {
-                reuseAddress = true
-                bind(InetSocketAddress("0.0.0.0", 0))
-                soTimeout = 0
-            }
+           val serverSocket = aSocket(SelectorManager(PreferablyIO))
+               .tcp()
+               .bind("0.0.0.0", 0)
 
             // launch the blocking accept() independently so it doesn't hold up the return
-            socketJob = coroutineScope.launch(PreferablyIO) {
+            coroutineScope.launch(PreferablyIO) {
                 try {
                     loggy("######### Is waiting for serverSocket Acceptance #########")
-                    socket = serverSocket.accept()
+                    val socket = serverSocket.accept()
+                    connection = socket.connection()
+
                     isConnected.value = true
-                    // carry on with transfer here, or signal via a StateFlow
+
+                    beginTransfer()
                 } catch (e: Exception) {
                     loggy("Accept failed: ${e.stackTraceToString()}")
                 }
@@ -120,7 +112,7 @@ class HotspotP2PM(context: Context, viewmodel: JetzyViewmodel) : QRDiscoveryP2PM
                 hotspotSSID = ssid,
                 hotspotPassword = password,
                 ipAddress = localAddress,
-                port = serverSocket.localPort,
+                port = serverSocket.port,
                 deviceName = getDeviceName()
             )
         } catch (e: Exception) {
@@ -161,18 +153,4 @@ class HotspotP2PM(context: Context, viewmodel: JetzyViewmodel) : QRDiscoveryP2PM
         return null
     }
 
-    override suspend fun cleanup() {
-    }
-
-    override suspend fun sendFiles(files: List<JetzyElement>): Result<Unit> {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun receiveFiles(outputDir: JetzyElement): Result<List<JetzyElement>> {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun disconnect() {
-        TODO("Not yet implemented")
-    }
 }

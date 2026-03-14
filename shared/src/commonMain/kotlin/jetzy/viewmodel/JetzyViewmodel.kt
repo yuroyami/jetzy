@@ -2,24 +2,19 @@ package jetzy.viewmodel
 
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import jetzy.managers.P2PManager
 import jetzy.managers.P2PManager.Companion.platformCallback
-import jetzy.managers.PeerDiscoveryP2PM
-import jetzy.managers.QRDiscoveryP2PM
 import jetzy.models.JetzyElement
 import jetzy.p2p.P2pDiscoveryMode
-import jetzy.p2p.P2pHandler
 import jetzy.p2p.P2pOperation
-import jetzy.p2p.P2pPeer
 import jetzy.theme.NightMode
 import jetzy.ui.Screen
+import jetzy.ui.transfer.TransferScreenState
 import jetzy.utils.NavigationDsl
 import jetzy.utils.Platform
 import kotlinx.coroutines.Dispatchers
@@ -29,13 +24,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>) : ViewModel() {
+class JetzyViewmodel() : ViewModel() {
 
     val backstack = mutableStateListOf<Screen>(Screen.MainScreen)
     val currentScreen = snapshotFlow { backstack.lastOrNull() ?: Screen.MainScreen }
         .stateIn(viewModelScope, SharingStarted.Eagerly, Screen.MainScreen)
 
     var p2pManager: P2PManager? = null
+
+    val transferState = MutableStateFlow<TransferScreenState?>(null)
+
+    val currentOperation = MutableStateFlow<P2pOperation?>(null)
+    val currentPeerPlatform = MutableStateFlow<Platform?>(null)
 
     @NavigationDsl
     fun navigateTo(screen: Screen, doRefresh: Boolean = false, noWayToReturn: Boolean = false) {
@@ -62,27 +62,21 @@ class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>) : ViewModel() {
 
     fun proceedFromMainScreen(peerPlatform: Platform, operation: P2pOperation) {
         val manager = platformCallback.getSuitableP2pManager(peerPlatform) ?: return
-        manager.initialize()
+        manager.initialize(viewmodel = this)
 
         p2pManager = manager
 
         navigateTo(
             screen = when (manager.discoveryMode) {
-                P2pDiscoveryMode.PeerDiscovery -> Screen.PeerDiscoveryScreen(manager as PeerDiscoveryP2PM)
-                P2pDiscoveryMode.QRCode -> Screen.QRDiscoveryScreen(manager as QRDiscoveryP2PM)
+                P2pDiscoveryMode.PeerDiscovery -> Screen.PeerDiscoveryScreen
+                P2pDiscoveryMode.QRCode -> Screen.QRDiscoveryScreen
             },
             doRefresh = true,
             noWayToReturn = true
         )
     }
 
-    val p2pHandler: P2pHandler by p2pHandlerProvider
-
     val nightMode = MutableStateFlow(NightMode.SYSTEM)
-
-    val currentOperation = MutableStateFlow<P2pOperation?>(null)
-    val currentPeerPlatform = MutableStateFlow<Platform?>(null)
-    //val currentTransferMethod = MutableStateFlow<P2pTechnology?>(null)
 
     val elementsToSend = mutableStateListOf<JetzyElement>()
 
@@ -94,22 +88,16 @@ class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>) : ViewModel() {
 
     val elementsReceived = mutableStateListOf<JetzyElement>()
 
-    val p2pPeers = mutableStateListOf<P2pPeer>()
-
-    val userMode = MutableStateFlow<Boolean?>(null)
-
-    /* P2P-related */
-
-    val textPeer1 = mutableStateOf<String?>(null)
-    val textPeer2 = mutableStateOf<String?>(null)
-    val transferProgressPrimary = mutableFloatStateOf(0f) //the overall transfer
-    val transferProgressSecondary = mutableFloatStateOf(0f) //the progress of transferring each file
-    val transferStatusText = mutableStateOf("") //status of transfer
-
     fun clearOperation() {
         elementsToSend.clear()
         currentOperation.value = null
         currentPeerPlatform.value = null
+    }
+
+    inline fun <reified T : JetzyElement> SnapshotStateList<JetzyElement>.filterAsStateFlow(): StateFlow<List<T>> {
+        return snapshotFlow {
+            filterIsInstance<T>()
+        }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
     }
 
     var snack = SnackbarHostState()
@@ -121,11 +109,5 @@ class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>) : ViewModel() {
                 duration = SnackbarDuration.Short
             )
         }
-    }
-
-    inline fun <reified T : JetzyElement> SnapshotStateList<JetzyElement>.filterAsStateFlow(): StateFlow<List<T>> {
-        return snapshotFlow {
-            filterIsInstance<T>()
-        }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
     }
 }

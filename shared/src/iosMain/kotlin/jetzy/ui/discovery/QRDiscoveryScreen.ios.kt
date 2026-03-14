@@ -6,7 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitViewController
 import jetzy.managers.QRDiscoveryP2PM
-import jetzy.managers.WifiP2PM
+import jetzy.managers.LanWifiP2PM
 import jetzy.ui.LocalViewmodel
 import jetzy.uiviewcontroller.QRScannerController
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -19,7 +19,7 @@ actual fun P2pQrContent(modifier: Modifier, manager: QRDiscoveryP2PM) {
     val qrController = remember {
         QRScannerController(
             onQrDetected = { qrData ->
-                (manager as? WifiP2PM)?.establishTcpClient(qrData)
+                (manager as? LanWifiP2PM)?.establishTcpClient(qrData)
             }
         )
     }
