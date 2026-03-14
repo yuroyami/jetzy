@@ -3,7 +3,6 @@ package jetzy.ui.discovery
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
@@ -26,16 +25,6 @@ import io.github.alexzhirkevich.qrose.rememberQrCodePainter
 import jetzy.managers.HotspotP2PM
 import jetzy.managers.QRDiscoveryP2PM
 import jetzy.ui.LocalViewmodel
-
-data class QRData(
-    val hotspotSSID: String,
-    val hotspotPassword: String,
-    val ipAddress: String,
-    val port: Int,
-    val deviceName: String
-) {
-    override fun toString(): String = "${hotspotSSID}:${hotspotPassword}:${ipAddress}:${port}:${deviceName}"
-}
 
 @Composable
 actual fun P2pQrContent(modifier: Modifier, manager: QRDiscoveryP2PM) {
@@ -69,14 +58,8 @@ actual fun P2pQrContent(modifier: Modifier, manager: QRDiscoveryP2PM) {
 
         Text("Your IP address is: " + qrData.ifBlank { "Not connected to any network" }, textAlign = TextAlign.Center)
 
-        Row {
-            TextButton(onClick = { qrRefreshor += 1 }) {
-                Text("Refresh")
-            }
-
-            TextButton(onClick = { viewmodel.p2pQRpopup.value = false }) {
-                Text("Cancel")
-            }
+        TextButton(onClick = { viewmodel.p2pQRpopup.value = false }) {
+            Text("Cancel")
         }
 
         Spacer(Modifier)

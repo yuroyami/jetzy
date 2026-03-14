@@ -62,6 +62,8 @@ class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>) : ViewModel() {
 
     fun proceedFromMainScreen(peerPlatform: Platform, operation: P2pOperation) {
         val manager = platformCallback.getSuitableP2pManager(peerPlatform) ?: return
+        manager.initialize()
+
         p2pManager = manager
 
         navigateTo(

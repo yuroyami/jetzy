@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -41,7 +42,6 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import jetzy.commonModule
-import jetzy.p2p.P2pHandler
 import jetzy.p2p.P2pOperation
 import jetzy.platformModule
 import jetzy.shared.generated.resources.Res
@@ -59,12 +59,9 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.dsl.koinConfiguration
 
 val LocalViewmodel = compositionLocalOf<JetzyViewmodel> { error("No Viewmodel provided") }
-val LocalP2pHandler = compositionLocalOf<P2pHandler> { error("No P2p Handler provided yet") }
 
 @Composable
-fun AdamScreen() {//JetzyBackground()
-    //Continue sending
-    //CenterAligned
+fun AdamScreen(onViewmodel: (JetzyViewmodel) -> Unit ) {
     KoinApplication(
         configuration = koinConfiguration(
             declaration = { modules(commonModule, platformModule) }
@@ -74,6 +71,10 @@ fun AdamScreen() {//JetzyBackground()
 
             val viewmodel = koinViewModel<JetzyViewmodel>()
             val haptic = LocalHapticFeedback.current
+
+            SideEffect {
+                onViewmodel(viewmodel)
+            }
 
             val currentScreen by viewmodel.currentScreen.collectAsState()
 

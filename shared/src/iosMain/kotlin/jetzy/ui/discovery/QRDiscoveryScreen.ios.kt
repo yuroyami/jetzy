@@ -1,45 +1,37 @@
 package jetzy.ui.discovery
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.UIKitInteropProperties
-import androidx.compose.ui.viewinterop.UIKitView
+import androidx.compose.ui.viewinterop.UIKitViewController
 import jetzy.managers.QRDiscoveryP2PM
-import jetzy.p2p.P2pQrController
+import jetzy.managers.WifiP2PM
+import jetzy.ui.LocalViewmodel
+import jetzy.uiviewcontroller.QRScannerController
 import kotlinx.cinterop.ExperimentalForeignApi
-import platform.UIKit.UIView
-
-var qrController: P2pQrController? = null
-
-lateinit var cameraContainer: UIView
 
 @OptIn(ExperimentalForeignApi::class)
 @Composable
 actual fun P2pQrContent(modifier: Modifier, manager: QRDiscoveryP2PM) {
-    UIKitView(
+    val viewmodel = LocalViewmodel.current
+
+    val qrController = remember {
+        QRScannerController(
+            onQrDetected = { qrData ->
+                (manager as? WifiP2PM)?.establishTcpClient(qrData)
+            }
+        )
+    }
+
+    UIKitViewController(
         modifier = modifier,
         factory = {
-            cameraContainer = UIView()
-            qrController = P2pQrController()
-            cameraContainer.addSubview(qrController!!.view)
-            cameraContainer
+            qrController
         },
-        update = {
-
-        },
-//        onResize = { view: UIView, rect: CValue<CGRect> ->
-//            CATransaction.begin()
-//            CATransaction.setValue(true, kCATransactionDisableActions)
-//            view.layer.setFrame(rect)
-//            qrController?.previewLayer?.setFrame(rect)
-//            cameraContainer.layer.frame = rect
-//            CATransaction.commit()
-//        },
-        onRelease = {
-            /*TODO*/
-        },
+        update = {},
         properties = UIKitInteropProperties(
-            isInteractive = false,
+            isInteractive = true, // camera preview needs touch passthrough
             isNativeAccessibilityEnabled = true
         )
     )

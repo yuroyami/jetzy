@@ -1,8 +1,7 @@
-package jetzy.p2p
+package jetzy.uiviewcontroller
 
-import jetz.common.ui.p2pHandler
-import jetz.common.utils.loggy
-import jetzy.ui.discovery.cameraContainer
+import jetzy.models.QRData
+import jetzy.models.QRData.Companion.toQRData
 import jetzy.utils.loggy
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.AVFoundation.AVCaptureConnection
@@ -20,7 +19,9 @@ import platform.AVFoundation.AVMetadataObjectTypeQRCode
 import platform.UIKit.UIViewController
 import platform.darwin.dispatch_get_main_queue
 
-class P2pQrController : UIViewController(null, null), AVCaptureMetadataOutputObjectsDelegateProtocol {
+class QRScannerController(
+    private val onQrDetected: (QRData) -> Unit
+) : UIViewController(null, null), AVCaptureMetadataOutputObjectsDelegateProtocol {
 
     private var captureSession: AVCaptureSession? = null
     var previewLayer: AVCaptureVideoPreviewLayer? = null
@@ -35,42 +36,45 @@ class P2pQrController : UIViewController(null, null), AVCaptureMetadataOutputObj
         try {
             captureSession = AVCaptureSession()
 
-            qrCaptureDevice = AVCaptureDevice.defaultDeviceWithMediaType(AVMediaTypeVideo) ?: failed()
+            qrCaptureDevice = AVCaptureDevice.Companion.defaultDeviceWithMediaType(AVMediaTypeVideo) ?: failed()
 
-            qrInput = AVCaptureDeviceInput.deviceInputWithDevice(qrCaptureDevice ?: failed(), null) ?: failed()
+            qrInput = AVCaptureDeviceInput.Companion.deviceInputWithDevice(qrCaptureDevice ?: failed(), null) ?: failed()
 
             if (captureSession?.canAddInput(qrInput ?: failed()) == true) {
                 captureSession?.addInput(qrInput ?: failed())
             } else failed()
 
-            qrMetadataOutput = AVCaptureMetadataOutput.new()
+            qrMetadataOutput = AVCaptureMetadataOutput.Companion.new()
 
             if (captureSession?.canAddOutput(qrMetadataOutput ?: failed()) == true) {
                 captureSession?.addOutput(qrMetadataOutput!!)
-                qrMetadataOutput!!.setMetadataObjectsDelegate(objectsDelegate = this, dispatch_get_main_queue())
-                //qrMetadataOutput!!.metadataObjectTypes = listOf(AVMetadataObjectTypeQRCode)
+                qrMetadataOutput!!.setMetadataObjectsDelegate(
+                    objectsDelegate = this,
+                    queue = dispatch_get_main_queue()
+                )
                 qrMetadataOutput!!.setMetadataObjectTypes(listOf(AVMetadataObjectTypeQRCode))
             } else failed()
 
-            previewLayer = AVCaptureVideoPreviewLayer.layerWithSession(captureSession ?: failed())
-            previewLayer?.frame = cameraContainer.layer.bounds
+            previewLayer = AVCaptureVideoPreviewLayer.Companion.layerWithSession(captureSession ?: failed())
+            previewLayer?.frame = view.layer.bounds
             previewLayer?.videoGravity = AVLayerVideoGravityResizeAspectFill
-            //cameraContainer.layer.addSublayer(previewLayer ?: return@UIKitView cameraContainer)
-            cameraContainer.layer.insertSublayer(previewLayer ?: failed(), atIndex = 0u)
+            view.layer.insertSublayer(previewLayer ?: failed(), atIndex = 0u)
 
-            if (captureSession?.isRunning() == false) {
-                //MainScope().launch {
-                captureSession?.startRunning()
-                //}
-            }
+            captureSession?.startRunning()
+
         } catch (e: Exception) {
-            e.printStackTrace()
+            loggy("QrController setup failed: ${e.stackTraceToString()}")
         }
+    }
+
+    override fun viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        // keep the preview layer filling the view as the layout changes
+        previewLayer?.frame = view.layer.bounds
     }
 
     override fun viewWillAppear(animated: Boolean) {
         super.viewWillAppear(animated)
-
         if (captureSession?.isRunning() == false) {
             captureSession?.startRunning()
         }
@@ -78,32 +82,30 @@ class P2pQrController : UIViewController(null, null), AVCaptureMetadataOutputObj
 
     override fun viewWillDisappear(animated: Boolean) {
         super.viewWillDisappear(animated)
-
         if (captureSession?.isRunning() == true) {
             captureSession?.stopRunning()
         }
     }
 
-    private fun failed(): Nothing {
-        captureSession = null
-        throw Exception()
-    }
-
-    override fun captureOutput(output: AVCaptureOutput, didOutputMetadataObjects: List<*>, fromConnection: AVCaptureConnection) {
+    override fun captureOutput(
+        output: AVCaptureOutput,
+        didOutputMetadataObjects: List<*>,
+        fromConnection: AVCaptureConnection
+    ) {
         captureSession?.stopRunning()
 
         val metadataObject = didOutputMetadataObjects.firstOrNull() as? AVMetadataMachineReadableCodeObject ?: return
         val stringValue = metadataObject.stringValue ?: return
 
-        loggy("QR CODE DETECTOR: $stringValue")
+        loggy("QR CODE DETECTED: $stringValue")
 
-        val p = stringValue.split(":")
-        if (p.isEmpty()) return
+        val qrData = stringValue.toQRData()
 
-        (p2pHandler as? P2pAppleHandler)?.crossPeer = p[2]
-        (p2pHandler as? P2pAppleHandler)?.connectCrossPlatform(
-            host = p[0],
-            port = p[1].toIntOrNull() ?: return
-        )
+        onQrDetected(qrData)
+    }
+
+    private fun failed(): Nothing {
+        captureSession = null
+        throw Exception("QrController setup step failed")
     }
 }

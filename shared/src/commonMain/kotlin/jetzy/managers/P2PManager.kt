@@ -1,5 +1,6 @@
 package jetzy.managers
 
+import androidx.annotation.CallSuper
 import jetzy.models.JetzyElement
 import jetzy.p2p.P2pDiscoveryMode
 import jetzy.p2p.P2pPlatformCallback
@@ -23,12 +24,13 @@ abstract class P2PManager {
 
     abstract val discoveryMode: P2pDiscoveryMode
 
-    abstract val requiredPermissions: List<String>
+    open val requiredPermissions: List<String> = listOf()
 
     /**
      * Initialize the manager and prepare for connections
      */
-    init {
+    @CallSuper
+    open fun initialize() {
         platformCallback.ensurePermissions(requiredPermissions)
     }
 

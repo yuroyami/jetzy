@@ -10,6 +10,9 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.ContextCompat
@@ -26,11 +29,10 @@ import jetzy.ui.AdamScreen
 import jetzy.utils.Platform
 import jetzy.utils.toasty
 import jetzy.viewmodel.JetzyViewmodel
-import org.koin.android.ext.android.inject
 
 class MainActivity: ComponentActivity(), P2pPlatformCallback {
 
-    val viewmodel: JetzyViewmodel by inject()
+    lateinit var viewmodel: JetzyViewmodel
 
     @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,16 +53,25 @@ class MainActivity: ComponentActivity(), P2pPlatformCallback {
         platformCallback = this
 
         setContent {
-            AdamScreen()
+            var trackDayNight by remember { mutableStateOf(false) }
 
-            val nightMode by viewmodel.nightMode.collectAsState()
-            val isSystemInDarkMode = isSystemInDarkTheme()
+            AdamScreen(
+                onViewmodel = {
+                    viewmodel = it
+                    trackDayNight = true
+                }
+            )
 
-            LaunchedEffect(nightMode) {
-                WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = when (nightMode) {
-                    NightMode.LIGHT -> true
-                    NightMode.DARK -> false
-                    NightMode.SYSTEM -> !isSystemInDarkMode
+            if (trackDayNight) {
+                val nightMode by viewmodel.nightMode.collectAsState()
+                val isSystemInDarkMode = isSystemInDarkTheme()
+
+                LaunchedEffect(nightMode) {
+                    WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = when (nightMode) {
+                        NightMode.LIGHT -> true
+                        NightMode.DARK -> false
+                        NightMode.SYSTEM -> !isSystemInDarkMode
+                    }
                 }
             }
         }

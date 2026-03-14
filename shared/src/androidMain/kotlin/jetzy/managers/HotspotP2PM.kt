@@ -7,7 +7,7 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import androidx.lifecycle.viewModelScope
 import jetzy.models.JetzyElement
-import jetzy.ui.discovery.QRData
+import jetzy.models.QRData
 import jetzy.utils.PreferablyIO
 import jetzy.utils.getDeviceName
 import jetzy.utils.getLocalIpAddress

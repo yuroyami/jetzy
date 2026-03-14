@@ -196,7 +196,7 @@ object P2pUI {
 
                 Spacer(Modifier)
 
-                P2pQRcontent(modifier = Modifier.fillMaxSize())
+                //P2pQRcontent(modifier = Modifier.fillMaxSize())
             }
         }
     }
