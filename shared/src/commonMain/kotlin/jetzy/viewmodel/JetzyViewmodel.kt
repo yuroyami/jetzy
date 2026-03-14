@@ -98,13 +98,6 @@ class JetzyViewmodel(p2pHandlerProvider: Lazy<P2pHandler>) : ViewModel() {
 
     val userMode = MutableStateFlow<Boolean?>(null)
 
-    /* Popups */
-
-    val p2pInitialPopup = mutableStateOf(false)
-    val p2pQRpopup = mutableStateOf(false)
-    val p2pChoosePeerPopup = mutableStateOf(false)
-    val p2pTransferPopup = mutableStateOf(false)
-
     /* P2P-related */
 
     val textPeer1 = mutableStateOf<String?>(null)

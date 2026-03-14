@@ -18,7 +18,10 @@ fun QRDiscoveryScreenUI(manager: QRDiscoveryP2PM) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        P2pQrContent(manager = manager)
+        P2pQrContent(
+            modifier = Modifier.fillMaxSize(),
+            manager = manager
+        )
     }
 
 }

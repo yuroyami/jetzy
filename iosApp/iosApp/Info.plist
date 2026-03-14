@@ -24,6 +24,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Jetzy needs permission to access your camera in order to scan peer's QR code.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Jetzy needs location permission to automatically connect to peer's hotspot.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
