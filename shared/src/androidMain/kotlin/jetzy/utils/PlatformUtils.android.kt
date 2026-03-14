@@ -1,7 +1,9 @@
 package jetzy.utils
 
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import kotlinx.coroutines.Dispatchers
 import java.net.InetAddress
 import java.net.NetworkInterface
@@ -12,7 +14,6 @@ actual val PreferablyIO = Dispatchers.IO
 actual val platform: Platform = Platform.Android
 
 actual fun generateTimestampMillis() = System.currentTimeMillis()
-
 
 actual fun getDeviceName() = android.os.Build.MODEL ?: "UNKNOWN DEVICE"
 
@@ -36,8 +37,8 @@ fun getLocalIpAddress(): String? {
     return null
 }
 
-fun ComponentActivity.toasty(s: String) {
-    runOnUiThread {
+fun Context.toasty(s: String) {
+    Handler(Looper.getMainLooper()).post {
         Toast.makeText(this@toasty, s, Toast.LENGTH_SHORT).show()
     }
 }

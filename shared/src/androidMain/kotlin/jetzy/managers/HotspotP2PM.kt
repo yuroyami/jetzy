@@ -4,22 +4,27 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.wifi.WifiManager
-import androidx.annotation.RequiresPermission
+import android.os.Build
 import androidx.lifecycle.viewModelScope
 import jetzy.models.JetzyElement
+import jetzy.ui.discovery.QRData
+import jetzy.utils.PreferablyIO
+import jetzy.utils.getDeviceName
+import jetzy.utils.getLocalIpAddress
 import jetzy.utils.loggy
 import jetzy.viewmodel.JetzyViewmodel
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
+import kotlin.coroutines.resumeWithException
 
-class HotspotP2PM(context: Context, viewmodel: JetzyViewmodel): QRDiscoveryP2PM() {
+class HotspotP2PM(context: Context, viewmodel: JetzyViewmodel) : QRDiscoveryP2PM() {
 
     override val coroutineScope: CoroutineScope = viewmodel.viewModelScope
 
@@ -29,36 +34,49 @@ class HotspotP2PM(context: Context, viewmodel: JetzyViewmodel): QRDiscoveryP2PM(
     private var socket: Socket? = null
     private var socketJob: Job? = null
 
+    override val requiredPermissions: List<String> = listOf(
+        Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES
+    )
     @SuppressLint("MissingPermission")
-    @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES])
-    fun startLocalHotspot(
-        onStarted: (ssid: String, password: String) -> Unit,
-        onFailed: (reason: Int) -> Unit
-    ) {
-        wifiManager.startLocalOnlyHotspot(object : WifiManager.LocalOnlyHotspotCallback() {
-            override fun onStarted(reservation: WifiManager.LocalOnlyHotspotReservation?) {
-                this@HotspotP2PM.reservation = reservation
+    suspend fun startLocalHotspotAsync(): Pair<String, String> = suspendCancellableCoroutine { cont ->
+        wifiManager.startLocalOnlyHotspot(
+            object : WifiManager.LocalOnlyHotspotCallback() {
+                override fun onStarted(reservation: WifiManager.LocalOnlyHotspotReservation?) {
+                    this@HotspotP2PM.reservation = reservation
 
-                reservation?.wifiConfiguration?.let { config ->
-                    val ssid = config.SSID
-                    val password = config.preSharedKey
-                    onStarted(ssid, password)
+                    if (reservation == null) {
+                        cont.resumeWithException(Exception("Reservation was null"))
+                        return
+                    }
+
+                    val credentials: Pair<String, String>? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        val config = reservation.softApConfiguration
+                        val ssid = config.ssid ?: return cont.resumeWithException(Exception("SSID was null"))
+                        val password = config.passphrase ?: return cont.resumeWithException(Exception("Passphrase was null"))
+                        Pair(ssid, password)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        val config = reservation.wifiConfiguration
+                        val ssid = config?.SSID ?: return cont.resumeWithException(Exception("SSID was null"))
+                        val password = config.preSharedKey ?: return cont.resumeWithException(Exception("Password was null"))
+                        Pair(ssid, password)
+                    }
+
+                    cont.resume(value = credentials!!, onCancellation = { _, _, _ -> })
                 }
-            }
 
-            override fun onStopped() {
-                // Hotspot stopped
-            }
+                override fun onStopped() {}
 
-            override fun onFailed(reason: Int) {
-                onFailed(reason)
-                // Reasons:
-                // ERROR_NO_CHANNEL = 1
-                // ERROR_GENERIC = 2
-                // ERROR_INCOMPATIBLE_MODE = 3
-                // ERROR_TETHERING_DISALLOWED = 4
-            }
-        }, null)
+                override fun onFailed(reason: Int) {
+                    cont.resumeWithException(Exception("Hotspot failed with reason $reason"))
+                }
+            }, null
+        )
+
+        cont.invokeOnCancellation {
+            reservation?.close()
+            reservation = null
+        }
     }
 
     fun stopLocalHotspot() {
@@ -66,47 +84,40 @@ class HotspotP2PM(context: Context, viewmodel: JetzyViewmodel): QRDiscoveryP2PM(
         reservation = null
     }
 
-    override suspend fun initialize() {
+    fun establishTcpServer(): Deferred<QRData?> = coroutineScope.async(PreferablyIO) {
+        try {
+            val (ssid, password) = startLocalHotspotAsync()
 
-    }
+            val localAddress = getLocalIpAddress() ?: return@async null
 
-    fun initServerTCP() {
-        val future: CompletableDeferred<Pair<String, Int>> = CompletableDeferred()
-        runCatching { socketJob?.cancel() }
-        socketJob = GlobalScope.launch(Dispatchers.IO) {
-            try {
-                val localAddress = "" //todo getLocalIpAddress()
-
-                if (localAddress == null) {
-                    future.complete(Pair("", 0))
-                    return@launch
-                }
-
-                val serverSocket = ServerSocket()
-                serverSocket.reuseAddress = true
-                val boundAddress = InetSocketAddress("0.0.0.0", 0)
-                serverSocket.bind(boundAddress)
-                serverSocket.soTimeout = 0
-
-                future.complete(Pair(localAddress, serverSocket.localPort))
-
-                socket = serverSocket.accept()
-
-                if (viewmodel.userMode.value == true) {
-                    //p2pInput = socket?.getInputStream()?.asSource()
-                } else {
-                    //p2pOutput = socket?.getOutputStream()?.asSink()
-                }
-
-                //At this point we're connected by QR code on LAN
-                //carryOnP2PCross()
-
-            } catch (e: Exception) {
-                loggy(e.stackTraceToString())
-                future.complete(Pair("", 0))
+            val serverSocket = ServerSocket().apply {
+                reuseAddress = true
+                bind(InetSocketAddress("0.0.0.0", 0))
+                soTimeout = 0
             }
+
+            // launch the blocking accept() independently so it doesn't hold up the return
+            socketJob = coroutineScope.launch(PreferablyIO) {
+                try {
+                    socket = serverSocket.accept()
+                    isConnected.value = true
+                    // carry on with transfer here, or signal via a StateFlow
+                } catch (e: Exception) {
+                    loggy("Accept failed: ${e.stackTraceToString()}")
+                }
+            }
+
+            QRData(
+                hotspotSSID = ssid,
+                hotspotPassword = password,
+                ipAddress = localAddress,
+                port = serverSocket.localPort,
+                deviceName = getDeviceName()
+            )
+        } catch (e: Exception) {
+            loggy(e.stackTraceToString())
+            null
         }
-        return future
     }
 
     override suspend fun cleanup() {

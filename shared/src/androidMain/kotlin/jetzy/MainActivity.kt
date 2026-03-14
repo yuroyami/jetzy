@@ -1,15 +1,18 @@
 package jetzy
 
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -21,6 +24,7 @@ import jetzy.p2p.P2pPlatformCallback
 import jetzy.theme.NightMode
 import jetzy.ui.AdamScreen
 import jetzy.utils.Platform
+import jetzy.utils.toasty
 import jetzy.viewmodel.JetzyViewmodel
 import org.koin.android.ext.android.inject
 
@@ -68,5 +72,19 @@ class MainActivity: ComponentActivity(), P2pPlatformCallback {
             Platform.IOS -> HotspotP2PM(this, viewmodel) as P2PManager
             else -> null
         }
+    }
+
+    private val p2pPermissioner = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        val allGranted = results.values.all { it }
+        if (!allGranted) toasty("Some P2P permissions were denied")
+    }
+
+    override fun ensurePermissions(perms: List<String>) {
+        val notYetGranted = perms.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (notYetGranted.isNotEmpty()) p2pPermissioner.launch(notYetGranted.toTypedArray())
     }
 }

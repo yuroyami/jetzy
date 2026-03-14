@@ -7,4 +7,6 @@ interface P2pPlatformCallback {
 
     fun getSuitableP2pManager(peerPlatform: Platform): P2PManager?
 
+    fun ensurePermissions(perms: List<String>)
+
 }

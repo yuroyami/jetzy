@@ -23,10 +23,14 @@ abstract class P2PManager {
 
     abstract val discoveryMode: P2pDiscoveryMode
 
+    abstract val requiredPermissions: List<String>
+
     /**
      * Initialize the manager and prepare for connections
      */
-    abstract suspend fun initialize()
+    init {
+        platformCallback.ensurePermissions(requiredPermissions)
+    }
 
     /**
      * Clean up resources and disconnect

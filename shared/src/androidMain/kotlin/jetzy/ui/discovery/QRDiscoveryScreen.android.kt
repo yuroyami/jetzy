@@ -23,8 +23,19 @@ import io.github.alexzhirkevich.qrose.options.QrPixelShape
 import io.github.alexzhirkevich.qrose.options.QrShapes
 import io.github.alexzhirkevich.qrose.options.roundCorners
 import io.github.alexzhirkevich.qrose.rememberQrCodePainter
+import jetzy.managers.HotspotP2PM
 import jetzy.managers.QRDiscoveryP2PM
 import jetzy.ui.LocalViewmodel
+
+data class QRData(
+    val hotspotSSID: String,
+    val hotspotPassword: String,
+    val ipAddress: String,
+    val port: Int,
+    val deviceName: String
+) {
+    override fun toString(): String = "${hotspotSSID}:${hotspotPassword}:${ipAddress}:${port}:${deviceName}"
+}
 
 @Composable
 actual fun P2pQrContent(modifier: Modifier, manager: QRDiscoveryP2PM) {
@@ -39,15 +50,9 @@ actual fun P2pQrContent(modifier: Modifier, manager: QRDiscoveryP2PM) {
         var qrRefreshor by remember { mutableIntStateOf(0) }
 
         LaunchedEffect(qrRefreshor) {
-//            val stuff = (viewmodel.p2pHandler as? P2pAndroidHandler)?.hostCrossPlatform()?.await() ?: return@LaunchedEffect
-//
-//            val p1 = stuff.first
-//            val p2 = stuff.second
-//
-//            if (p1.isBlank()) return@LaunchedEffect
-//
-//            val p3 = getDeviceName()
-//            qrData = "$p1:$p2:$p3"
+            val data = (manager as? HotspotP2PM)?.establishTcpServer()?.await() ?: return@LaunchedEffect //TODO Throw error
+
+            qrData = data.toString()
         }
 
         val qrcodePainter = rememberQrCodePainter(

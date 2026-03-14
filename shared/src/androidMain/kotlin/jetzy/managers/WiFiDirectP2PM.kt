@@ -34,13 +34,13 @@ class WiFiDirectP2PM(
     }.toMutableList()
 
 //
-//    private val p2pPermissioner = activity.registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-//        if (!isGranted) {
-//            activity.toasty("You didn't grant all P2P WiFi Direct permissions (Nearby, GPS)")
-//        } else {
-//            runWifiDirectPermissions()
-//        }
-//    }
+    private val p2pPermissioner = activity.registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+        if (!isGranted) {
+            activity.toasty("You didn't grant all P2P WiFi Direct permissions (Nearby, GPS)")
+        } else {
+            runWifiDirectPermissions()
+        }
+    }
 
 //    private fun runWifiDirectPermissions() {
 //        if (wifiDirectPerms.isNotEmpty()) {
