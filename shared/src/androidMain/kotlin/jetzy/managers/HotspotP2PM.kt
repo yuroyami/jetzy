@@ -34,9 +34,14 @@ class HotspotP2PM(context: Context, viewmodel: JetzyViewmodel) : QRDiscoveryP2PM
     private var socket: Socket? = null
     private var socketJob: Job? = null
 
-    override val requiredPermissions: List<String> = listOf(
-        Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES
-    )
+    override val requiredPermissions: List<String> = buildList {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            add(Manifest.permission.NEARBY_WIFI_DEVICES)
+        } else {
+            add(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+
     @SuppressLint("MissingPermission")
     suspend fun startLocalHotspotAsync(): Pair<String, String> = suspendCancellableCoroutine { cont ->
         wifiManager.startLocalOnlyHotspot(

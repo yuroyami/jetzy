@@ -9,14 +9,17 @@ import jetzy.p2p.P2pPeer
 import jetzy.viewmodel.JetzyViewmodel
 import kotlinx.coroutines.CoroutineScope
 
-class WiFiDirectP2PM(
-    private val context: Context,
-    viewmodel: JetzyViewmodel
-) : PeerDiscoveryP2PM() {
+class WiFiDirectP2PM(private val context: Context, viewmodel: JetzyViewmodel) : PeerDiscoveryP2PM() {
 
     override val coroutineScope: CoroutineScope = viewmodel.viewModelScope
 
-    private val wifiDirectPerms = buildList<String> {
+    // Wi-Fi Direct platform object
+    private val wifiP2pManager by lazy {
+        context.getSystemService(Context.WIFI_P2P_SERVICE) as android.net.wifi.p2p.WifiP2pManager
+    }
+
+
+    override val requiredPermissions = buildList<String> {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             add(Manifest.permission.NEARBY_WIFI_DEVICES)
         } else {
@@ -31,39 +34,8 @@ class WiFiDirectP2PM(
             add(Manifest.permission.BLUETOOTH)
             add(Manifest.permission.BLUETOOTH_ADMIN)
         }*/
-    }.toMutableList()
-
-//
-    private val p2pPermissioner = activity.registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-        if (!isGranted) {
-            activity.toasty("You didn't grant all P2P WiFi Direct permissions (Nearby, GPS)")
-        } else {
-            runWifiDirectPermissions()
-        }
     }
 
-//    private fun runWifiDirectPermissions() {
-//        if (wifiDirectPerms.isNotEmpty()) {
-//            val permission = wifiDirectPerms.first()
-//            p2pPermissioner.launch(permission)
-//            wifiDirectPerms.remove(permission)
-//        } else {
-//            viewmodel.p2pChoosePeerPopup.value = true
-//
-//            //TODO: WiFi Direct permissions ready
-//        }
-//    }
-
-    // Wi-Fi Direct platform object
-    private val wifiP2pManager by lazy {
-        context.getSystemService(Context.WIFI_P2P_SERVICE) as android.net.wifi.p2p.WifiP2pManager
-    }
-    
-    override suspend fun initialize() {
-        // Initialize WiFi Direct
-        transferStatus.value = "WiFi Direct initialized"
-    }
-    
     override suspend fun startDiscoveryAndAdvertising(deviceName: String) {
         isDiscovering.value = true
         isAdvertising.value = true
