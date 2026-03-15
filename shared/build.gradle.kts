@@ -154,6 +154,5 @@ kotlin {
 
 buildConfig {
     buildConfigField("APP_VERSION", AppConfig.versionName)
-    buildConfigField("DEBUG", false)
-    buildConfigField("ALLOW_LOGGING", false)
+    buildConfigField("DEBUG", true)
 }

@@ -11,7 +11,7 @@ import coil3.compose.setSingletonImageLoaderFactory
 import io.github.vinceglb.filekit.coil.addPlatformFileSupport
 
 /** Logs the [s] message to the platform's corresponding log output */
-fun loggy(s: Any?) = Logger.e(tag = "Pingy") { s.toString() }
+fun loggy(s: Any?) = Logger.e(tag = "Jetzy") { s.toString() }
 
 @DslMarker annotation class NavigationDsl
 

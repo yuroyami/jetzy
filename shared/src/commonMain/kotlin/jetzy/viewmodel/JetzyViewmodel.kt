@@ -1,5 +1,6 @@
 package jetzy.viewmodel
 
+import Jetzy.shared.BuildConfig
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.mutableStateListOf
@@ -78,7 +79,13 @@ class JetzyViewmodel() : ViewModel() {
 
     val nightMode = MutableStateFlow(NightMode.SYSTEM)
 
-    val elementsToSend = mutableStateListOf<JetzyElement>()
+    val elementsToSend = mutableStateListOf<JetzyElement>().also { list ->
+        if (BuildConfig.DEBUG) {
+            repeat(10) {
+                list.add(JetzyElement.Text("Hello World!!!"))
+            }
+        }
+    }
 
     val file2Send = elementsToSend.filterAsStateFlow<JetzyElement.File>()
     val folders2Send = elementsToSend.filterAsStateFlow<JetzyElement.Folder>()

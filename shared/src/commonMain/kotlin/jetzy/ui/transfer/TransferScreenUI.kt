@@ -51,14 +51,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import jetzy.theme.sdp
 import jetzy.ui.LocalViewmodel
-import jetzy.utils.ComposeUtils.scheme
 import jetzy.utils.Platform
 
 @Composable
 fun TransferScreenUI() {
     val viewmodel = LocalViewmodel.current
+    val manager = viewmodel.p2pManager ?: return
+
     val transferState by viewmodel.transferState.collectAsState()
 
     transferState?.let { state ->
@@ -120,11 +120,17 @@ fun TransferScreenUI() {
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            state.files.forEachIndexed { index, file ->
-                                FileRow(
-                                    file = file,
-                                    animDelay = index * 60,
-                                )
+                            if (state.isSender) {
+                                viewmodel.elementsToSend.forEachIndexed { i, file ->
+//                                    FileRow(
+//                                        file = file,
+//                                        animDelay = i * 60,
+//                                    )
+                                }
+                            } else {
+                                viewmodel.elementsReceived.forEachIndexed { index, element ->
+
+                                }
                             }
                         }
                     }

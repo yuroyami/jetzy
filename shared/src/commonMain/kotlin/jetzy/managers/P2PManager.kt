@@ -54,15 +54,12 @@ abstract class P2PManager {
 
         viewmodel.transferState.value = TransferScreenState(
             senderName = "EdgyBoi",
-            senderInitials = "E.B",
             receiverName = "CoolGuy",
-            receiverInitials = "C.G",
             progress = 0f,
             completedCount = 0,
             totalCount = 1,
             speedLabel = "2.4MB/s",
             remainingLabel = "Remaining is...",
-            files = listOf(),
             isSender = viewmodel.currentOperation.value == P2pOperation.SEND
         )
 
