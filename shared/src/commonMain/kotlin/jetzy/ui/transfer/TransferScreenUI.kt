@@ -104,12 +104,14 @@ fun TransferScreenUI() {
                         }
 
                         // Progress
+                        val progress by manager.transferProgress.collectAsState()
+                        val speed by manager.transferSpeed.collectAsState()
                         ProgressSection(
-                            progress = state.progress,
+                            progress = progress,
                             completedCount = state.completedCount,
                             totalCount = state.totalCount,
-                            speedLabel = state.speedLabel,
-                            remainingLabel = state.remainingLabel,
+                            speedLabel = "${speed.div(1_000_000L)} MB/s", //TODO
+                            remainingLabel = "ETA: 3 minutes remaining", //TODO
                             modifier = Modifier.fillMaxWidth()
                         )
 

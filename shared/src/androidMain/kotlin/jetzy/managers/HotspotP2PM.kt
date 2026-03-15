@@ -89,7 +89,7 @@ class HotspotP2PM(context: Context) : QRDiscoveryP2PM() {
 
             val localAddress = getHotspotIpAddress() ?: return@async null
 
-           val serverSocket = aSocket(SelectorManager(PreferablyIO))
+            val serverSocket = aSocket(SelectorManager(PreferablyIO))
                .tcp()
                .bind("0.0.0.0", 0)
 

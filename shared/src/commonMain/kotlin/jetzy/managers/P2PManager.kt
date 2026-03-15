@@ -43,6 +43,7 @@ abstract class P2PManager {
     }
 
     val transferProgress = MutableStateFlow(0f)
+    val transferSpeed = MutableStateFlow(0L) //in bytes per second
     val transferStatus = MutableStateFlow("")
     val isConnected  = MutableStateFlow(false)
 
@@ -68,11 +69,9 @@ abstract class P2PManager {
         viewmodel.transferState.value = TransferScreenState(
             senderName = "EdgyBoi",
             receiverName = "CoolGuy",
-            progress = 0f,
             completedCount = 0,
             totalCount = 1,
             speedLabel = "2.4MB/s",
-            remainingLabel = "Remaining is...",
             isSender = viewmodel.currentOperation.value == P2pOperation.SEND
         )
 

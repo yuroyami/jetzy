@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -68,6 +69,7 @@ import jetzy.ui.transfer.Teal800
 import jetzy.ui.transfer.TextPrimary
 import jetzy.ui.transfer.TextSecondary
 import jetzy.ui.transfer.TextTertiary
+import jetzy.utils.getDeviceName
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
@@ -93,6 +95,11 @@ fun PeerDiscoveryScreenUI() {
 
     var selectedPeer by remember { mutableStateOf<P2pPeer?>(null) }
 
+    LaunchedEffect(null) {
+        viewmodel.viewModelScope.launch {
+            manager.startDiscoveryAndAdvertising(getDeviceName())
+        }
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
