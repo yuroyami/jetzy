@@ -57,103 +57,105 @@ import jetzy.utils.Platform
 @Composable
 fun TransferScreenUI() {
     val viewmodel = LocalViewmodel.current
-    val manager   = viewmodel.p2pManager ?: return
+    val manager = viewmodel.p2pManager ?: return
 
-    val transferState by viewmodel.transferState.collectAsState()
-    val manifest      by manager.manifest.collectAsState()
-    val fileEntries   by manager.fileEntries.collectAsState()
-    val progress      by manager.transferProgress.collectAsState()
-    val speed         by manager.transferSpeed.collectAsState()
+    val manifest by manager.manifest.collectAsState()
+    val fileEntries by manager.fileEntries.collectAsState()
+    val progress by manager.transferProgress.collectAsState()
+    val speed by manager.transferSpeed.collectAsState()
+    val remote by manager.remotePeerInfo.collectAsState()
 
-    transferState?.let { state ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(SurfaceBg),
-            contentAlignment = Alignment.TopCenter
+    if (manifest == null || remote == null) return
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(SurfaceBg),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        LazyColumn(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            LazyColumn(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(0.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                item {
-                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+            item {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
 
-                        // ── Peer row ──────────────────────────────────────────
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 24.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            PeerAvatar(
-                                name       = state.senderName,
-                                label      = "sender",
-                                bgColor    = Purple600,
-                                floatDelay = 0,
-                                platform   = Platform.Android, // TODO
-                            )
-                            PacketAnimation(modifier = Modifier.weight(1f).height(56.dp))
-                            PeerAvatar(
-                                name       = state.receiverName,
-                                label      = "receiver",
-                                bgColor    = Teal600,
-                                floatDelay = 750,
-                                platform   = Platform.IOS // TODO
-                            )
-                        }
-
-                        // ── Overall progress ──────────────────────────────────
-                        val completedFiles = fileEntries.count { it.status == FileTransferStatus.Done }
-                        ProgressSection(
-                            progress       = progress,
-                            completedCount = completedFiles,
-                            totalCount     = manifest?.totalFiles ?: state.totalCount,
-                            totalBytes     = manifest?.totalBytes,
-                            speedLabel     = if (speed > 0) speed.toHumanSize() + "/s" else "—",
-                            remainingLabel = remainingLabel(
-                                totalBytes     = manifest?.totalBytes ?: 0L,
-                                progressFrac   = progress,
-                                speedBytesPerS = speed
-                            ),
-                            modifier = Modifier.fillMaxWidth()
+                    // ── Peer row ──────────────────────────────────────────
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 24.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        PeerAvatar(
+                            name = manifest!!.senderName,
+                            label = "sender",
+                            bgColor = Color.Black,
+                            floatDelay = 0,
+                            platform = manifest!!.senderPlatform,
                         )
+                        PacketAnimation(modifier = Modifier.weight(1f).height(56.dp))
+                        PeerAvatar(
+                            name = remote!!.name,
+                            label = "receiver",
+                            bgColor = Color.Black,
+                            floatDelay = 750,
+                            platform = remote!!.platform
+                        )
+                    }
 
-                        Spacer(Modifier.height(16.dp))
+                    // ── Overall progress ──────────────────────────────────
+                    val completedFiles = fileEntries.count { it.status == FileTransferStatus.Done }
+                    ProgressSection(
+                        progress = progress,
+                        completedCount = completedFiles,
+                        totalCount = manifest?.totalFiles ?: 0,
+                        totalBytes = manifest?.totalBytes,
+                        speedLabel = if (speed > 0) speed.toHumanSize() + "/s" else "—",
+                        remainingLabel = remainingLabel(
+                            totalBytes = manifest?.totalBytes ?: 0L,
+                            progressFrac = progress,
+                            speedBytesPerS = speed
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-                        // ── File list — driven entirely by live fileEntries ────
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            fileEntries.forEachIndexed { i, entry ->
-                                FileRow(entry = entry, animDelay = i * 60)
-                            }
+                    Spacer(Modifier.height(16.dp))
+
+                    // ── File list — driven entirely by live fileEntries ────
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        fileEntries.forEachIndexed { i, entry ->
+                            FileRow(entry = entry, animDelay = i * 60)
                         }
                     }
                 }
+            }
 
-                item {
-                    Spacer(Modifier.height(16.dp))
-                    Button(
-                        onClick = { /* TODO cancel */ },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.Transparent,
-                            contentColor   = TextSecondary,
-                        ),
-                        border = androidx.compose.foundation.BorderStroke(0.5.dp, BorderMid),
-                        shape  = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text       = "Cancel transfer",
-                            fontSize   = 13.sp,
-                            fontWeight = FontWeight.W400,
-                        )
-                    }
+            item {
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = {
+                        /* TODO cancel */
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.Transparent,
+                        contentColor = TextSecondary,
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, BorderMid),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Cancel transfer",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.W400,
+                    )
                 }
             }
         }
@@ -164,12 +166,12 @@ fun TransferScreenUI() {
 
 private fun remainingLabel(totalBytes: Long, progressFrac: Float, speedBytesPerS: Long): String {
     if (speedBytesPerS <= 0L || progressFrac <= 0f || progressFrac >= 1f) return "Calculating…"
-    val bytesLeft   = (totalBytes * (1f - progressFrac)).toLong()
-    val secsLeft    = bytesLeft / speedBytesPerS
+    val bytesLeft = (totalBytes * (1f - progressFrac)).toLong()
+    val secsLeft = bytesLeft / speedBytesPerS
     return when {
-        secsLeft < 60   -> "${secsLeft}s remaining"
+        secsLeft < 60 -> "${secsLeft}s remaining"
         secsLeft < 3600 -> "${secsLeft / 60}m ${secsLeft % 60}s remaining"
-        else            -> "${secsLeft / 3600}h ${(secsLeft % 3600) / 60}m remaining"
+        else -> "${secsLeft / 3600}h ${(secsLeft % 3600) / 60}m remaining"
     }
 }
 
@@ -203,10 +205,10 @@ private fun PeerAvatar(
     val infiniteTransition = rememberInfiniteTransition(label = "float_$name")
     val offsetY by infiniteTransition.animateFloat(
         initialValue = 0f,
-        targetValue  = -6f,
+        targetValue = -6f,
         animationSpec = infiniteRepeatable(
-            animation    = tween(1600, easing = FastOutSlowInEasing),
-            repeatMode   = RepeatMode.Reverse,
+            animation = tween(1600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
             initialStartOffset = StartOffset(floatDelay)
         ),
         label = "float_y_$name"
@@ -222,21 +224,21 @@ private fun PeerAvatar(
                 .border(0.5.dp, BorderWeak, CircleShape)
         ) {
             Icon(
-                modifier        = Modifier.size(48.dp).padding(4.dp),
-                imageVector     = platform.icon,
+                modifier = Modifier.size(48.dp).padding(4.dp),
+                imageVector = platform.icon,
                 contentDescription = null,
-                tint            = platform.brandColor
+                tint = platform.brandColor
             )
         }
         Spacer(Modifier.height(6.dp))
         Text(
-            text       = name,
-            fontSize   = 13.sp,
+            text = name,
+            fontSize = 13.sp,
             fontWeight = FontWeight.W500,
-            color      = TextPrimary,
-            maxLines   = 1,
-            overflow   = TextOverflow.Ellipsis,
-            modifier   = Modifier.widthIn(max = 90.dp)
+            color = TextPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(max = 90.dp)
         )
         Text(text = label, fontSize = 11.sp, color = TextTertiary)
     }
@@ -250,9 +252,9 @@ private fun PacketAnimation(modifier: Modifier = Modifier) {
     val offsets = listOf(0, 400, 800).map { delay ->
         infiniteTransition.animateFloat(
             initialValue = 0f,
-            targetValue  = 1f,
+            targetValue = 1f,
             animationSpec = infiniteRepeatable(
-                animation  = tween(1200, easing = LinearEasing),
+                animation = tween(1200, easing = LinearEasing),
                 repeatMode = RepeatMode.Restart,
                 initialStartOffset = StartOffset(delay)
             ),
@@ -260,29 +262,31 @@ private fun PacketAnimation(modifier: Modifier = Modifier) {
         )
     }
     Box(modifier = modifier.drawBehind {
-        val w = size.width; val h = size.height; val cy = h / 2f
-        val p0  = Offset(0f, cy)
+        val w = size.width
+        val h = size.height
+        val cy = h / 2f
+        val p0 = Offset(0f, cy)
         val cp1 = Offset(w * 0.3f, cy - h * 0.5f)
         val cp2 = Offset(w * 0.7f, cy + h * 0.5f)
-        val p3  = Offset(w, cy)
+        val p3 = Offset(w, cy)
 
         val pathDash = Path().apply { moveTo(p0.x, p0.y); cubicTo(cp1.x, cp1.y, cp2.x, cp2.y, p3.x, p3.y) }
         drawPath(path = pathDash, color = BorderWeak, style = Stroke(width = 1.dp.toPx(), cap = StrokeCap.Round))
 
         offsets.forEach { offset ->
-            val t     = offset.value
+            val t = offset.value
             val alpha = when {
                 t < 0.08f -> t / 0.08f
                 t > 0.92f -> (1f - t) / 0.08f
-                else      -> 1f
+                else -> 1f
             }
             if (alpha <= 0f) return@forEach
             val x = cubicBezier(p0.x, cp1.x, cp2.x, p3.x, t)
             val y = cubicBezier(p0.y, cp1.y, cp2.y, p3.y, t)
             drawRoundRect(
-                color       = Purple400.copy(alpha = alpha),
-                topLeft     = Offset(x - 4.dp.toPx(), y - 4.dp.toPx()),
-                size        = androidx.compose.ui.geometry.Size(8.dp.toPx(), 8.dp.toPx()),
+                color = Purple400.copy(alpha = alpha),
+                topLeft = Offset(x - 4.dp.toPx(), y - 4.dp.toPx()),
+                size = androidx.compose.ui.geometry.Size(8.dp.toPx(), 8.dp.toPx()),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()),
             )
         }
@@ -307,29 +311,29 @@ private fun ProgressSection(
     modifier: Modifier = Modifier,
 ) {
     val animatedProgress by animateFloatAsState(
-        targetValue   = progress.coerceIn(0f, 1f),
+        targetValue = progress.coerceIn(0f, 1f),
         animationSpec = tween(400, easing = FastOutSlowInEasing),
-        label         = "progress"
+        label = "progress"
     )
     Column(modifier = modifier) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment     = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text     = buildString {
+                text = buildString {
                     append("$completedCount of $totalCount files")
                     if (totalBytes != null) append("  ·  ${totalBytes.toHumanSize()} total")
                 },
                 fontSize = 12.sp,
-                color    = TextSecondary,
+                color = TextSecondary,
             )
             Text(
-                text       = "${(animatedProgress * 100).toInt()}%",
-                fontSize   = 12.sp,
+                text = "${(animatedProgress * 100).toInt()}%",
+                fontSize = 12.sp,
                 fontWeight = FontWeight.W500,
-                color      = TextPrimary,
+                color = TextPrimary,
             )
         }
         Spacer(Modifier.height(8.dp))
@@ -352,7 +356,7 @@ private fun ProgressSection(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment     = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(text = remainingLabel, fontSize = 11.sp, color = TextTertiary)
             SpeedBadge(speedLabel = speedLabel)
@@ -364,16 +368,16 @@ private fun ProgressSection(
 private fun SpeedBadge(speedLabel: String) {
     val infiniteTransition = rememberInfiniteTransition(label = "live_dot")
     val dotAlpha by infiniteTransition.animateFloat(
-        initialValue  = 0.18f,
-        targetValue   = 0.9f,
+        initialValue = 0.18f,
+        targetValue = 0.9f,
         animationSpec = infiniteRepeatable(
-            animation  = tween(1500, easing = FastOutSlowInEasing),
+            animation = tween(1500, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "dot_alpha"
     )
     Row(
-        verticalAlignment     = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier
             .clip(RoundedCornerShape(99.dp))
@@ -408,9 +412,9 @@ private fun FileRow(
 
     // animate per-file secondary progress bar
     val animatedFileProgress by animateFloatAsState(
-        targetValue   = entry.progress.coerceIn(0f, 1f),
+        targetValue = entry.progress.coerceIn(0f, 1f),
         animationSpec = tween(300, easing = FastOutSlowInEasing),
-        label         = "file_progress_${entry.name}"
+        label = "file_progress_${entry.name}"
     )
 
     Column(
@@ -424,7 +428,7 @@ private fun FileRow(
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Row(
-            verticalAlignment     = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -432,17 +436,18 @@ private fun FileRow(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text       = entry.name,
-                    fontSize   = 13.sp,
+                    text = entry.name,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.W500,
-                    color      = TextPrimary,
-                    maxLines   = 1,
-                    overflow   = TextOverflow.Ellipsis,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 // show "sent / total" when active, otherwise just total
                 val sizeText = when (entry.status) {
                     FileTransferStatus.Active ->
                         "${entry.bytesTransferred.toHumanSize()} / ${entry.sizeLabel}"
+
                     else -> entry.sizeLabel
                 }
                 Text(text = sizeText, fontSize = 11.sp, color = TextTertiary)
@@ -477,12 +482,12 @@ private fun FileRow(
 @Composable
 private fun FileTypeIcon(typeLabel: String) {
     val (bg, fg) = when (typeLabel.uppercase()) {
-        "VID" -> Coral50  to Coral800
-        "DOC" -> Teal50   to Teal800
-        "PDF" -> Coral50  to Coral800
+        "VID" -> Coral50 to Coral800
+        "DOC" -> Teal50 to Teal800
+        "PDF" -> Coral50 to Coral800
         "ZIP" -> Purple50 to Purple800
-        "AUD" -> Teal50   to Teal800
-        else  -> Purple50 to Purple800
+        "AUD" -> Teal50 to Teal800
+        else -> Purple50 to Purple800
     }
     Box(
         contentAlignment = Alignment.Center,
@@ -492,10 +497,10 @@ private fun FileTypeIcon(typeLabel: String) {
             .background(bg)
     ) {
         Text(
-            text       = typeLabel.take(3).uppercase(),
-            fontSize   = 9.sp,
+            text = typeLabel.take(3).uppercase(),
+            fontSize = 9.sp,
             fontWeight = FontWeight.W500,
-            color      = fg,
+            color = fg,
         )
     }
 }
@@ -515,13 +520,14 @@ private fun FileStatusIndicator(status: FileTransferStatus) {
                 Text("✓", fontSize = 8.sp, color = Teal800)
             }
         }
+
         FileTransferStatus.Active -> {
             val infiniteTransition = rememberInfiniteTransition(label = "spinner")
             val rotation by infiniteTransition.animateFloat(
-                initialValue  = 0f,
-                targetValue   = 360f,
+                initialValue = 0f,
+                targetValue = 360f,
                 animationSpec = infiniteRepeatable(animation = tween(700, easing = LinearEasing)),
-                label         = "spin"
+                label = "spin"
             )
             Box(
                 modifier = Modifier
@@ -532,15 +538,16 @@ private fun FileStatusIndicator(status: FileTransferStatus) {
                         val r = (size.minDimension - stroke) / 2f
                         drawCircle(color = Purple100, radius = r, style = Stroke(width = stroke))
                         drawArc(
-                            color      = Purple600,
+                            color = Purple600,
                             startAngle = 0f,
                             sweepAngle = 270f,
-                            useCenter  = false,
-                            style      = Stroke(width = stroke, cap = StrokeCap.Round)
+                            useCenter = false,
+                            style = Stroke(width = stroke, cap = StrokeCap.Round)
                         )
                     }
             )
         }
+
         FileTransferStatus.Pending -> {
             Box(
                 modifier = Modifier
@@ -549,6 +556,7 @@ private fun FileStatusIndicator(status: FileTransferStatus) {
                     .background(BorderWeak)
             )
         }
+
         FileTransferStatus.Failed -> {
             Box(
                 contentAlignment = Alignment.Center,

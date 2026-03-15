@@ -20,12 +20,15 @@ import jetzy.ui.Screen
 import jetzy.ui.transfer.FileTransferEntry
 import jetzy.ui.transfer.FileTransferStatus
 import jetzy.ui.transfer.ManifestEntry
+import jetzy.ui.transfer.PeerInfo
 import jetzy.ui.transfer.ReceivedItem
 import jetzy.ui.transfer.TransferManifest
-import jetzy.ui.transfer.TransferScreenState
+import jetzy.utils.Platform
 import jetzy.utils.PreferablyIO
 import jetzy.utils.generateTimestampMillis
+import jetzy.utils.getDeviceName
 import jetzy.utils.loggy
+import jetzy.utils.platform
 import jetzy.viewmodel.JetzyViewmodel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -53,8 +56,7 @@ abstract class P2PManager {
     private val coroutineSupervisor = SupervisorJob()
     protected val coroutineScope = CoroutineScope(PreferablyIO + coroutineSupervisor)
 
-    // ── Connection ────────────────────────────────────────────────────────────
-
+    // ── Ktor Connection ────────────────────────────────────────────────────────────
     var connection: Connection? = null
         set(value) {
             field = value
@@ -66,6 +68,9 @@ abstract class P2PManager {
 
     /** Populated once the manifest is exchanged; null before transfer starts */
     val manifest: StateFlow<TransferManifest?>
+        field = MutableStateFlow(null)
+
+    val remotePeerInfo: StateFlow<PeerInfo?>
         field = MutableStateFlow(null)
 
     /**
@@ -94,7 +99,6 @@ abstract class P2PManager {
     val itemsRECEIVED = mutableStateListOf<ReceivedItem>()
 
     // ── Subclass contracts ────────────────────────────────────────────────────
-
     abstract val discoveryMode: P2pDiscoveryMode
     open val requiredPermissions: List<String> = listOf()
 
@@ -109,13 +113,6 @@ abstract class P2PManager {
     @P2pIoApi
     private fun beginTransfer() {
         viewmodel.navigateTo(Screen.TransferScreen, noWayToReturn = true)
-        viewmodel.transferState.value = TransferScreenState(
-            senderName   = "EdgyBoi",
-            receiverName = "CoolGuy",
-            completedCount = 0,
-            totalCount   = 1,
-            isSender     = viewmodel.currentOperation.value == P2pOperation.SEND
-        )
         coroutineScope.launch {
             when (viewmodel.currentOperation.value) {
                 P2pOperation.SEND    -> sendFiles(viewmodel.elementsToSend)
@@ -142,22 +139,34 @@ abstract class P2PManager {
 
     // ── Send ──────────────────────────────────────────────────────────────────
     private suspend fun sendFiles(files: List<JetzyElement>) {
-        val conn = connection ?: run {
-            loggy("[~] sendFiles() called but connection is null — aborting")
-            return
-        }
+        val conn = connection ?: run { loggy("[~] sendFiles() called but connection is null — aborting"); return }
         val output = conn.output
         val input  = conn.input
 
         // ── 1. Build & send manifest ──────────────────────────────────────────
         val entries    = files.map { ManifestEntry(name = it.name, sizeBytes = it.size()) }
         val totalBytes = entries.sumOf { it.sizeBytes }
-        val mf         = TransferManifest(totalFiles = files.size, totalBytes = totalBytes, entries = entries)
-
-        loggy("[>] Sending manifest: ${files.size} file(s), $totalBytes bytes total")
+        val mf         = TransferManifest(
+            totalFiles   = files.size,
+            totalBytes   = totalBytes,
+            entries      = entries,
+            senderName   = getDeviceName(),
+            senderPlatform = platform
+        )
 
         output.writeInt(files.size)
         output.writeLong(totalBytes)
+
+        // write senderName
+        val senderNameBytes = mf.senderName.encodeToByteArray()
+        output.writeInt(senderNameBytes.size)
+        output.writeFully(senderNameBytes)
+
+        // write senderPlatform
+        val platformBytes = mf.senderPlatform.name.encodeToByteArray()
+        output.writeInt(platformBytes.size)
+        output.writeFully(platformBytes)
+
         entries.forEach { entry ->
             val nameBytes = entry.name.encodeToByteArray()
             output.writeInt(nameBytes.size)
@@ -170,13 +179,19 @@ abstract class P2PManager {
         }
         output.flush()
 
-        // publish manifest + init entry states
         manifest.value    = mf
         fileEntries.value = entries.map { FileTransferEntry(name = it.name, sizeBytes = it.sizeBytes, mimeType = it.mimeType) }
 
-        // wait for receiver manifest ACK
-        input.readByte()
-        loggy("[ok] Receiver acknowledged manifest — starting file stream")
+        // ── read receiver's PeerInfo instead of bare ACK ─────────────────────
+        val receiverNameLen   = input.readInt()
+        val receiverNameBytes = ByteArray(receiverNameLen).also { input.readFully(it) }
+        val receiverPlatLen   = input.readInt()
+        val receiverPlatBytes = ByteArray(receiverPlatLen).also { input.readFully(it) }
+        remotePeerInfo.value  = PeerInfo(
+            name     = receiverNameBytes.decodeToString(),
+            platform = Platform.valueOf(receiverPlatBytes.decodeToString())
+        )
+        loggy("[ok] Receiver identified as '${remotePeerInfo.value?.name}' — starting file stream")
 
         // ── 2. Stream files ───────────────────────────────────────────────────
         var totalBytesSent  = 0L
@@ -239,16 +254,21 @@ abstract class P2PManager {
     // ── Receive ───────────────────────────────────────────────────────────────
 
     private suspend fun receiveFiles() {
-        val conn = connection ?: run {
-            loggy("[~] receiveFiles() called but connection is null — aborting")
-            return
-        }
+        val conn = connection ?: run { loggy("[~] receiveFiles() called but connection is null — aborting"); return }
         val input  = conn.input
         val output = conn.output
 
         // ── 1. Read manifest ──────────────────────────────────────────────────
         val totalFiles = input.readInt()
         val totalBytes = input.readLong()
+
+        // read senderName
+        val senderNameLen   = input.readInt()
+        val senderNameBytes = ByteArray(senderNameLen).also { input.readFully(it) }
+
+        // read senderPlatform
+        val senderPlatLen   = input.readInt()
+        val senderPlatBytes = ByteArray(senderPlatLen).also { input.readFully(it) }
 
         val entries = (0 until totalFiles).map {
             val nameLen   = input.readInt()
@@ -261,14 +281,25 @@ abstract class P2PManager {
             ManifestEntry(name = nameBytes.decodeToString(), sizeBytes = sizeBytes, mimeType = mimeType)
         }
 
-        val mf = TransferManifest(totalFiles = totalFiles, totalBytes = totalBytes, entries = entries)
+        val mf = TransferManifest(
+            totalFiles     = totalFiles,
+            totalBytes     = totalBytes,
+            entries        = entries,
+            senderName     = senderNameBytes.decodeToString(),
+            senderPlatform = Platform.valueOf(senderPlatBytes.decodeToString())
+        )
         manifest.value    = mf
         fileEntries.value = entries.map { FileTransferEntry(name = it.name, sizeBytes = it.sizeBytes, mimeType = it.mimeType) }
+        loggy("[<] Manifest received from '${mf.senderName}': $totalFiles file(s), $totalBytes bytes total")
 
-        loggy("[<] Manifest received: $totalFiles file(s), $totalBytes bytes total")
+        // ── reply with our own PeerInfo instead of bare ACK ──────────────────
+        val myNameBytes = getDeviceName().encodeToByteArray()
+        output.writeInt(myNameBytes.size)
+        output.writeFully(myNameBytes)
 
-        // send manifest ACK — sender will now begin streaming
-        output.writeByte(1)
+        val myPlatBytes = platform.name.encodeToByteArray()
+        output.writeInt(myPlatBytes.size)
+        output.writeFully(myPlatBytes)
         output.flush()
 
         // ── 2. Receive files ──────────────────────────────────────────────────

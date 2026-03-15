@@ -15,7 +15,6 @@ import jetzy.p2p.P2pOperation
 import jetzy.p2p.P2pPlatformCallback
 import jetzy.theme.NightMode
 import jetzy.ui.Screen
-import jetzy.ui.transfer.TransferScreenState
 import jetzy.utils.NavigationDsl
 import jetzy.utils.Platform
 import jetzy.utils.platform

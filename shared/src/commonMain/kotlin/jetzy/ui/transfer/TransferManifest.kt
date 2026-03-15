@@ -1,14 +1,21 @@
 package jetzy.ui.transfer
 
+import jetzy.utils.Platform
 import kotlinx.io.files.Path
 import kotlin.math.round
 
 // ── Manifest (declared before transfer begins) ────────────────────────────────
-
 data class TransferManifest(
     val totalFiles: Int,
     val totalBytes: Long,
-    val entries: List<ManifestEntry>
+    val entries: List<ManifestEntry>,
+    val senderName: String,
+    val senderPlatform: Platform
+)
+
+data class PeerInfo(
+    val name: String,
+    val platform: Platform,
 )
 
 data class ManifestEntry(
