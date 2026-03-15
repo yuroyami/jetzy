@@ -78,7 +78,6 @@ kotlin {
                 enableLanguageFeature("NestedTypeAliases") //-Xnested-type-aliases
                 enableLanguageFeature("ExpectActualClasses") //-Xexpect-actual-classes
                 enableLanguageFeature("ContextParameters") //Xcontext-parameters
-                enableLanguageFeature("ReturnValueChecker")
             }
         }
 

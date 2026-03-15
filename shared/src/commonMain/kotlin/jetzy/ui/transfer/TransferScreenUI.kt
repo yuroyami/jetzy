@@ -31,9 +31,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -51,7 +51,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import jetzy.theme.sdp
 import jetzy.ui.LocalViewmodel
+import jetzy.utils.ComposeUtils.scheme
+import jetzy.utils.Platform
 
 @Composable
 fun TransferScreenUI() {
@@ -59,10 +62,6 @@ fun TransferScreenUI() {
     val transferState by viewmodel.transferState.collectAsState()
 
     transferState?.let { state ->
-        LaunchedEffect(null) {
-            viewmodel.p2pManager
-        }
-
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -78,15 +77,31 @@ fun TransferScreenUI() {
                 item {
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         // Peer row
-                        PeerRow(
-                            senderName = state.senderName,
-                            senderInitials = state.senderInitials,
-                            receiverName = state.receiverName,
-                            receiverInitials = state.receiverInitials,
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(bottom = 24.dp)
-                        )
+                                .padding(bottom = 24.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            PeerAvatar(
+                                name = state.senderName,
+                                label = "sender",
+                                bgColor = Purple600,
+                                floatDelay = 0,
+                                platform = Platform.Android, //TODO
+                            )
+
+                            PacketAnimation(modifier = Modifier.weight(1f).height(56.dp))
+
+                            PeerAvatar(
+                                name = state.receiverName,
+                                label = "receiver",
+                                bgColor = Teal600,
+                                floatDelay = 750,
+                                platform = Platform.IOS //TODO
+                            )
+                        }
 
                         // Progress
                         ProgressSection(
@@ -159,53 +174,15 @@ private fun GlassCard(
     )
 }
 
-// ─── Peer row with floating avatars + packet animation ───────────────────────
-
-@Composable
-private fun PeerRow(
-    senderName: String,
-    senderInitials: String,
-    receiverName: String,
-    receiverInitials: String,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        PeerAvatar(
-            initials = senderInitials,
-            name = senderName,
-            label = "sender",
-            bgColor = Purple600,
-            textColor = Purple100,
-            floatDelay = 0,
-        )
-
-        PacketAnimation(modifier = Modifier.weight(1f).height(56.dp))
-
-        PeerAvatar(
-            initials = receiverInitials,
-            name = receiverName,
-            label = "receiver",
-            bgColor = Teal600,
-            textColor = Teal100,
-            floatDelay = 750,
-        )
-    }
-}
-
 @Composable
 private fun PeerAvatar(
-    initials: String,
     name: String,
     label: String,
     bgColor: Color,
-    textColor: Color,
+    platform: Platform,
     floatDelay: Int,
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "float_$initials")
+    val infiniteTransition = rememberInfiniteTransition(label = "float_$name")
     val offsetY by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = -6f,
@@ -214,7 +191,7 @@ private fun PeerAvatar(
             repeatMode = RepeatMode.Reverse,
             initialStartOffset = StartOffset(floatDelay)
         ),
-        label = "float_y_$initials"
+        label = "float_y_$name"
     )
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -227,11 +204,11 @@ private fun PeerAvatar(
                 .background(bgColor)
                 .border(0.5.dp, BorderWeak, CircleShape)
         ) {
-            Text(
-                text = initials,
-                color = textColor,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.W500,
+            Icon(
+                modifier = Modifier.size(48.dp).padding(4.dp),
+                imageVector = platform.icon,
+                contentDescription = null,
+                tint = platform.brandColor
             )
         }
         Spacer(Modifier.height(6.dp))
@@ -252,8 +229,7 @@ private fun PeerAvatar(
     }
 }
 
-// ─── Packet animation (curved path with travelling dots) ─────────────────────
-
+// ─── Packet animation (curved path with traveling dots) ─────────────────────
 @Composable
 private fun PacketAnimation(modifier: Modifier = Modifier) {
     val infiniteTransition = rememberInfiniteTransition(label = "packets")
@@ -294,7 +270,7 @@ private fun PacketAnimation(modifier: Modifier = Modifier) {
             style = Stroke(width = 1.dp.toPx(), cap = StrokeCap.Round)
         )
 
-        // Draw each travelling packet
+        // Draw each traveling packet
         offsets.forEach { offset ->
             val t = offset.value
 

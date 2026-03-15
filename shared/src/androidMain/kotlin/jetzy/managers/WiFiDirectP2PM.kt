@@ -54,9 +54,8 @@ class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
         transferStatus.value = "Sending ${files.size} files..."
     }
     
-    override suspend fun receiveFiles(outputDir: JetzyElement) {
+    override suspend fun receiveFiles() {
         transferStatus.value = "Waiting to receive files..."
-
     }
 
     override suspend fun cleanup() {

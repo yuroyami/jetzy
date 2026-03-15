@@ -2,10 +2,10 @@ package jetzy
 
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.ComposeUIViewController
+import jetzy.managers.LanWifiP2PM
 import jetzy.managers.MpcP2PM
 import jetzy.managers.P2PManager
 import jetzy.managers.P2PManager.Companion.platformCallback
-import jetzy.managers.LanWifiP2PM
 import jetzy.p2p.P2pPlatformCallback
 import jetzy.ui.AdamScreen
 import jetzy.utils.Platform
@@ -23,8 +23,8 @@ fun MainViewController(): UIViewController = ComposeUIViewController(
         platformCallback = object: P2pPlatformCallback {
             override fun getSuitableP2pManager(peerPlatform: Platform): P2PManager? {
                 return when (peerPlatform) {
-                    Platform.Android -> LanWifiP2PM(viewmodel) as P2PManager
-                    Platform.IOS -> MpcP2PM() as P2PManager
+                    Platform.Android -> LanWifiP2PM()
+                    Platform.IOS -> MpcP2PM()
                     else -> null
                 }
             }

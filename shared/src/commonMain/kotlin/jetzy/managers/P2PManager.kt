@@ -7,6 +7,7 @@ import jetzy.p2p.P2pIoApi
 import jetzy.p2p.P2pOperation
 import jetzy.p2p.P2pPlatformCallback
 import jetzy.ui.Screen
+import jetzy.ui.transfer.TransferScreenState
 import jetzy.utils.PreferablyIO
 import jetzy.viewmodel.JetzyViewmodel
 import kotlinx.coroutines.CoroutineScope
@@ -49,6 +50,20 @@ abstract class P2PManager {
     fun beginTransfer() {
         viewmodel.navigateTo(
             Screen.TransferScreen, noWayToReturn = true
+        )
+
+        viewmodel.transferState.value = TransferScreenState(
+            senderName = "EdgyBoi",
+            senderInitials = "E.B",
+            receiverName = "CoolGuy",
+            receiverInitials = "C.G",
+            progress = 0f,
+            completedCount = 0,
+            totalCount = 1,
+            speedLabel = "2.4MB/s",
+            remainingLabel = "Remaining is...",
+            files = listOf(),
+            isSender = viewmodel.currentOperation.value == P2pOperation.SEND
         )
 
         coroutineScope.launch {

@@ -79,8 +79,8 @@ class MainActivity: ComponentActivity(), P2pPlatformCallback {
 
     override fun getSuitableP2pManager(peerPlatform: Platform): P2PManager? {
         return when (peerPlatform) {
-            Platform.Android -> WiFiDirectP2PM(this, viewmodel) as P2PManager
-            Platform.IOS -> HotspotP2PM(this, viewmodel) as P2PManager
+            Platform.Android -> WiFiDirectP2PM(this)
+            Platform.IOS -> HotspotP2PM(this)
             else -> null
         }
     }
