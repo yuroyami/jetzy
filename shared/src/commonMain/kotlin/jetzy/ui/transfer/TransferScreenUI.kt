@@ -124,14 +124,27 @@ fun TransferScreenUI() {
                         ) {
                             if (state.isSender) {
                                 viewmodel.elementsToSend.forEachIndexed { i, file ->
-//                                    FileRow(
-//                                        file = file,
-//                                        animDelay = i * 60,
-//                                    )
+                                    FileRow(
+                                        file = TransferFile(
+                                            name = file.name,
+                                            sizeLabel = "2.52 MBs",
+                                            typeLabel = "EXE",
+                                            status = FileTransferStatus.Done
+                                        ),
+                                        animDelay = i * 60
+                                    )
                                 }
                             } else {
-                                viewmodel.elementsReceived.forEachIndexed { index, element ->
-
+                                manager.itemsRECEIVED.forEachIndexed { i, item ->
+                                    FileRow(
+                                        file = TransferFile(
+                                            name = item.name,
+                                            sizeLabel = "2.52 MBs",
+                                            typeLabel = "EXE",
+                                            status = FileTransferStatus.Done
+                                        ),
+                                        animDelay = i * 60
+                                    )
                                 }
                             }
                         }

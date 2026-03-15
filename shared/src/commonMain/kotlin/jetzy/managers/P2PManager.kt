@@ -1,6 +1,7 @@
 package jetzy.managers
 
 import androidx.annotation.CallSuper
+import androidx.compose.runtime.mutableStateListOf
 import io.ktor.network.sockets.Connection
 import io.ktor.utils.io.cancel
 import io.ktor.utils.io.readByte
@@ -12,6 +13,7 @@ import io.ktor.utils.io.writeFully
 import io.ktor.utils.io.writeInt
 import io.ktor.utils.io.writeLong
 import jetzy.models.JetzyElement
+import jetzy.models.ReceivedItem
 import jetzy.p2p.P2pDiscoveryMode
 import jetzy.p2p.P2pIoApi
 import jetzy.p2p.P2pOperation
@@ -54,6 +56,8 @@ abstract class P2PManager {
     abstract val discoveryMode: P2pDiscoveryMode
 
     open val requiredPermissions: List<String> = listOf()
+
+    val itemsRECEIVED = mutableStateListOf<ReceivedItem>()
 
     /**
      * Initialize the manager and prepare for connections
@@ -98,7 +102,7 @@ abstract class P2PManager {
         isConnected.value = false
     }
 
-    suspend fun sendFiles(files: List<JetzyElement>) {
+    private suspend fun sendFiles(files: List<JetzyElement>) {
         val conn = connection ?: run {
             loggy("[~] sendFiles() called but connection is null -- aborting")
             return
@@ -154,7 +158,7 @@ abstract class P2PManager {
         }
     }
 
-    suspend fun receiveFiles() {
+    private suspend fun receiveFiles() {
         val conn = connection ?: run {
             loggy("[~] receiveFiles() called but connection is null -- aborting")
             return
@@ -207,7 +211,9 @@ abstract class P2PManager {
                 output.flush()
 
                 transferStatus.value = "Received: $name"
-                // TODO received.add(JetzyElement.ReceivedFile(name, tempPath))
+
+                itemsRECEIVED.add(ReceivedItem(name = name, path = tempPath))
+
                 loggy("[->] [$fileIndex] '$name' staged at $tempPath")
             }
 

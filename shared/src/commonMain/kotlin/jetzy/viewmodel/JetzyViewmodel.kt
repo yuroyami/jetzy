@@ -95,8 +95,6 @@ class JetzyViewmodel : ViewModel() {
     val videos2Send = elementsToSend.filterAsStateFlow<JetzyElement.Video>()
     val texts2Send = elementsToSend.filterAsStateFlow<JetzyElement.Text>()
 
-    val elementsReceived = mutableStateListOf<JetzyElement>()
-
     fun clearOperation() {
         elementsToSend.clear()
         currentOperation.value = null
