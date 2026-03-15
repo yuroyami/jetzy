@@ -71,7 +71,6 @@ abstract class P2PManager {
             receiverName = "CoolGuy",
             completedCount = 0,
             totalCount = 1,
-            speedLabel = "2.4MB/s",
             isSender = viewmodel.currentOperation.value == P2pOperation.SEND
         )
 
