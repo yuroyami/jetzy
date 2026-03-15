@@ -1,104 +1,527 @@
 package jetzy.ui.discovery
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewModelScope
 import jetzy.managers.PeerDiscoveryP2PM
-import jetzy.shared.generated.resources.Res
-import jetzy.shared.generated.resources.notosans
-import jetzy.theme.sdp
-import jetzy.theme.ssp
+import jetzy.p2p.P2pPeer
 import jetzy.ui.LocalViewmodel
-import jetzy.utils.ComposeUtils.JetzyText
-import jetzy.utils.ComposeUtils.font
+import jetzy.ui.Screen
+import jetzy.ui.transfer.BorderMid
+import jetzy.ui.transfer.BorderWeak
+import jetzy.ui.transfer.CardBg
+import jetzy.ui.transfer.CardBg2
+import jetzy.ui.transfer.Coral50
+import jetzy.ui.transfer.Coral600
+import jetzy.ui.transfer.Coral800
+import jetzy.ui.transfer.Purple100
+import jetzy.ui.transfer.Purple400
+import jetzy.ui.transfer.Purple50
+import jetzy.ui.transfer.Purple600
+import jetzy.ui.transfer.Purple800
+import jetzy.ui.transfer.SurfaceBg
+import jetzy.ui.transfer.Teal50
+import jetzy.ui.transfer.Teal600
+import jetzy.ui.transfer.Teal800
+import jetzy.ui.transfer.TextPrimary
+import jetzy.ui.transfer.TextSecondary
+import jetzy.ui.transfer.TextTertiary
+import kotlinx.coroutines.launch
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
+// ── Peer color assignment ──────────────────────────────────────────────────────
+private data class PeerColors(val bg: Color, val fg: Color, val accent: Color)
+
+private fun peerColors(index: Int) = when (index % 3) {
+    0    -> PeerColors(Purple50, Purple800, Purple600)
+    1    -> PeerColors(Teal50, Teal800, Teal600)
+    else -> PeerColors(Coral50, Coral800, Coral600)
+}
+
+// ── Root screen ────────────────────────────────────────────────────────────────
 @Composable
 fun PeerDiscoveryScreenUI() {
     val viewmodel = LocalViewmodel.current
     val manager = viewmodel.p2pManager as? PeerDiscoveryP2PM ?: return
 
     val availablePeers by manager.availablePeers.collectAsState()
+    val isDiscovering  by manager.isDiscovering.collectAsState()
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    var selectedPeer by remember { mutableStateOf<P2pPeer?>(null) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(SurfaceBg),
+        contentAlignment = Alignment.TopCenter
     ) {
-        JetzyText(
-            text = "Select your Peer",
-            size = 14.ssp,
-            modifier = Modifier.padding(6.dp)
-        )
-
-        Text("Make sure your peer is receiving")
-
-        Surface(
-            modifier = Modifier.weight(1f).padding(16.dp),
-            tonalElevation = 28.dp,
-            shadowElevation = 3.dp,
-            shape = RoundedCornerShape(6.dp)
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            val platform by viewmodel.currentPeerPlatform.collectAsState()
-            if (platform != null) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize()
+
+            // ── Header ──────────────────────────────────────────────────────
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = "PEER DISCOVERY",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.W500,
+                    color = TextTertiary,
+                    letterSpacing = 0.08.sp,
+                )
+                Text(
+                    text = "Find nearby devices",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.W500,
+                    color = TextPrimary,
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    text = "Select a device below to connect",
+                    fontSize = 13.sp,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center,
+                )
+            }
+
+            // ── Radar ────────────────────────────────────────────────────────
+            RadarView(
+                peers = availablePeers,
+                selectedPeer = selectedPeer,
+                onPeerSelected = { selectedPeer = it },
+                modifier = Modifier.size(200.dp)
+            )
+
+            // ── Peer list card ───────────────────────────────────────────────
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(CardBg)
+                    .border(0.5.dp, BorderWeak, RoundedCornerShape(20.dp))
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    repeat(3) {
-                        item {
-                            TextButton(
-                                modifier = Modifier.fillMaxWidth(),
-                                onClick = {
+                    Text(
+                        text = "Nearby devices",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.W500,
+                        color = TextPrimary,
+                    )
+                    if (isDiscovering) SearchingIndicator()
+                }
 
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = platform!!.icon,
-                                    contentDescription = null,
-                                    tint = platform!!.brandColor,
-                                    modifier = Modifier.size(18.sdp).padding(horizontal = 4.dp)
-                                )
-
-                                Text(text = "Peer $it", modifier = Modifier.weight(1f), fontFamily = Res.font.notosans.font)
-                            }
-
-                            HorizontalDivider()
-                        }
-                    }
-
-                    items(availablePeers) {
-                        TextButton(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-
-                            }
-                        ) {
-                            Icon(
-                                imageVector = platform!!.icon,
-                                contentDescription = null,
-                                tint = platform!!.brandColor,
-                                modifier = Modifier.size(18.sdp).padding(horizontal = 4.dp)
+                if (availablePeers.isEmpty()) {
+                    EmptyPeersState()
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        availablePeers.forEachIndexed { index, peer ->
+                            PeerRow(
+                                peer = peer,
+                                colors = peerColors(index),
+                                isSelected = peer == selectedPeer,
+                                animDelay = index * 60,
+                                onClick = { selectedPeer = if (selectedPeer == peer) null else peer }
                             )
-
-                            Text(text = "Peer $it", modifier = Modifier.weight(1f), fontFamily = Res.font.notosans.font)
                         }
                     }
                 }
             }
+
+            Spacer(Modifier.weight(1f))
+
+            // ── Connect button ───────────────────────────────────────────────
+            ConnectButton(
+                peer = selectedPeer,
+                onClick = {
+                    selectedPeer?.let { peer ->
+                        viewmodel.viewModelScope.launch {
+                            manager.connectToPeer(peer)
+                        }
+                    }
+                }
+            )
+
+            // ── Cancel ───────────────────────────────────────────────────────
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .border(0.5.dp, BorderMid, RoundedCornerShape(12.dp))
+                    .clickable {
+                        viewmodel.navigateTo(Screen.MainScreen)
+                    }
+                    .padding(vertical = 10.dp)
+            ) {
+                Text("Cancel", fontSize = 13.sp, color = TextSecondary)
+            }
         }
+    }
+}
+
+// ── Radar ──────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun RadarView(
+    peers: List<P2pPeer>,
+    selectedPeer: P2pPeer?,
+    onPeerSelected: (P2pPeer) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "radar")
+    val sweepAngle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(2500, easing = LinearEasing)),
+        label = "sweep"
+    )
+    val centerPulse by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            tween(1500, easing = FastOutSlowInEasing),
+            RepeatMode.Reverse
+        ),
+        label = "center"
+    )
+
+    // stable angular positions for up to 5 peers
+    val peerAngles = remember(peers.size) {
+        List(peers.size) { i -> (i * 137.5f) % 360f } // golden angle distribution
+    }
+    val peerRadii = remember(peers.size) {
+        List(peers.size) { i -> 0.35f + (i % 3) * 0.18f }
+    }
+
+    Box(
+        modifier = modifier.drawBehind {
+            val cx = size.width / 2f
+            val cy = size.height / 2f
+            val maxR = size.minDimension / 2f
+
+            // rings
+            listOf(0.35f, 0.65f, 1f).forEach { f ->
+                drawCircle(
+                    color = Purple400.copy(alpha = .15f),
+                    radius = maxR * f,
+                    center = Offset(cx, cy),
+                    style = Stroke(0.5.dp.toPx())
+                )
+            }
+
+            // sweep
+            drawArc(
+                color = Purple400.copy(alpha = .2f),
+                startAngle = sweepAngle - 60f,
+                sweepAngle = 60f,
+                useCenter = true,
+                topLeft = Offset(cx - maxR, cy - maxR),
+                size = androidx.compose.ui.geometry.Size(maxR * 2, maxR * 2),
+            )
+
+            // sweep leading edge line
+            val sweepRad = sweepAngle.toDouble() * (PI / 180.0)
+            drawLine(
+                color = Purple400.copy(alpha = .5f),
+                start = Offset(cx, cy),
+                end = Offset(
+                    cx + (maxR * cos(sweepRad)).toFloat(),
+                    cy + (maxR * sin(sweepRad)).toFloat(),
+                ),
+                strokeWidth = 1.dp.toPx(),
+                cap = StrokeCap.Round,
+            )
+
+            // center dot
+            drawCircle(
+                color = Purple600.copy(alpha = centerPulse),
+                radius = 5.dp.toPx(),
+                center = Offset(cx, cy),
+            )
+        },
+        contentAlignment = Alignment.Center
+    ) {
+        // peer dots
+        Box(modifier = Modifier.fillMaxSize()) {
+            peers.forEachIndexed { index, peer ->
+                val angle = peerAngles.getOrElse(index) { 0f }
+                val radius = peerRadii.getOrElse(index) { 0.5f }
+                val colors = peerColors(index)
+
+                val infiniteRipple = rememberInfiniteTransition(label = "ripple_$index")
+                val rippleScale by infiniteRipple.animateFloat(
+                    initialValue = 1f,
+                    targetValue = 2.4f,
+                    animationSpec = infiniteRepeatable(
+                        tween(2000, delayMillis = index * 600, easing = LinearEasing),
+                        RepeatMode.Restart
+                    ),
+                    label = "scale_$index"
+                )
+                val rippleAlpha by infiniteRipple.animateFloat(
+                    initialValue = 0.4f,
+                    targetValue = 0f,
+                    animationSpec = infiniteRepeatable(
+                        tween(2000, delayMillis = index * 600),
+                        RepeatMode.Restart
+                    ),
+                    label = "alpha_$index"
+                )
+
+                val angleRad = angle.toDouble() * (PI / 180.0)
+                val dotSize = 10.dp
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .drawBehind {
+                            val cx = size.width / 2f
+                            val cy = size.height / 2f
+                            val maxR = size.minDimension / 2f
+                            val dx = (maxR * radius * cos(angleRad)).toFloat()
+                            val dy = (maxR * radius * sin(angleRad)).toFloat()
+                            val dotR = dotSize.toPx() / 2f
+
+                            // ripple
+                            drawCircle(
+                                color = colors.accent.copy(alpha = rippleAlpha),
+                                radius = dotR * rippleScale,
+                                center = Offset(cx + dx, cy + dy),
+                            )
+                            // dot
+                            drawCircle(
+                                color = if (peer == peers.firstOrNull { it.id == peer.id }) colors.accent else colors.accent.copy(.7f),
+                                radius = dotR,
+                                center = Offset(cx + dx, cy + dy),
+                            )
+                        }
+                        .clickable { onPeerSelected(peer) }
+                )
+            }
+        }
+    }
+}
+
+// ── Peer row ───────────────────────────────────────────────────────────────────
+
+@Composable
+private fun PeerRow(
+    peer: P2pPeer,
+    colors: PeerColors,
+    isSelected: Boolean,
+    animDelay: Int,
+    onClick: () -> Unit,
+) {
+    val animAlpha by produceState(0f, peer) {
+        kotlinx.coroutines.delay(animDelay.toLong())
+        value = 1f
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer { alpha = animAlpha }
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isSelected) colors.bg else CardBg2)
+            .border(
+                width = if (isSelected) 1.5.dp else 0.5.dp,
+                color = if (isSelected) colors.accent else BorderWeak,
+                shape = RoundedCornerShape(12.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+    ) {
+        // avatar
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(colors.bg)
+        ) {
+            Text(
+                text = peer.name.take(2).uppercase(),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.W500,
+                color = colors.fg,
+            )
+        }
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = peer.name,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.W500,
+                color = if (isSelected) colors.fg else TextPrimary,
+            )
+            Text(
+                text = "Wi-Fi Direct",
+                fontSize = 11.sp,
+                color = TextTertiary,
+            )
+        }
+
+        SignalBars(strength = peer.signalStrength, color = colors.accent)
+    }
+}
+
+// ── Signal bars ────────────────────────────────────────────────────────────────
+
+@Composable
+private fun SignalBars(strength: Int, color: Color) {
+    Row(
+        verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        listOf(5.dp, 9.dp, 13.dp, 17.dp).forEachIndexed { index, h ->
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(h)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(if (index < strength) color else BorderWeak)
+            )
+        }
+    }
+}
+
+// ── Searching indicator ────────────────────────────────────────────────────────
+
+@Composable
+private fun SearchingIndicator() {
+    val infiniteTransition = rememberInfiniteTransition(label = "search")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(700, easing = LinearEasing)),
+        label = "spin"
+    )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Box(modifier = Modifier.size(12.dp).drawBehind {
+            val stroke = 1.5.dp.toPx()
+            val r = (size.minDimension - stroke) / 2f
+            drawCircle(BorderWeak, radius = r, style = Stroke(stroke))
+            drawArc(Purple600, startAngle = rotation, sweepAngle = 270f,
+                useCenter = false, style = Stroke(stroke, cap = StrokeCap.Round))
+        })
+        Text("Scanning", fontSize = 11.sp, color = TextTertiary)
+    }
+}
+
+// ── Empty state ────────────────────────────────────────────────────────────────
+
+@Composable
+private fun EmptyPeersState() {
+    val infiniteTransition = rememberInfiniteTransition(label = "empty")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f, targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(
+            tween(1400, easing = FastOutSlowInEasing), RepeatMode.Reverse
+        ),
+        label = "empty_alpha"
+    )
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 16.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(Purple50.copy(alpha = alpha))
+                .drawBehind {
+                    val stroke = 1.5.dp.toPx()
+                    val r = (size.minDimension - stroke) / 2f
+                    drawCircle(Purple400.copy(alpha = alpha), radius = r, style = Stroke(stroke))
+                }
+        )
+        Text("No devices found yet", fontSize = 13.sp, color = TextSecondary)
+        Text("Make sure the other device has Jetzy open", fontSize = 11.sp, color = TextTertiary, textAlign = TextAlign.Center)
+    }
+}
+
+// ── Connect button ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun ConnectButton(peer: P2pPeer?, onClick: () -> Unit) {
+    val enabled = peer != null
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (enabled) Purple600 else Purple600.copy(alpha = 0.35f))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(vertical = 13.dp)
+    ) {
+        Text(
+            text = if (peer != null) "Connect to ${peer.name}" else "Select a device to connect",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.W500,
+            color = Purple100,
+        )
     }
 }

@@ -45,11 +45,8 @@ import jetzy.ui.transfer.BorderWeak
 import jetzy.ui.transfer.CardBg
 import jetzy.ui.transfer.CardBg2
 import jetzy.ui.transfer.Purple400
-import jetzy.ui.transfer.Purple50
 import jetzy.ui.transfer.Purple600
 import jetzy.ui.transfer.SurfaceBg
-import jetzy.ui.transfer.Teal50
-import jetzy.ui.transfer.Teal600
 import jetzy.ui.transfer.TextPrimary
 import jetzy.ui.transfer.TextSecondary
 import jetzy.ui.transfer.TextTertiary
@@ -135,9 +132,9 @@ actual fun P2pQrContent(modifier: Modifier, manager: QRDiscoveryP2PM) {
                     ViewfinderOverlay()
                 }
 
-                OrDivider()
+                //OrDivider()
 
-                NearbyDevicesList()
+                //NearbyDevicesList()
             }
 
             TextButton(
@@ -210,39 +207,39 @@ private fun ViewfinderOverlay() {
             }
     )
 }
-
-@Composable
-private fun OrDivider() {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Box(Modifier.weight(1f).height(0.5.dp).background(BorderWeak))
-        Text("or connect from nearby", fontSize = 11.sp, color = TextTertiary)
-        Box(Modifier.weight(1f).height(0.5.dp).background(BorderWeak))
-    }
-}
-
-@Composable
-private fun NearbyDevicesList() {
-    // placeholder rows — wire these up to your actual WiFi Direct / NSD discovery results
-    Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        NearbyDeviceRow(name = "ASUSAI2501B", meta = "Android · hotspot", signalStrength = 3, color = Purple600, bgColor = Purple50)
-        NearbyDeviceRow(name = "MacBook Pro", meta = "macOS · Wi-Fi Direct", signalStrength = 4, color = Teal600, bgColor = Teal50)
-    }
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        SearchingSpinner()
-        Text("Searching for nearby devices", fontSize = 12.sp, color = TextTertiary)
-    }
-}
+//
+//@Composable
+//private fun OrDivider() {
+//    Row(
+//        verticalAlignment = Alignment.CenterVertically,
+//        horizontalArrangement = Arrangement.spacedBy(10.dp),
+//        modifier = Modifier.fillMaxWidth()
+//    ) {
+//        Box(Modifier.weight(1f).height(0.5.dp).background(BorderWeak))
+//        Text("or connect from nearby", fontSize = 11.sp, color = TextTertiary)
+//        Box(Modifier.weight(1f).height(0.5.dp).background(BorderWeak))
+//    }
+//}
+//
+//@Composable
+//private fun NearbyDevicesList() {
+//    // placeholder rows — wire these up to your actual WiFi Direct / NSD discovery results
+//    Column(
+//        verticalArrangement = Arrangement.spacedBy(8.dp),
+//        modifier = Modifier.fillMaxWidth()
+//    ) {
+//        NearbyDeviceRow(name = "ASUSAI2501B", meta = "Android · hotspot", signalStrength = 3, color = Purple600, bgColor = Purple50)
+//        NearbyDeviceRow(name = "MacBook Pro", meta = "macOS · Wi-Fi Direct", signalStrength = 4, color = Teal600, bgColor = Teal50)
+//    }
+//
+//    Row(
+//        verticalAlignment = Alignment.CenterVertically,
+//        horizontalArrangement = Arrangement.spacedBy(6.dp)
+//    ) {
+//        SearchingSpinner()
+//        Text("Searching for nearby devices", fontSize = 12.sp, color = TextTertiary)
+//    }
+//}
 
 @Composable
 private fun NearbyDeviceRow(

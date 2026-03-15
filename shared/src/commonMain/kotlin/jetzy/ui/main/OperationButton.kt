@@ -32,8 +32,6 @@ import jetzy.theme.ssp
 import jetzy.ui.LocalViewmodel
 import org.jetbrains.compose.resources.Font
 
-
-
 @Composable
 fun OperationButton(
     modifier: Modifier = Modifier,

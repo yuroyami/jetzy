@@ -16,6 +16,7 @@ val Teal50     = Color(0xFFE1F5EE)
 val Teal800    = Color(0xFF085041)
 val Coral50    = Color(0xFFFAECE7)
 val Coral800   = Color(0xFF712B13)
+val Coral600   = Color(0xFF993C1D)
 
 val SurfaceBg  = Color(0xFFF5F4F1)   // --color-background-tertiary approx
 val CardBg     = Color(0xFFFFFFFF)
