@@ -3,7 +3,6 @@ package jetzy.managers
 import jetzy.p2p.P2pDiscoveryMode
 import jetzy.p2p.P2pPeer
 import jetzy.utils.loggy
-import kotlinx.coroutines.launch
 import platform.Foundation.NSError
 import platform.MultipeerConnectivity.MCEncryptionOptional
 import platform.MultipeerConnectivity.MCNearbyServiceAdvertiser
@@ -40,13 +39,11 @@ class MpcP2PM : PeerDiscoveryP2PM() {
 
         sessionDelegate.onPeerConnected = { mcPeerID ->
             loggy("MPC peer connected: ${mcPeerID.displayName}")
-            isConnected.value = true
-            coroutineScope.launch { beginTransfer() }
+            //TODO ESTBALISH KTOR CONNECTION HERE
         }
 
         sessionDelegate.onPeerDisconnected = { mcPeerID ->
             loggy("MPC peer disconnected: ${mcPeerID.displayName}")
-            isConnected.value = false
         }
 
         sessionDelegate.onDataReceived = { data, _ ->
@@ -87,7 +84,6 @@ class MpcP2PM : PeerDiscoveryP2PM() {
     override suspend fun startDiscoveryAndAdvertising(deviceName: String) {
         isDiscovering.value = true
         isAdvertising.value = true
-        transferStatus.value = "Looking for nearby devices..."
 
         advertiser = MCNearbyServiceAdvertiser(
             peer = localPeerID,
@@ -124,8 +120,6 @@ class MpcP2PM : PeerDiscoveryP2PM() {
         val mcPeerID = peerIdMap[peer.id]
             ?: return Result.failure(Exception("MCPeerID not found for ${peer.id}"))
 
-        transferStatus.value = "Inviting ${peer.name}..."
-
         browser?.invitePeer(
             peerID = mcPeerID,
             toSession = session,
@@ -142,7 +136,6 @@ class MpcP2PM : PeerDiscoveryP2PM() {
     override suspend fun cleanup() {
         stopDiscoveryAndAdvertising()
         session.disconnect()
-        isConnected.value = false
         connection = null
     }
 }

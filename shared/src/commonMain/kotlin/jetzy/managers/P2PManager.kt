@@ -25,6 +25,7 @@ import jetzy.viewmodel.JetzyViewmodel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
@@ -45,19 +46,28 @@ abstract class P2PManager {
     var connection: Connection? = null
         set(value) {
             field = value
-            beginTransfer()
+            isConnected.value = value != null
+            if (value != null) beginTransfer()
         }
 
-    val transferProgress = MutableStateFlow(0f)
-    val transferSpeed = MutableStateFlow(0L) //in bytes per second
-    val transferStatus = MutableStateFlow("")
-    val isConnected  = MutableStateFlow(false)
+    val itemsRECEIVED = mutableStateListOf<ReceivedItem>()
+
+    val transferStatus: StateFlow<String>
+        field = MutableStateFlow("")
+
+    val transferProgress: StateFlow<Float>
+        field = MutableStateFlow(0f)
+
+    val transferSpeed: StateFlow<Long> //in bytes per second
+        field = MutableStateFlow(0L)
+
+    val isConnected: StateFlow<Boolean>
+        field = MutableStateFlow(false)
 
     abstract val discoveryMode: P2pDiscoveryMode
 
     open val requiredPermissions: List<String> = listOf()
 
-    val itemsRECEIVED = mutableStateListOf<ReceivedItem>()
 
     /**
      * Initialize the manager and prepare for connections
@@ -110,7 +120,7 @@ abstract class P2PManager {
         loggy("[>] Starting transfer of ${files.size} file(s): ${files.map { it.name }}")
         try {
             val output = conn.output
-            val input  = conn.input
+            val input = conn.input
 
             files.forEachIndexed { index, file ->
                 val fileSize = file.size()
@@ -165,8 +175,8 @@ abstract class P2PManager {
         }
         loggy("[<] Waiting to receive files from peer...")
         try {
-            val input    = conn.input
-            val output   = conn.output
+            val input = conn.input
+            val output = conn.output
             val received = mutableListOf<JetzyElement>()
             var fileIndex = 0
 
@@ -180,15 +190,15 @@ abstract class P2PManager {
 
                 val nameBytes = ByteArray(nameLen)
                 input.readFully(nameBytes)
-                val name     = nameBytes.decodeToString()
+                val name = nameBytes.decodeToString()
                 val fileSize = input.readLong()
                 fileIndex++
 
                 loggy("[<] [$fileIndex] Incoming: '$name' (${fileSize.toHumanSize()})")
 
                 val tempPath = Path(SystemTemporaryDirectory, name)
-                val sink     = SystemFileSystem.sink(tempPath).buffered()
-                val buf      = ByteArray(64 * 1024)
+                val sink = SystemFileSystem.sink(tempPath).buffered()
+                val buf = ByteArray(64 * 1024)
                 var bytesRead = 0L
 
                 try {
@@ -226,10 +236,10 @@ abstract class P2PManager {
 
     // ── Helper ────────────────────────────────────────────────────────────────────
     private fun Long.toHumanSize(): String = when {
-        this < 1024L              -> "$this B"
-        this < 1024L * 1024       -> "${round(this / 1024f * 10) / 10} KB"
+        this < 1024L -> "$this B"
+        this < 1024L * 1024 -> "${round(this / 1024f * 10) / 10} KB"
         this < 1024L * 1024 * 1024 -> "${round(this / (1024f * 1024) * 10) / 10} MB"
-        else                       -> "${round(this / (1024f * 1024 * 1024) * 100) / 100} GB"
+        else -> "${round(this / (1024f * 1024 * 1024) * 100) / 100} GB"
     }
 
 }

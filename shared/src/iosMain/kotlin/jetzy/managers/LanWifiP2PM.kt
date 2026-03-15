@@ -38,8 +38,6 @@ class LanWifiP2PM : QRDiscoveryP2PM() {
                 }.onFailure { e ->
                     loggy("Connection attempt failed: ${e.message}, retrying in 2s...")
                     delay(2.seconds)
-                }.onSuccess {
-                    beginTransfer()
                 }
             }
 

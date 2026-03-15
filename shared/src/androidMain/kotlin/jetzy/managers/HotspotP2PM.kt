@@ -99,10 +99,6 @@ class HotspotP2PM(context: Context) : QRDiscoveryP2PM() {
                     loggy("######### Is waiting for serverSocket Acceptance #########")
                     val socket = serverSocket.accept()
                     connection = socket.connection()
-
-                    isConnected.value = true
-
-                    beginTransfer()
                 } catch (e: Exception) {
                     loggy("Accept failed: ${e.stackTraceToString()}")
                 }

@@ -50,7 +50,6 @@ class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
         ensureChannel()
         isDiscovering.value = true
         isAdvertising.value = true
-        transferStatus.value = "Looking for nearby devices..."
 
         registerReceiver()
 
@@ -150,7 +149,6 @@ class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
     @SuppressLint("MissingPermission")
     override suspend fun connectToPeer(peer: P2pPeer): Result<Unit> {
         val ch = channel ?: return Result.failure(Exception("Channel not initialized"))
-        transferStatus.value = "Connecting to ${peer.name}..."
 
         return suspendCancellableCoroutine { cont ->
             val config = WifiP2pConfig().apply {
@@ -179,9 +177,7 @@ class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
                 loggy("WiFi Direct server listening on port $PORT")
                 val socket = serverSocket.accept()
                 connection = socket.connection()
-                isConnected.value = true
                 loggy("WiFi Direct client connected")
-                beginTransfer()
             } else {
                 // this device is the client — connect to GO
                 loggy("WiFi Direct connecting to GO: $groupOwnerIp:$PORT")
@@ -189,9 +185,7 @@ class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
                     runCatching {
                         val socket = aSocket(selectorManager).tcp().connect(groupOwnerIp, PORT)
                         connection = socket.connection()
-                        isConnected.value = true
                         loggy("WiFi Direct connected to group owner")
-                        beginTransfer()
                     }.onFailure { e ->
                         loggy("Retrying WiFi Direct connection: ${e.message}")
                         kotlinx.coroutines.delay(1500)
@@ -209,7 +203,6 @@ class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
         channel?.let { wifiP2pManager.removeGroup(it, null) }
         channel = null
         connection = null
-        isConnected.value = false
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
