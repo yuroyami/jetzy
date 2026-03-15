@@ -15,7 +15,6 @@ import jetzy.models.JetzyElement
 import jetzy.p2p.P2pDiscoveryMode
 import jetzy.p2p.P2pIoApi
 import jetzy.p2p.P2pOperation
-import jetzy.p2p.P2pPlatformCallback
 import jetzy.ui.Screen
 import jetzy.ui.transfer.TransferScreenState
 import jetzy.utils.PreferablyIO
@@ -39,10 +38,10 @@ abstract class P2PManager {
     protected val coroutineScope = CoroutineScope(PreferablyIO + coroutineSupervisor)
 
     var connection: Connection? = null
-
-    companion object {
-        lateinit var platformCallback: P2pPlatformCallback
-    }
+        set(value) {
+            field = value
+            beginTransfer()
+        }
 
     val transferProgress = MutableStateFlow(0f)
     val transferSpeed = MutableStateFlow(0L) //in bytes per second
@@ -59,14 +58,12 @@ abstract class P2PManager {
     @CallSuper
     open fun initialize(viewmodel: JetzyViewmodel) {
         this.viewmodel = viewmodel
-        platformCallback.ensurePermissions(requiredPermissions)
+        viewmodel.platformCallback.ensurePermissions(requiredPermissions)
     }
 
     @P2pIoApi
-    fun beginTransfer() {
-        viewmodel.navigateTo(
-            Screen.TransferScreen, noWayToReturn = true
-        )
+    private fun beginTransfer() {
+        viewmodel.navigateTo(Screen.TransferScreen, noWayToReturn = true)
 
         viewmodel.transferState.value = TransferScreenState(
             senderName = "EdgyBoi",

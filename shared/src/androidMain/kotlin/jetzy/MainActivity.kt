@@ -21,7 +21,6 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import jetzy.managers.HotspotP2PM
 import jetzy.managers.P2PManager
-import jetzy.managers.P2PManager.Companion.platformCallback
 import jetzy.managers.WiFiDirectP2PM
 import jetzy.p2p.P2pPlatformCallback
 import jetzy.theme.NightMode
@@ -50,14 +49,13 @@ class MainActivity: ComponentActivity(), P2pPlatformCallback {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        platformCallback = this
-
         setContent {
             var trackDayNight by remember { mutableStateOf(false) }
 
             AdamScreen(
                 onViewmodel = {
                     viewmodel = it
+                    viewmodel.platformCallback = this
                     trackDayNight = true
                 }
             )

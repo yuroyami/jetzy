@@ -160,7 +160,6 @@ class JetzyMCSessionDelegate : NSObject(), MCSessionDelegateProtocol {
             MCSessionState.MCSessionStateConnected    -> onPeerConnected?.invoke(peer)
             MCSessionState.MCSessionStateNotConnected -> onPeerDisconnected?.invoke(peer)
             MCSessionState.MCSessionStateConnecting   -> loggy("MPC connecting to ${peer.displayName}")
-            else -> {}
         }
     }
 

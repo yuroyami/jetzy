@@ -9,10 +9,10 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import jetzy.managers.P2PManager
-import jetzy.managers.P2PManager.Companion.platformCallback
 import jetzy.models.JetzyElement
 import jetzy.p2p.P2pDiscoveryMode
 import jetzy.p2p.P2pOperation
+import jetzy.p2p.P2pPlatformCallback
 import jetzy.theme.NightMode
 import jetzy.ui.Screen
 import jetzy.ui.transfer.TransferScreenState
@@ -25,13 +25,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class JetzyViewmodel() : ViewModel() {
+class JetzyViewmodel : ViewModel() {
 
     val backstack = mutableStateListOf<Screen>(Screen.MainScreen)
     val currentScreen = snapshotFlow { backstack.lastOrNull() ?: Screen.MainScreen }
         .stateIn(viewModelScope, SharingStarted.Eagerly, Screen.MainScreen)
 
     var p2pManager: P2PManager? = null
+
+    lateinit var platformCallback: P2pPlatformCallback
 
     val transferState = MutableStateFlow<TransferScreenState?>(null)
 
