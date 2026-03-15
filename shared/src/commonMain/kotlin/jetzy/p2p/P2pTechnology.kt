@@ -30,7 +30,6 @@ sealed class P2pTechnology(
     }
 
     abstract fun isAvailable(currentPlatform: Platform, targetPlatform: Platform): Boolean
-    abstract suspend fun initiate(): P2PConnection
 
     // Common method instances
     object LocalNetwork : P2pTechnology(
@@ -44,8 +43,6 @@ sealed class P2pTechnology(
         override fun isAvailable(currentPlatform: Platform, targetPlatform: Platform): Boolean {
             return currentPlatform in supportedPlatforms && targetPlatform in supportedPlatforms
         }
-
-        override suspend fun initiate(): P2PConnection = TODO("Implement mDNS/Bonjour discovery")
     }
 
     object Bluetooth : P2pTechnology(
@@ -58,8 +55,6 @@ sealed class P2pTechnology(
         override fun isAvailable(currentPlatform: Platform, targetPlatform: Platform): Boolean {
             return currentPlatform in supportedPlatforms && targetPlatform in supportedPlatforms
         }
-
-        override suspend fun initiate(): P2PConnection = TODO("Implement Bluetooth")
     }
 
     // Android-specific methods
@@ -73,8 +68,6 @@ sealed class P2pTechnology(
         override fun isAvailable(currentPlatform: Platform, targetPlatform: Platform): Boolean {
             return currentPlatform == Platform.Android && targetPlatform == Platform.Android
         }
-
-        override suspend fun initiate(): P2PConnection = TODO("Implement WiFi Direct")
     }
 
     object NearbyConnections : P2pTechnology(
@@ -87,8 +80,6 @@ sealed class P2pTechnology(
         override fun isAvailable(currentPlatform: Platform, targetPlatform: Platform): Boolean {
             return currentPlatform == Platform.Android && targetPlatform == Platform.Android
         }
-
-        override suspend fun initiate(): P2PConnection = TODO("Implement Nearby Connections")
     }
 
     object HotspotLAN : P2pTechnology(
@@ -102,8 +93,6 @@ sealed class P2pTechnology(
             return currentPlatform in setOf(Platform.Android, Platform.IOS) &&
                     targetPlatform in setOf(Platform.Android, Platform.IOS, Platform.PC)
         }
-
-        override suspend fun initiate(): P2PConnection = TODO("Implement Hotspot")
     }
 
     // iOS-specific methods
@@ -117,7 +106,5 @@ sealed class P2pTechnology(
         override fun isAvailable(currentPlatform: Platform, targetPlatform: Platform): Boolean {
             return currentPlatform == Platform.IOS && targetPlatform == Platform.IOS
         }
-
-        override suspend fun initiate(): P2PConnection = TODO("Implement MultipeerConnectivity")
     }
 }

@@ -18,6 +18,7 @@ import jetzy.ui.Screen
 import jetzy.ui.transfer.TransferScreenState
 import jetzy.utils.NavigationDsl
 import jetzy.utils.Platform
+import jetzy.utils.platform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -39,6 +40,12 @@ class JetzyViewmodel : ViewModel() {
 
     val currentOperation = MutableStateFlow<P2pOperation?>(null)
     val currentPeerPlatform = MutableStateFlow<Platform?>(null)
+
+    val isSender: Boolean
+        get() = currentOperation.value == P2pOperation.SEND
+
+    val peerPlatform: Platform
+        get() = currentPeerPlatform.value ?: platform
 
     @NavigationDsl
     fun navigateTo(screen: Screen, doRefresh: Boolean = false, noWayToReturn: Boolean = false) {
