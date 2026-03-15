@@ -1,5 +1,6 @@
 package jetzy
 
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.WindowManager
@@ -95,5 +96,13 @@ class MainActivity: ComponentActivity(), P2pPlatformCallback {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
         if (notYetGranted.isNotEmpty()) p2pPermissioner.launch(notYetGranted.toTypedArray())
+    }
+
+    companion object {
+        lateinit var contextGetter: () -> Context
+    }
+
+    init {
+        contextGetter = { this }
     }
 }
