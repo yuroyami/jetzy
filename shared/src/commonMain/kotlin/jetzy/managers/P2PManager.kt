@@ -19,12 +19,14 @@ import jetzy.p2p.P2pPlatformCallback
 import jetzy.ui.Screen
 import jetzy.ui.transfer.TransferScreenState
 import jetzy.utils.PreferablyIO
+import jetzy.utils.loggy
 import jetzy.viewmodel.JetzyViewmodel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.io.buffered
+import kotlin.math.round
 
 /**
  * Base interface for all P2P transfer methods
@@ -97,31 +99,46 @@ abstract class P2PManager {
     }
 
     suspend fun sendFiles(files: List<JetzyElement>) {
-        val conn = connection ?: return
+        val conn = connection ?: run {
+            loggy("📭 sendFiles() called but connection is null — aborting")
+            return
+        }
+        loggy("🚀 Starting transfer of ${files.size} file(s): ${files.map { it.name }}")
         try {
             val output = conn.output
             val input  = conn.input
 
             files.forEachIndexed { index, file ->
+                val fileSize = file.size()
+                loggy("📦 [${ index + 1}/${files.size}] Preparing '${file.name}' (${fileSize.toHumanSize()})")
+
                 val nameBytes = file.name.encodeToByteArray()
                 output.writeInt(nameBytes.size)
                 output.writeFully(nameBytes)
-                output.writeLong(file.size())
+                output.writeLong(fileSize)
+
+                loggy("📤 [${ index + 1}/${files.size}] Streaming '${file.name}'...")
 
                 val src = file.source.buffered()
                 val buf = ByteArray(64 * 1024)
+                var bytesSent = 0L
                 try {
                     while (true) {
                         val read = src.readAtMostTo(buf)
                         if (read == -1) break
                         output.writeFully(buf, 0, read)
+                        bytesSent += read
+                        val pct = (bytesSent * 100f / fileSize).toInt()
+                        loggy("   ↑ ${bytesSent.toHumanSize()} / ${fileSize.toHumanSize()} ($pct%)")
                     }
                 } finally {
                     src.close()
                 }
 
                 output.flush()
+                loggy("⏳ [${ index + 1}/${files.size}] Waiting for ack from receiver...")
                 input.readByte()
+                loggy("✅ [${ index + 1}/${files.size}] '${file.name}' confirmed by receiver")
 
                 transferProgress.value = (index + 1f) / files.size
                 transferStatus.value = "Sent ${index + 1} of ${files.size}: ${file.name}"
@@ -129,29 +146,43 @@ abstract class P2PManager {
 
             output.writeInt(0)
             output.flush()
+            loggy("🏁 All ${files.size} file(s) sent successfully — end signal written")
             Result.success(Unit)
         } catch (e: Exception) {
+            loggy("💥 sendFiles() crashed: ${e.stackTraceToString()}")
             Result.failure(e)
         }
     }
 
     suspend fun receiveFiles() {
-        val conn = connection ?: return
+        val conn = connection ?: run {
+            loggy("📭 receiveFiles() called but connection is null — aborting")
+            return
+        }
+        loggy("📡 Waiting to receive files from peer...")
         try {
-            val input  = conn.input
-            val output = conn.output
+            val input   = conn.input
+            val output  = conn.output
             val received = mutableListOf<JetzyElement>()
+            var fileIndex = 0
 
             while (true) {
+                loggy("👂 Waiting for next file header...")
                 val nameLen = input.readInt()
-                if (nameLen == 0) break // sender signalled done
+                if (nameLen == 0) {
+                    loggy("🏁 Received end signal — transfer complete (${received.size} file(s))")
+                    break
+                }
 
                 val nameBytes = ByteArray(nameLen)
                 input.readFully(nameBytes)
                 val name = nameBytes.decodeToString()
-
                 val fileSize = input.readLong()
-                val fileBytes = ByteArray(fileSize.toInt()) // fine for files < 2GB
+                fileIndex++
+
+                loggy("📥 [$fileIndex] Incoming: '$name' (${fileSize.toHumanSize()})")
+
+                val fileBytes = ByteArray(fileSize.toInt())
                 var bytesRead = 0L
                 val buf = ByteArray(64 * 1024)
 
@@ -161,20 +192,32 @@ abstract class P2PManager {
                     buf.copyInto(fileBytes, bytesRead.toInt(), 0, toRead)
                     bytesRead += toRead
                     transferProgress.value = bytesRead.toFloat() / fileSize
+                    val pct = (bytesRead * 100f / fileSize).toInt()
+                    loggy("   ↓ ${bytesRead.toHumanSize()} / ${fileSize.toHumanSize()} ($pct%)")
                 }
 
-                // ack so sender moves to next file
+                loggy("✅ [$fileIndex] '$name' fully received — sending ack")
                 output.writeByte(1)
                 output.flush()
 
                 transferStatus.value = "Received: $name"
-                // received.add(JetzyElement from fileBytes + name) — depends on your JetzyElement API
+                //TODO received.add(JetzyElement.ReceivedFile(name, fileBytes))
+                loggy("💾 [$fileIndex] '$name' saved to received list")
             }
 
             Result.success(received)
         } catch (e: Exception) {
+            loggy("💥 receiveFiles() crashed: ${e.stackTraceToString()}")
             Result.failure(e)
         }
+    }
+
+    // ── Helper ────────────────────────────────────────────────────────────────────
+    private fun Long.toHumanSize(): String = when {
+        this < 1024L              -> "$this B"
+        this < 1024L * 1024       -> "${round(this / 1024f * 10) / 10} KB"
+        this < 1024L * 1024 * 1024 -> "${round(this / (1024f * 1024) * 10) / 10} MB"
+        else                       -> "${round(this / (1024f * 1024 * 1024) * 100) / 100} GB"
     }
 
 
