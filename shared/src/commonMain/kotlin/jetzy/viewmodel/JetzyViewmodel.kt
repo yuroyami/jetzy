@@ -35,8 +35,6 @@ class JetzyViewmodel : ViewModel() {
 
     lateinit var platformCallback: P2pPlatformCallback
 
-    val transferState = MutableStateFlow<TransferScreenState?>(null)
-
     val currentOperation = MutableStateFlow<P2pOperation?>(null)
     val currentPeerPlatform = MutableStateFlow<Platform?>(null)
 

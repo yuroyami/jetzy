@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import jetzy.ui.LocalViewmodel
 import jetzy.utils.Platform
 
@@ -64,6 +65,8 @@ fun TransferScreenUI() {
     val progress by manager.transferProgress.collectAsState()
     val speed by manager.transferSpeed.collectAsState()
     val remote by manager.remotePeerInfo.collectAsState()
+
+    val transferComplete by manager.transferComplete.collectAsState()
 
     if (manifest == null || remote == null) return
 
@@ -138,24 +141,37 @@ fun TransferScreenUI() {
             }
 
             item {
+                val destDir = rememberDirectoryPickerLauncher { dir ->
+                    dir?.let { destinationDir ->
+                        manager.finalizeReceivedFilesAt(destinationDir)
+                    }
+                }
+
                 Spacer(Modifier.height(16.dp))
-                Button(
-                    onClick = {
-                        /* TODO cancel */
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Transparent,
-                        contentColor = TextSecondary,
-                    ),
-                    border = androidx.compose.foundation.BorderStroke(0.5.dp, BorderMid),
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "Cancel transfer",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.W400,
-                    )
+                if (transferComplete && !viewmodel.isSender) {
+                    Button(
+                        onClick = {
+                            destDir.launch()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Purple600),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Save files to folder…", fontSize = 13.sp, fontWeight = FontWeight.W500)
+                    }
+                } else {
+                    Button(
+                        onClick = { /* TODO cancel */ },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Transparent,
+                            contentColor = TextSecondary,
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(0.5.dp, BorderMid),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Cancel transfer", fontSize = 13.sp, fontWeight = FontWeight.W400)
+                    }
                 }
             }
         }

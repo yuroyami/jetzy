@@ -2,6 +2,7 @@ package jetzy.managers
 
 import androidx.annotation.CallSuper
 import androidx.compose.runtime.mutableStateListOf
+import io.github.vinceglb.filekit.PlatformFile
 import io.ktor.network.sockets.Connection
 import io.ktor.utils.io.cancel
 import io.ktor.utils.io.readByte
@@ -87,6 +88,9 @@ abstract class P2PManager {
 
     val transferStatus: StateFlow<String>
         field = MutableStateFlow("")
+
+    val transferComplete: StateFlow<Boolean>
+        field = MutableStateFlow(false)
 
     /** Instantaneous transfer speed in bytes/second */
     val transferSpeed: StateFlow<Long>
@@ -249,6 +253,8 @@ abstract class P2PManager {
         output.flush()
         transferSpeed.value = 0L
         loggy("[ok] All ${files.size} file(s) sent — end signal written")
+
+        transferComplete.value = true
     }
 
     // ── Receive ───────────────────────────────────────────────────────────────
@@ -301,6 +307,8 @@ abstract class P2PManager {
         output.writeInt(myPlatBytes.size)
         output.writeFully(myPlatBytes)
         output.flush()
+
+        remotePeerInfo.value = PeerInfo(name = mf.senderName, platform = mf.senderPlatform)
 
         // ── 2. Receive files ──────────────────────────────────────────────────
         var totalBytesRead   = 0L
@@ -362,6 +370,8 @@ abstract class P2PManager {
 
         transferSpeed.value = 0L
         loggy("[ok] Transfer complete — ${itemsRECEIVED.size} file(s) staged")
+
+        transferComplete.value = true
     }
 
     // ── Internal helpers ──────────────────────────────────────────────────────
@@ -375,5 +385,10 @@ abstract class P2PManager {
         transform: (FileTransferEntry) -> FileTransferEntry
     ) {
         value = value.toMutableList().also { it[index] = transform(it[index]) }
+    }
+
+
+    fun finalizeReceivedFilesAt(destDir: PlatformFile) {
+
     }
 }
