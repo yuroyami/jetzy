@@ -99,10 +99,15 @@ class JetzyViewmodel : ViewModel() {
     val videos2Send = elementsToSend.filterAsStateFlow<JetzyElement.Video>()
     val texts2Send = elementsToSend.filterAsStateFlow<JetzyElement.Text>()
 
-    fun clearOperation() {
+    fun resetEverything() {
         elementsToSend.clear()
         currentOperation.value = null
         currentPeerPlatform.value = null
+        p2pManager = null
+
+        navigateTo(
+            Screen.MainScreen, doRefresh = true, noWayToReturn = true
+        )
     }
 
     inline fun <reified T : JetzyElement> SnapshotStateList<JetzyElement>.filterAsStateFlow(): StateFlow<List<T>> {

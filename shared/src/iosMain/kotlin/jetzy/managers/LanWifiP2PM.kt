@@ -20,7 +20,7 @@ import kotlin.time.Duration.Companion.seconds
 
 class LanWifiP2PM : QRDiscoveryP2PM() {
 
-    fun establishTcpClient(qrData: QRData) = coroutineScope.async(PreferablyIO) {
+    fun establishTcpClient(qrData: QRData) = p2pScope.async(PreferablyIO) {
         try {
             loggy("Establishing WiFi Connection: $qrData")
 

@@ -83,7 +83,7 @@ class HotspotP2PM(context: Context) : QRDiscoveryP2PM() {
         reservation = null
     }
 
-    fun establishTcpServer(): Deferred<QRData?> = coroutineScope.async(PreferablyIO) {
+    fun establishTcpServer(): Deferred<QRData?> = p2pScope.async(PreferablyIO) {
         try {
             val (ssid, password) = startLocalHotspotAsync()
 
@@ -94,7 +94,7 @@ class HotspotP2PM(context: Context) : QRDiscoveryP2PM() {
                .bind("0.0.0.0", 0)
 
             // launch the blocking accept() independently so it doesn't hold up the return
-            coroutineScope.launch(PreferablyIO) {
+            p2pScope.launch(PreferablyIO) {
                 try {
                     loggy("######### Is waiting for serverSocket Acceptance #########")
                     val socket = serverSocket.accept()

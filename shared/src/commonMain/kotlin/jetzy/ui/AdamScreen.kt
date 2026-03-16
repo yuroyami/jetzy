@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.HorizontalDivider
@@ -61,7 +60,7 @@ import org.koin.dsl.koinConfiguration
 val LocalViewmodel = compositionLocalOf<JetzyViewmodel> { error("No Viewmodel provided") }
 
 @Composable
-fun AdamScreen(onViewmodel: (JetzyViewmodel) -> Unit ) {
+fun AdamScreen(onViewmodel: (JetzyViewmodel) -> Unit) {
     KoinApplication(
         configuration = koinConfiguration(
             declaration = { modules(commonModule, platformModule) }
@@ -94,25 +93,11 @@ fun AdamScreen(onViewmodel: (JetzyViewmodel) -> Unit ) {
                                 //CenterAligned
                                 CenterAlignedTopAppBar(
                                     navigationIcon = {
-                                        if (currentScreen is Screen.MainScreen) {
-                                            IconButton(
-                                                onClick = {
-                                                    viewmodel.clearOperation()
-                                                    viewmodel.navigateTo(Screen.MainScreen)
-                                                }
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Filled.Home,
-                                                    contentDescription = null
-                                                )
-                                            }
-                                        } else {
-                                            Image(
-                                                imageVector = vectorResource(Res.drawable.jetzy_vector),
-                                                contentDescription = null,
-                                                modifier = Modifier.height(64.dp)
-                                            )
-                                        }
+                                        Image(
+                                            imageVector = vectorResource(Res.drawable.jetzy_vector),
+                                            contentDescription = null,
+                                            modifier = Modifier.height(64.dp)
+                                        )
                                     },
                                     title = {
                                         if (currentScreen !is Screen.MainScreen) {

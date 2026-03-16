@@ -68,7 +68,7 @@ class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
                 }
             })
             cont.invokeOnCancellation {
-                coroutineScope.launch {
+                p2pScope.launch {
                     stopDiscoveryAndAdvertising()
                 }
             }
@@ -125,7 +125,7 @@ class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
                                     val goIp = info.groupOwnerAddress?.hostAddress ?: return@requestConnectionInfo
                                     val isGO = info.isGroupOwner
                                     loggy("Connected — GO IP: $goIp, isGroupOwner: $isGO")
-                                    coroutineScope.launch {
+                                    p2pScope.launch {
                                         handleP2pConnection(goIp, isGO)
                                     }
                                 }

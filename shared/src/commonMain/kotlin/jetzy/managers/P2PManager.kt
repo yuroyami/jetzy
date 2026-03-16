@@ -3,6 +3,7 @@ package jetzy.managers
 import androidx.annotation.CallSuper
 import androidx.compose.runtime.mutableStateListOf
 import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.atomicMove
 import io.ktor.network.sockets.Connection
 import io.ktor.utils.io.cancel
 import io.ktor.utils.io.readByte
@@ -55,7 +56,7 @@ abstract class P2PManager {
     lateinit var viewmodel: JetzyViewmodel
 
     private val coroutineSupervisor = SupervisorJob()
-    protected val coroutineScope = CoroutineScope(PreferablyIO + coroutineSupervisor)
+    protected val p2pScope = CoroutineScope(PreferablyIO + coroutineSupervisor)
 
     // ── Ktor Connection ────────────────────────────────────────────────────────────
     var connection: Connection? = null
@@ -92,6 +93,9 @@ abstract class P2PManager {
     val transferComplete: StateFlow<Boolean>
         field = MutableStateFlow(false)
 
+    val saveComplete: StateFlow<Boolean>
+        field = MutableStateFlow(false)
+
     /** Instantaneous transfer speed in bytes/second */
     val transferSpeed: StateFlow<Long>
         field = MutableStateFlow(0L)
@@ -107,7 +111,6 @@ abstract class P2PManager {
     open val requiredPermissions: List<String> = listOf()
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
-
     @CallSuper
     open fun initialize(viewmodel: JetzyViewmodel) {
         this.viewmodel = viewmodel
@@ -117,7 +120,7 @@ abstract class P2PManager {
     @P2pIoApi
     private fun beginTransfer() {
         viewmodel.navigateTo(Screen.TransferScreen, noWayToReturn = true)
-        coroutineScope.launch {
+        p2pScope.launch {
             when (viewmodel.currentOperation.value) {
                 P2pOperation.SEND    -> sendFiles(viewmodel.elementsToSend)
                 P2pOperation.RECEIVE -> receiveFiles()
@@ -389,6 +392,15 @@ abstract class P2PManager {
 
 
     fun finalizeReceivedFilesAt(destDir: PlatformFile) {
+        p2pScope.launch {
+            itemsRECEIVED.forEach { item ->
+                val platformFile = PlatformFile(item.path)
+                platformFile.atomicMove(destDir)
+            }
 
+            saveComplete.value = true
+
+            viewmodel.snacky("Files moved successfully!")
+        }
     }
 }

@@ -36,7 +36,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,6 +70,7 @@ fun TransferScreenUI() {
     val remote by manager.remotePeerInfo.collectAsState()
 
     val transferComplete by manager.transferComplete.collectAsState()
+    val saveComplete by manager.saveComplete.collectAsState()
 
     if (manifest == null || remote == null) return
 
@@ -141,18 +145,23 @@ fun TransferScreenUI() {
             }
 
             item {
-                val destDir = rememberDirectoryPickerLauncher { dir ->
-                    dir?.let { destinationDir ->
-                        manager.finalizeReceivedFilesAt(destinationDir)
-                    }
-                }
-
                 Spacer(Modifier.height(16.dp))
-                if (transferComplete && !viewmodel.isSender) {
+
+                if (transferComplete && !viewmodel.isSender && !saveComplete) {
+                    var savingStarted by remember { mutableStateOf(false) }
+
+                    val destDir = rememberDirectoryPickerLauncher { dir ->
+                        dir?.let { destinationDir ->
+                            savingStarted = true
+                            manager.finalizeReceivedFilesAt(destinationDir)
+                        }
+                    }
+
                     Button(
                         onClick = {
                             destDir.launch()
                         },
+                        enabled = !savingStarted,
                         colors = ButtonDefaults.buttonColors(containerColor = Purple600),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -161,7 +170,9 @@ fun TransferScreenUI() {
                     }
                 } else {
                     Button(
-                        onClick = { /* TODO cancel */ },
+                        onClick = {
+                            viewmodel.resetEverything()
+                        },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color.Transparent,
                             contentColor = TextSecondary,
@@ -170,7 +181,7 @@ fun TransferScreenUI() {
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Cancel transfer", fontSize = 13.sp, fontWeight = FontWeight.W400)
+                        Text(if (transferComplete) "Done" else "Cancel transfer", fontSize = 13.sp, fontWeight = FontWeight.W400)
                     }
                 }
             }
