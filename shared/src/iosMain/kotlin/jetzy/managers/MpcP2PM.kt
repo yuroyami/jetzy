@@ -1,6 +1,5 @@
 package jetzy.managers
 
-import jetzy.p2p.P2pDiscoveryMode
 import jetzy.p2p.P2pPeer
 import jetzy.utils.loggy
 import platform.Foundation.NSError
@@ -18,8 +17,6 @@ import platform.darwin.NSObject
 private const val SERVICE_TYPE = "jetzy-p2p" // must be <= 15 chars, lowercase, no underscores
 
 class MpcP2PM : PeerDiscoveryP2PM() {
-
-    override val discoveryMode: P2pDiscoveryMode = P2pDiscoveryMode.PeerDiscovery
 
     private val localPeerID = MCPeerID(displayName = platform.UIKit.UIDevice.currentDevice.name)
     private val session = MCSession(peer = localPeerID, securityIdentity = null, encryptionPreference = MCEncryptionOptional)

@@ -15,8 +15,6 @@ import io.ktor.utils.io.writeFully
 import io.ktor.utils.io.writeInt
 import io.ktor.utils.io.writeLong
 import jetzy.models.JetzyElement
-import jetzy.p2p.P2pDiscoveryMode
-import jetzy.p2p.P2pIoApi
 import jetzy.p2p.P2pOperation
 import jetzy.ui.Screen
 import jetzy.ui.transfer.FileTransferEntry
@@ -25,6 +23,7 @@ import jetzy.ui.transfer.ManifestEntry
 import jetzy.ui.transfer.PeerInfo
 import jetzy.ui.transfer.ReceivedItem
 import jetzy.ui.transfer.TransferManifest
+import jetzy.utils.P2pIoApi
 import jetzy.utils.Platform
 import jetzy.utils.PreferablyIO
 import jetzy.utils.generateTimestampMillis
@@ -58,13 +57,18 @@ abstract class P2PManager {
     private val coroutineSupervisor = SupervisorJob()
     protected val p2pScope = CoroutineScope(PreferablyIO + coroutineSupervisor)
 
+    open val usesPeerDiscovery: Boolean = false
+
     // ── Ktor Connection ────────────────────────────────────────────────────────────
+    //TODO Observe socket state in order to keep UI state fresh and up-to-date
     var connection: Connection? = null
         set(value) {
             field = value
             isConnected.value = value != null
             if (value != null) beginTransfer()
         }
+
+    val isHandshaking = MutableStateFlow(false)
 
     // ── Public state flows ────────────────────────────────────────────────────
 
@@ -107,7 +111,6 @@ abstract class P2PManager {
     val itemsRECEIVED = mutableStateListOf<ReceivedItem>()
 
     // ── Subclass contracts ────────────────────────────────────────────────────
-    abstract val discoveryMode: P2pDiscoveryMode
     open val requiredPermissions: List<String> = listOf()
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -139,6 +142,8 @@ abstract class P2PManager {
         }
         connection = null
     }
+
+    val bufferSize = 512 * 1024 //512 KB
 
     // ── Send ──────────────────────────────────────────────────────────────────
     private suspend fun sendFiles(files: List<JetzyElement>) {
@@ -206,9 +211,10 @@ abstract class P2PManager {
                 fileEntries.updateAt(index) { it.copy(status = FileTransferStatus.Active) }
                 loggy("[>] [${index + 1}/${files.size}] Streaming '${file.name}' (${entries[index].sizeBytes} bytes)")
 
-                val buf = ByteArray(64 * 1024)
                 val src = file.source.buffered()
-                var fileSent = 0L
+                val buf = ByteArray(bufferSize)
+
+                var bytesTransferred = 0L
 
                 try {
                     while (true) {
@@ -216,20 +222,20 @@ abstract class P2PManager {
                         if (read == -1) break
 
                         output.writeFully(buf, 0, read)
-                        fileSent += read
+                        bytesTransferred += read
                         totalBytesSent += read
                         speedWindowBytes += read
 
                         // update per-file entry
-                        fileEntries.updateAt(index) { it.copy(bytesTransferred = fileSent) }
+                        fileEntries.updateAt(index) { it.copy(bytesTransferred = bytesTransferred) }
 
                         // overall progress by actual bytes
                         transferProgress.value = totalBytesSent.toFloat() / totalBytes
 
-                        // recalculate speed roughly every 500 ms
+                        // recalculate speed roughly every 1000 ms
                         val now = generateTimestampMillis()
                         val elapsed = now - speedWindowStart
-                        if (elapsed >= 500L) {
+                        if (elapsed >= 1000L) {
                             transferSpeed.value = (speedWindowBytes * 1000L) / elapsed
                             speedWindowBytes = 0L
                             speedWindowStart = now
@@ -263,7 +269,7 @@ abstract class P2PManager {
     }
 
     // ── Receive ───────────────────────────────────────────────────────────────
-
+    //TODO Protect against overwrite
     private suspend fun receiveFiles() {
         try {
             val conn = connection ?: run { loggy("[~] receiveFiles() called but connection is null — aborting"); return }
@@ -327,7 +333,7 @@ abstract class P2PManager {
 
                 val tempPath = Path(SystemTemporaryDirectory, entry.name)
                 val sink = SystemFileSystem.sink(tempPath).buffered()
-                val buf = ByteArray(64 * 1024)
+                val buf = ByteArray(bufferSize)
                 var fileRead = 0L
 
                 try {
@@ -345,7 +351,7 @@ abstract class P2PManager {
 
                         val now = generateTimestampMillis()
                         val elapsed = now - speedWindowStart
-                        if (elapsed >= 500L) {
+                        if (elapsed >= 1000L) {
                             transferSpeed.value = (speedWindowBytes * 1000L) / elapsed
                             speedWindowBytes = 0L
                             speedWindowStart = now

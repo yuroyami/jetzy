@@ -50,7 +50,7 @@ import io.github.alexzhirkevich.qrose.options.roundCorners
 import io.github.alexzhirkevich.qrose.options.solid
 import io.github.alexzhirkevich.qrose.rememberQrCodePainter
 import jetzy.managers.HotspotP2PM
-import jetzy.managers.QRDiscoveryP2PM
+import jetzy.managers.P2PManager
 import jetzy.models.QRData
 import jetzy.ui.transfer.BorderWeak
 import jetzy.ui.transfer.CardBg
@@ -66,7 +66,7 @@ import jetzy.ui.transfer.TextSecondary
 import jetzy.ui.transfer.TextTertiary
 
 @Composable
-actual fun P2pQrContent(modifier: Modifier, manager: QRDiscoveryP2PM) {
+actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
 
     var qrData by remember { mutableStateOf<QRData?>(null) }
     var refreshor by remember { mutableIntStateOf(0) }

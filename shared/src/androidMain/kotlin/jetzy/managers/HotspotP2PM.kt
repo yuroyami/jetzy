@@ -23,7 +23,7 @@ import java.net.NetworkInterface
 import java.util.Enumeration
 import kotlin.coroutines.resumeWithException
 
-class HotspotP2PM(context: Context) : QRDiscoveryP2PM() {
+class HotspotP2PM(context: Context) : P2PManager() {
 
     private val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
     private var reservation: WifiManager.LocalOnlyHotspotReservation? = null
@@ -36,8 +36,42 @@ class HotspotP2PM(context: Context) : QRDiscoveryP2PM() {
         }
     }
 
+    fun establishTcpServer(): Deferred<QRData?> = p2pScope.async(PreferablyIO) {
+        try {
+            val (ssid, password) = startLocalHotspotAsync()
+
+            val localAddress = getHotspotIpAddress() ?: return@async null
+
+            val serverSocket = aSocket(SelectorManager(PreferablyIO))
+                .tcp()
+                .bind("0.0.0.0", 0)
+
+            // launch the blocking accept() independently so it doesn't hold up the return
+            p2pScope.launch(PreferablyIO) {
+                try {
+                    loggy("######### Is waiting for serverSocket Acceptance #########")
+                    val socket = serverSocket.accept()
+                    connection = socket.connection()
+                } catch (e: Exception) {
+                    loggy("Accept failed: ${e.stackTraceToString()}")
+                }
+            }
+
+            QRData(
+                hotspotSSID = ssid,
+                hotspotPassword = password,
+                ipAddress = localAddress,
+                port = serverSocket.port,
+                deviceName = getDeviceName()
+            )
+        } catch (e: Exception) {
+            loggy(e.stackTraceToString())
+            null
+        }
+    }
+
     @SuppressLint("MissingPermission")
-    suspend fun startLocalHotspotAsync(): Pair<String, String> = suspendCancellableCoroutine { cont ->
+    private suspend fun startLocalHotspotAsync(): Pair<String, String> = suspendCancellableCoroutine { cont ->
         wifiManager.startLocalOnlyHotspot(
             object : WifiManager.LocalOnlyHotspotCallback() {
                 override fun onStarted(reservation: WifiManager.LocalOnlyHotspotReservation?) {
@@ -67,7 +101,9 @@ class HotspotP2PM(context: Context) : QRDiscoveryP2PM() {
                 override fun onStopped() {}
 
                 override fun onFailed(reason: Int) {
-                    cont.resumeWithException(Exception("Hotspot failed with reason $reason"))
+                    val error = "Hotspot failed with reason $reason"
+                    viewmodel.snacky(error)
+                    cont.resumeWithException(Exception(error))
                 }
             }, null
         )
@@ -83,40 +119,6 @@ class HotspotP2PM(context: Context) : QRDiscoveryP2PM() {
         runCatching {
             reservation?.close()
             reservation = null
-        }
-    }
-
-    fun establishTcpServer(): Deferred<QRData?> = p2pScope.async(PreferablyIO) {
-        try {
-            val (ssid, password) = startLocalHotspotAsync()
-
-            val localAddress = getHotspotIpAddress() ?: return@async null
-
-            val serverSocket = aSocket(SelectorManager(PreferablyIO))
-               .tcp()
-               .bind("0.0.0.0", 0)
-
-            // launch the blocking accept() independently so it doesn't hold up the return
-            p2pScope.launch(PreferablyIO) {
-                try {
-                    loggy("######### Is waiting for serverSocket Acceptance #########")
-                    val socket = serverSocket.accept()
-                    connection = socket.connection()
-                } catch (e: Exception) {
-                    loggy("Accept failed: ${e.stackTraceToString()}")
-                }
-            }
-
-            QRData(
-                hotspotSSID = ssid,
-                hotspotPassword = password,
-                ipAddress = localAddress,
-                port = serverSocket.port,
-                deviceName = getDeviceName()
-            )
-        } catch (e: Exception) {
-            loggy(e.stackTraceToString())
-            null
         }
     }
 

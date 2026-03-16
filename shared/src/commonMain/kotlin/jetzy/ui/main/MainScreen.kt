@@ -1,6 +1,7 @@
 package jetzy.ui.main
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -100,7 +101,9 @@ fun MainScreenUI() {
             verticalArrangement = Arrangement.SpaceEvenly
         ) {
 
-            AnimatedVisibility(visible = operation == null) {
+            AnimatedVisibility(
+                visible = operation == null
+            ) {
                 Column(
                     horizontalAlignment = CenterHorizontally,
                     modifier = Modifier.fillMaxWidth().padding(8.dp)
@@ -127,7 +130,7 @@ fun MainScreenUI() {
             ) {
                 Column(
                     horizontalAlignment = CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth().padding(8.dp)
+                    modifier = Modifier.fillMaxWidth().padding(8.dp).animateContentSize()
                 ) {
                     AnimatedVisibility(operation == null) {
                         Text(
@@ -217,7 +220,7 @@ fun MainScreenUI() {
             AnimatedVisibility(showPeerPlatform) {
                 operation?.let {
                     Surface(
-                        modifier = Modifier.fillMaxWidth().padding(8.sdp),
+                        modifier = Modifier.fillMaxWidth().padding(8.sdp).animateContentSize(),
                         tonalElevation = 0.dp,
                         shadowElevation = 8.dp
                     ) {

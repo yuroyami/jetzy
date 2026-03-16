@@ -8,8 +8,8 @@ import jetzy.utils.PreferablyIO
 import jetzy.utils.loggy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import platform.Foundation.NSError
 import platform.NetworkExtension.NEHotspotConfiguration
@@ -18,9 +18,11 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.time.Duration.Companion.seconds
 
-class LanWifiP2PM : QRDiscoveryP2PM() {
+class LanWifiP2PM : P2PManager() {
 
-    fun establishTcpClient(qrData: QRData) = p2pScope.async(PreferablyIO) {
+    override val usesPeerDiscovery: Boolean = false
+
+    fun establishTcpClient(qrData: QRData) = p2pScope.launch(PreferablyIO) {
         try {
             loggy("Establishing WiFi Connection: $qrData")
 
@@ -48,7 +50,7 @@ class LanWifiP2PM : QRDiscoveryP2PM() {
         }
     }
 
-    suspend fun connectToWifi(qrData: QRData): Unit = suspendCancellableCoroutine { cont ->
+    private suspend fun connectToWifi(qrData: QRData): Unit = suspendCancellableCoroutine { cont ->
         val config = NEHotspotConfiguration(sSID = qrData.hotspotSSID, passphrase = qrData.hotspotPassword, isWEP = false)
         config.joinOnce = true // disconnects when app goes to background, cleaner for P2P
 

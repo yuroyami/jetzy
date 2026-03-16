@@ -164,7 +164,7 @@ fun TransferScreenUI() {
                             destDir.launch()
                         },
                         enabled = !savingStarted,
-                        colors = ButtonDefaults.buttonColors(containerColor = Purple600),
+                        colors = ButtonDefaults.buttonColors(containerColor = Purple600, contentColor = Color.White),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {

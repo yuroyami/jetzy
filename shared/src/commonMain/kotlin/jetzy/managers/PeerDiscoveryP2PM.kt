@@ -1,21 +1,20 @@
 package jetzy.managers
 
-import jetzy.p2p.P2pDiscoveryMode
 import jetzy.p2p.P2pPeer
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * Manager that supports automatic peer discovery/advertising
- * Both sides can discover each other (Wi-Fi Direct, Bluetooth, Nearby, MultipeerConnectivity)
+ * Both sides can discover each other (Wi-Fi Direct, Bluetooth, NearbyConnections, MultipeerConnectivity)
  */
 abstract class PeerDiscoveryP2PM : P2PManager() {
+
+    override val usesPeerDiscovery: Boolean = true
 
     val availablePeers = MutableStateFlow(listOf<P2pPeer>())
 
     val isDiscovering = MutableStateFlow(false)
     val isAdvertising = MutableStateFlow(false)
-
-    override val discoveryMode: P2pDiscoveryMode = P2pDiscoveryMode.PeerDiscovery
 
     /**
      * Start both advertising this device AND discovering peers

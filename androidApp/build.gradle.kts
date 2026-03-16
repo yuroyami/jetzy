@@ -15,15 +15,6 @@ android {
     compileSdk = AppConfig.compileSdk
 
     signingConfigs {
-        create("jetzy") {
-            storeFile = file("${rootDir}/keystore/jetzy.jks")
-            keyAlias = "jetzy"
-            keyPassword = "az90az09"
-            storePassword = "az90az09"
-        }
-    }
-
-    signingConfigs {
         file("${rootDir}/keystore/yuroyamikey.jks").takeIf { it.exists() }?.let { keystoreFile ->
             create("keystore") {
                 storeFile = keystoreFile

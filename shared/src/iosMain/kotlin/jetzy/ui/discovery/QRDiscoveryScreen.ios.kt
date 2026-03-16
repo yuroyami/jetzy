@@ -40,7 +40,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitViewController
 import jetzy.managers.LanWifiP2PM
-import jetzy.managers.QRDiscoveryP2PM
+import jetzy.managers.P2PManager
 import jetzy.ui.transfer.BorderWeak
 import jetzy.ui.transfer.CardBg
 import jetzy.ui.transfer.CardBg2
@@ -55,11 +55,12 @@ import kotlinx.cinterop.ExperimentalForeignApi
 
 @OptIn(ExperimentalForeignApi::class)
 @Composable
-actual fun P2pQrContent(modifier: Modifier, manager: QRDiscoveryP2PM) {
+actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
 
     val qrController = remember {
         QRScannerController(
             onQrDetected = { qrData ->
+                manager.isHandshaking.value = true
                 (manager as? LanWifiP2PM)?.establishTcpClient(qrData)
             }
         )
