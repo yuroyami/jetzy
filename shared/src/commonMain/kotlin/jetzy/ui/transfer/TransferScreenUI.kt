@@ -171,6 +171,7 @@ fun TransferScreenUI() {
                 } else {
                     Button(
                         onClick = {
+                            manager.cleanup()
                             viewmodel.resetEverything()
                         },
                         colors = ButtonDefaults.buttonColors(

@@ -2,6 +2,7 @@ package jetzy.managers
 
 import androidx.annotation.CallSuper
 import androidx.compose.runtime.mutableStateListOf
+import androidx.lifecycle.viewModelScope
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.atomicMove
 import io.ktor.network.sockets.Connection
@@ -133,252 +134,256 @@ abstract class P2PManager {
     open suspend fun cleanup() {
         connection?.let {
             it.input.cancel()
-            it.output.flushAndClose()
+            viewmodel.viewModelScope.launch {
+                it.output.flushAndClose()
+            }
         }
         connection = null
-        isConnected.value = false
-        manifest.value = null
-        fileEntries.value = emptyList()
-        transferProgress.value = 0f
-        transferSpeed.value = 0L
-        transferStatus.value = ""
     }
 
     // ── Send ──────────────────────────────────────────────────────────────────
     private suspend fun sendFiles(files: List<JetzyElement>) {
-        val conn = connection ?: run { loggy("[~] sendFiles() called but connection is null — aborting"); return }
-        val output = conn.output
-        val input  = conn.input
+        try {
+            val conn = connection ?: run { loggy("[~] sendFiles() called but connection is null — aborting"); return }
+            val output = conn.output
+            val input = conn.input
 
-        // ── 1. Build & send manifest ──────────────────────────────────────────
-        val entries    = files.map { ManifestEntry(name = it.name, sizeBytes = it.size()) }
-        val totalBytes = entries.sumOf { it.sizeBytes }
-        val mf         = TransferManifest(
-            totalFiles   = files.size,
-            totalBytes   = totalBytes,
-            entries      = entries,
-            senderName   = getDeviceName(),
-            senderPlatform = platform
-        )
+            // ── 1. Build & send manifest ──────────────────────────────────────────
+            val entries = files.map { ManifestEntry(name = it.name, sizeBytes = it.size()) }
+            val totalBytes = entries.sumOf { it.sizeBytes }
+            val mf = TransferManifest(
+                totalFiles = files.size,
+                totalBytes = totalBytes,
+                entries = entries,
+                senderName = getDeviceName(),
+                senderPlatform = platform
+            )
 
-        output.writeInt(files.size)
-        output.writeLong(totalBytes)
+            output.writeInt(files.size)
+            output.writeLong(totalBytes)
 
-        // write senderName
-        val senderNameBytes = mf.senderName.encodeToByteArray()
-        output.writeInt(senderNameBytes.size)
-        output.writeFully(senderNameBytes)
+            // write senderName
+            val senderNameBytes = mf.senderName.encodeToByteArray()
+            output.writeInt(senderNameBytes.size)
+            output.writeFully(senderNameBytes)
 
-        // write senderPlatform
-        val platformBytes = mf.senderPlatform.name.encodeToByteArray()
-        output.writeInt(platformBytes.size)
-        output.writeFully(platformBytes)
+            // write senderPlatform
+            val platformBytes = mf.senderPlatform.name.encodeToByteArray()
+            output.writeInt(platformBytes.size)
+            output.writeFully(platformBytes)
 
-        entries.forEach { entry ->
-            val nameBytes = entry.name.encodeToByteArray()
-            output.writeInt(nameBytes.size)
-            output.writeFully(nameBytes)
-            output.writeLong(entry.sizeBytes)
+            entries.forEach { entry ->
+                val nameBytes = entry.name.encodeToByteArray()
+                output.writeInt(nameBytes.size)
+                output.writeFully(nameBytes)
+                output.writeLong(entry.sizeBytes)
 
-            val mimeBytes = (entry.mimeType ?: "").encodeToByteArray()
-            output.writeInt(mimeBytes.size)
-            if (mimeBytes.isNotEmpty()) output.writeFully(mimeBytes)
-        }
-        output.flush()
-
-        manifest.value    = mf
-        fileEntries.value = entries.map { FileTransferEntry(name = it.name, sizeBytes = it.sizeBytes, mimeType = it.mimeType) }
-
-        // ── read receiver's PeerInfo instead of bare ACK ─────────────────────
-        val receiverNameLen   = input.readInt()
-        val receiverNameBytes = ByteArray(receiverNameLen).also { input.readFully(it) }
-        val receiverPlatLen   = input.readInt()
-        val receiverPlatBytes = ByteArray(receiverPlatLen).also { input.readFully(it) }
-        remotePeerInfo.value  = PeerInfo(
-            name     = receiverNameBytes.decodeToString(),
-            platform = Platform.valueOf(receiverPlatBytes.decodeToString())
-        )
-        loggy("[ok] Receiver identified as '${remotePeerInfo.value?.name}' — starting file stream")
-
-        // ── 2. Stream files ───────────────────────────────────────────────────
-        var totalBytesSent  = 0L
-        var speedWindowStart = generateTimestampMillis()
-        var speedWindowBytes = 0L
-
-        files.forEachIndexed { index, file ->
-            fileEntries.updateAt(index) { it.copy(status = FileTransferStatus.Active) }
-            loggy("[>] [${index + 1}/${files.size}] Streaming '${file.name}' (${entries[index].sizeBytes} bytes)")
-
-            val buf    = ByteArray(64 * 1024)
-            val src    = file.source.buffered()
-            var fileSent = 0L
-
-            try {
-                while (true) {
-                    val read = src.readAtMostTo(buf)
-                    if (read == -1) break
-
-                    output.writeFully(buf, 0, read)
-                    fileSent       += read
-                    totalBytesSent += read
-                    speedWindowBytes += read
-
-                    // update per-file entry
-                    fileEntries.updateAt(index) { it.copy(bytesTransferred = fileSent) }
-
-                    // overall progress by actual bytes
-                    transferProgress.value = totalBytesSent.toFloat() / totalBytes
-
-                    // recalculate speed roughly every 500 ms
-                    val now = generateTimestampMillis()
-                    val elapsed = now - speedWindowStart
-                    if (elapsed >= 500L) {
-                        transferSpeed.value = (speedWindowBytes * 1000L) / elapsed
-                        speedWindowBytes = 0L
-                        speedWindowStart = now
-                    }
-                }
-            } finally {
-                src.close()
+                val mimeBytes = (entry.mimeType ?: "").encodeToByteArray()
+                output.writeInt(mimeBytes.size)
+                if (mimeBytes.isNotEmpty()) output.writeFully(mimeBytes)
             }
-
             output.flush()
-            input.readByte() // wait for per-file ACK
 
-            fileEntries.updateAt(index) {
-                it.copy(status = FileTransferStatus.Done, bytesTransferred = it.sizeBytes)
+            manifest.value = mf
+            fileEntries.value = entries.map { FileTransferEntry(name = it.name, sizeBytes = it.sizeBytes, mimeType = it.mimeType) }
+
+            // ── read receiver's PeerInfo instead of bare ACK ─────────────────────
+            val receiverNameLen = input.readInt()
+            val receiverNameBytes = ByteArray(receiverNameLen).also { input.readFully(it) }
+            val receiverPlatLen = input.readInt()
+            val receiverPlatBytes = ByteArray(receiverPlatLen).also { input.readFully(it) }
+            remotePeerInfo.value = PeerInfo(
+                name = receiverNameBytes.decodeToString(),
+                platform = Platform.valueOf(receiverPlatBytes.decodeToString())
+            )
+            loggy("[ok] Receiver identified as '${remotePeerInfo.value?.name}' — starting file stream")
+
+            // ── 2. Stream files ───────────────────────────────────────────────────
+            var totalBytesSent = 0L
+            var speedWindowStart = generateTimestampMillis()
+            var speedWindowBytes = 0L
+
+            files.forEachIndexed { index, file ->
+                fileEntries.updateAt(index) { it.copy(status = FileTransferStatus.Active) }
+                loggy("[>] [${index + 1}/${files.size}] Streaming '${file.name}' (${entries[index].sizeBytes} bytes)")
+
+                val buf = ByteArray(64 * 1024)
+                val src = file.source.buffered()
+                var fileSent = 0L
+
+                try {
+                    while (true) {
+                        val read = src.readAtMostTo(buf)
+                        if (read == -1) break
+
+                        output.writeFully(buf, 0, read)
+                        fileSent += read
+                        totalBytesSent += read
+                        speedWindowBytes += read
+
+                        // update per-file entry
+                        fileEntries.updateAt(index) { it.copy(bytesTransferred = fileSent) }
+
+                        // overall progress by actual bytes
+                        transferProgress.value = totalBytesSent.toFloat() / totalBytes
+
+                        // recalculate speed roughly every 500 ms
+                        val now = generateTimestampMillis()
+                        val elapsed = now - speedWindowStart
+                        if (elapsed >= 500L) {
+                            transferSpeed.value = (speedWindowBytes * 1000L) / elapsed
+                            speedWindowBytes = 0L
+                            speedWindowStart = now
+                        }
+                    }
+                } finally {
+                    src.close()
+                }
+
+                output.flush()
+                input.readByte() // wait for per-file ACK
+
+                fileEntries.updateAt(index) {
+                    it.copy(status = FileTransferStatus.Done, bytesTransferred = it.sizeBytes)
+                }
+                transferStatus.value = "Sent ${index + 1} of ${files.size}: ${file.name}"
+                loggy("[ok] [${index + 1}/${files.size}] '${file.name}' confirmed by receiver")
             }
-            transferStatus.value = "Sent ${index + 1} of ${files.size}: ${file.name}"
-            loggy("[ok] [${index + 1}/${files.size}] '${file.name}' confirmed by receiver")
+
+            output.writeInt(0) // end signal
+            output.flush()
+            transferSpeed.value = 0L
+            loggy("[ok] All ${files.size} file(s) sent — end signal written")
+
+            transferComplete.value = true
+        } catch (e: Exception) {
+            loggy(e.stackTraceToString())
+
         }
-
-        output.writeInt(0) // end signal
-        output.flush()
-        transferSpeed.value = 0L
-        loggy("[ok] All ${files.size} file(s) sent — end signal written")
-
-        transferComplete.value = true
     }
 
     // ── Receive ───────────────────────────────────────────────────────────────
 
     private suspend fun receiveFiles() {
-        val conn = connection ?: run { loggy("[~] receiveFiles() called but connection is null — aborting"); return }
-        val input  = conn.input
-        val output = conn.output
+        try {
+            val conn = connection ?: run { loggy("[~] receiveFiles() called but connection is null — aborting"); return }
+            val input = conn.input
+            val output = conn.output
 
-        // ── 1. Read manifest ──────────────────────────────────────────────────
-        val totalFiles = input.readInt()
-        val totalBytes = input.readLong()
+            // ── 1. Read manifest ──────────────────────────────────────────────────
+            val totalFiles = input.readInt()
+            val totalBytes = input.readLong()
 
-        // read senderName
-        val senderNameLen   = input.readInt()
-        val senderNameBytes = ByteArray(senderNameLen).also { input.readFully(it) }
+            // read senderName
+            val senderNameLen = input.readInt()
+            val senderNameBytes = ByteArray(senderNameLen).also { input.readFully(it) }
 
-        // read senderPlatform
-        val senderPlatLen   = input.readInt()
-        val senderPlatBytes = ByteArray(senderPlatLen).also { input.readFully(it) }
+            // read senderPlatform
+            val senderPlatLen = input.readInt()
+            val senderPlatBytes = ByteArray(senderPlatLen).also { input.readFully(it) }
 
-        val entries = (0 until totalFiles).map {
-            val nameLen   = input.readInt()
-            val nameBytes = ByteArray(nameLen).also { b -> input.readFully(b) }
-            val sizeBytes = input.readLong()
-            val mimeLen   = input.readInt()
-            val mimeType  = if (mimeLen > 0) {
-                ByteArray(mimeLen).also { b -> input.readFully(b) }.decodeToString()
-            } else null
-            ManifestEntry(name = nameBytes.decodeToString(), sizeBytes = sizeBytes, mimeType = mimeType)
-        }
-
-        val mf = TransferManifest(
-            totalFiles     = totalFiles,
-            totalBytes     = totalBytes,
-            entries        = entries,
-            senderName     = senderNameBytes.decodeToString(),
-            senderPlatform = Platform.valueOf(senderPlatBytes.decodeToString())
-        )
-        manifest.value    = mf
-        fileEntries.value = entries.map { FileTransferEntry(name = it.name, sizeBytes = it.sizeBytes, mimeType = it.mimeType) }
-        loggy("[<] Manifest received from '${mf.senderName}': $totalFiles file(s), $totalBytes bytes total")
-
-        // ── reply with our own PeerInfo instead of bare ACK ──────────────────
-        val myNameBytes = getDeviceName().encodeToByteArray()
-        output.writeInt(myNameBytes.size)
-        output.writeFully(myNameBytes)
-
-        val myPlatBytes = platform.name.encodeToByteArray()
-        output.writeInt(myPlatBytes.size)
-        output.writeFully(myPlatBytes)
-        output.flush()
-
-        remotePeerInfo.value = PeerInfo(name = mf.senderName, platform = mf.senderPlatform)
-
-        // ── 2. Receive files ──────────────────────────────────────────────────
-        var totalBytesRead   = 0L
-        var speedWindowStart  = generateTimestampMillis()
-        var speedWindowBytes  = 0L
-
-        entries.forEachIndexed { index, entry ->
-            fileEntries.updateAt(index) { it.copy(status = FileTransferStatus.Active) }
-            loggy("[<] [${index + 1}/${entries.size}] Receiving '${entry.name}' (${entry.sizeBytes} bytes)")
-
-            val tempPath = Path(SystemTemporaryDirectory, entry.name)
-            val sink     = SystemFileSystem.sink(tempPath).buffered()
-            val buf      = ByteArray(64 * 1024)
-            var fileRead = 0L
-
-            try {
-                while (fileRead < entry.sizeBytes) {
-                    val toRead = minOf(buf.size.toLong(), entry.sizeBytes - fileRead).toInt()
-                    input.readFully(buf, 0, toRead)
-                    sink.write(buf, 0, toRead)
-
-                    fileRead         += toRead
-                    totalBytesRead   += toRead
-                    speedWindowBytes += toRead
-
-                    fileEntries.updateAt(index) { it.copy(bytesTransferred = fileRead) }
-                    transferProgress.value = totalBytesRead.toFloat() / totalBytes
-
-                    val now     = generateTimestampMillis()
-                    val elapsed = now - speedWindowStart
-                    if (elapsed >= 500L) {
-                        transferSpeed.value  = (speedWindowBytes * 1000L) / elapsed
-                        speedWindowBytes     = 0L
-                        speedWindowStart     = now
-                    }
-                }
-            } finally {
-                sink.flush()
-                sink.close()
+            val entries = (0 until totalFiles).map {
+                val nameLen = input.readInt()
+                val nameBytes = ByteArray(nameLen).also { b -> input.readFully(b) }
+                val sizeBytes = input.readLong()
+                val mimeLen = input.readInt()
+                val mimeType = if (mimeLen > 0) {
+                    ByteArray(mimeLen).also { b -> input.readFully(b) }.decodeToString()
+                } else null
+                ManifestEntry(name = nameBytes.decodeToString(), sizeBytes = sizeBytes, mimeType = mimeType)
             }
 
-            output.writeByte(1)
+            val mf = TransferManifest(
+                totalFiles = totalFiles,
+                totalBytes = totalBytes,
+                entries = entries,
+                senderName = senderNameBytes.decodeToString(),
+                senderPlatform = Platform.valueOf(senderPlatBytes.decodeToString())
+            )
+            manifest.value = mf
+            fileEntries.value = entries.map { FileTransferEntry(name = it.name, sizeBytes = it.sizeBytes, mimeType = it.mimeType) }
+            loggy("[<] Manifest received from '${mf.senderName}': $totalFiles file(s), $totalBytes bytes total")
+
+            // ── reply with our own PeerInfo instead of bare ACK ──────────────────
+            val myNameBytes = getDeviceName().encodeToByteArray()
+            output.writeInt(myNameBytes.size)
+            output.writeFully(myNameBytes)
+
+            val myPlatBytes = platform.name.encodeToByteArray()
+            output.writeInt(myPlatBytes.size)
+            output.writeFully(myPlatBytes)
             output.flush()
 
-            fileEntries.updateAt(index) {
-                it.copy(status = FileTransferStatus.Done, bytesTransferred = entry.sizeBytes)
-            }
-            itemsRECEIVED.add(
-                ReceivedItem(
-                    name = entry.name,
-                    path = tempPath,
-                    sizeBytes = entry.sizeBytes,
-                    mimeType = entry.mimeType
+            remotePeerInfo.value = PeerInfo(name = mf.senderName, platform = mf.senderPlatform)
+
+            // ── 2. Receive files ──────────────────────────────────────────────────
+            var totalBytesRead = 0L
+            var speedWindowStart = generateTimestampMillis()
+            var speedWindowBytes = 0L
+
+            entries.forEachIndexed { index, entry ->
+                fileEntries.updateAt(index) { it.copy(status = FileTransferStatus.Active) }
+                loggy("[<] [${index + 1}/${entries.size}] Receiving '${entry.name}' (${entry.sizeBytes} bytes)")
+
+                val tempPath = Path(SystemTemporaryDirectory, entry.name)
+                val sink = SystemFileSystem.sink(tempPath).buffered()
+                val buf = ByteArray(64 * 1024)
+                var fileRead = 0L
+
+                try {
+                    while (fileRead < entry.sizeBytes) {
+                        val toRead = minOf(buf.size.toLong(), entry.sizeBytes - fileRead).toInt()
+                        input.readFully(buf, 0, toRead)
+                        sink.write(buf, 0, toRead)
+
+                        fileRead += toRead
+                        totalBytesRead += toRead
+                        speedWindowBytes += toRead
+
+                        fileEntries.updateAt(index) { it.copy(bytesTransferred = fileRead) }
+                        transferProgress.value = totalBytesRead.toFloat() / totalBytes
+
+                        val now = generateTimestampMillis()
+                        val elapsed = now - speedWindowStart
+                        if (elapsed >= 500L) {
+                            transferSpeed.value = (speedWindowBytes * 1000L) / elapsed
+                            speedWindowBytes = 0L
+                            speedWindowStart = now
+                        }
+                    }
+                } finally {
+                    sink.flush()
+                    sink.close()
+                }
+
+                output.writeByte(1)
+                output.flush()
+
+                fileEntries.updateAt(index) {
+                    it.copy(status = FileTransferStatus.Done, bytesTransferred = entry.sizeBytes)
+                }
+                itemsRECEIVED.add(
+                    ReceivedItem(
+                        name = entry.name,
+                        path = tempPath,
+                        sizeBytes = entry.sizeBytes,
+                        mimeType = entry.mimeType
+                    )
                 )
-            )
-            transferStatus.value = "Received: ${entry.name}"
-            loggy("[ok] [${index + 1}/${entries.size}] '${entry.name}' fully received")
+                transferStatus.value = "Received: ${entry.name}"
+                loggy("[ok] [${index + 1}/${entries.size}] '${entry.name}' fully received")
+            }
+
+            transferSpeed.value = 0L
+            loggy("[ok] Transfer complete — ${itemsRECEIVED.size} file(s) staged")
+
+            transferComplete.value = true
+        } catch (e: Exception) {
+            loggy(e.stackTraceToString())
         }
-
-        transferSpeed.value = 0L
-        loggy("[ok] Transfer complete — ${itemsRECEIVED.size} file(s) staged")
-
-        transferComplete.value = true
     }
 
     // ── Internal helpers ──────────────────────────────────────────────────────
-
     /**
      * Immutably replaces a single entry in the list state flow at [index].
      * Safe to call from any coroutine since StateFlow.value assignment is atomic.
