@@ -40,3 +40,4 @@ lbswscale.so
 Pods/
 *.lock
 WebAppOutput/
+*.jks

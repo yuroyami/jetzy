@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.compose.plugin)
@@ -21,6 +23,24 @@ android {
         }
     }
 
+    signingConfigs {
+        file("${rootDir}/keystore/yuroyamikey.jks").takeIf { it.exists() }?.let { keystoreFile ->
+            create("keystore") {
+                storeFile = keystoreFile
+
+                val localProperties = Properties().apply {
+                    val file = File("local.properties")
+                    if (file.exists()) load(file.inputStream())
+                }
+                localProperties.apply {
+                    keyAlias = getProperty("yuroyami.keyAlias")
+                    keyPassword = getProperty("yuroyami.keyPassword")
+                    storePassword = getProperty("yuroyami.storePassword")
+                }
+            }
+        }
+    }
+
     defaultConfig {
         minSdk = AppConfig.minSdk
         targetSdk = AppConfig.compileSdk
@@ -35,12 +55,12 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            signingConfig = signingConfigs.getByName("jetzy")
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("keystore")
         }
         debug {
             applicationIdSuffix = ".dev"
-            signingConfig = signingConfigs.getByName("jetzy")
+            signingConfig = signingConfigs.getByName("keystore")
         }
     }
 }
