@@ -100,7 +100,7 @@ kotlin {
             /* Bundle: Compose multiplatform dependencies (Foundation + UI + Material3 + Viewmodel + Navigation3) */
             implementation(libs.bundles.compose.multiplatform)
 
-            implementation("br.com.devsrsouza.compose.icons:font-awesome:1.1.1")
+            implementation(libs.font.awesome)
 
             /* Image viewing library */
             implementation(libs.coil)
@@ -153,7 +153,7 @@ kotlin {
 //}
 
 with(AppConfig) {
-    updateIOSVersion()
+    //updateIOSVersion()
 }
 
 buildConfig {

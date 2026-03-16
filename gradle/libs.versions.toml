@@ -1,5 +1,6 @@
 [versions] ########################################################################################
 #KMM-Plugins
+fontAwesome = "1.1.1"
 kotlin = "2.3.10"
 agp = "9.0.1" #"9.0.0-alpha05"
 compose-multiplatform = "1.11.0-alpha04"
@@ -37,6 +38,7 @@ media3 = "1.8.0"
 
 [libraries] #######################################################################################
 ## KMM
+font-awesome = { module = "br.com.devsrsouza.compose.icons:font-awesome", version.ref = "fontAwesome" }
 kotlinstdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
 koroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "koroutines" }
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }

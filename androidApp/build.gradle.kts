@@ -24,12 +24,9 @@ android {
     defaultConfig {
         minSdk = AppConfig.minSdk
         targetSdk = AppConfig.compileSdk
-        ""
         applicationId = "com.yuroyami.jetzy"
         versionCode = AppConfig.versionCode
         versionName = AppConfig.versionName
-
-        signingConfig = signingConfigs.getByName("jetzy")
     }
 
     compileOptions {
@@ -39,6 +36,11 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            signingConfig = signingConfigs.getByName("jetzy")
+        }
+        debug {
+            applicationIdSuffix = ".dev"
+            signingConfig = signingConfigs.getByName("jetzy")
         }
     }
 }
