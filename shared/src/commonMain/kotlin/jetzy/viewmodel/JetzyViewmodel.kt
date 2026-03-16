@@ -10,7 +10,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import jetzy.managers.P2PManager
 import jetzy.models.JetzyElement
-import jetzy.p2p.P2pDiscoveryMode
 import jetzy.p2p.P2pOperation
 import jetzy.p2p.P2pPlatformCallback
 import jetzy.theme.NightMode
@@ -74,9 +73,9 @@ class JetzyViewmodel : ViewModel() {
         p2pManager = manager
 
         navigateTo(
-            screen = when (manager.discoveryMode) {
-                P2pDiscoveryMode.PeerDiscovery -> Screen.PeerDiscoveryScreen
-                P2pDiscoveryMode.QRCode -> Screen.QRDiscoveryScreen
+            screen = when (manager.usesPeerDiscovery) {
+                true -> Screen.PeerDiscoveryScreen
+                false -> Screen.QRDiscoveryScreen
             },
             doRefresh = true,
             noWayToReturn = true

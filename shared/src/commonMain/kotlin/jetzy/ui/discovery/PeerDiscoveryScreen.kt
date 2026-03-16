@@ -23,7 +23,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -197,6 +199,8 @@ fun PeerDiscoveryScreenUI() {
                 peer = selectedPeer,
                 onClick = {
                     selectedPeer?.let { peer ->
+                        manager.isHandshaking.value = true
+
                         viewmodel.viewModelScope.launch {
                             manager.connectToPeer(peer)
                         }
@@ -218,6 +222,20 @@ fun PeerDiscoveryScreenUI() {
             ) {
                 Text("Cancel", fontSize = 13.sp, color = TextSecondary)
             }
+        }
+    }
+
+
+    val isHandshaking by manager.isHandshaking.collectAsState()
+    if (isHandshaking) {
+        val loadingOverlayColor = Color.Black.copy(alpha = 0.8f)
+        Box(
+            modifier = Modifier.fillMaxSize().background(loadingOverlayColor).clickable(onClick={}),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator(
+                color = contentColorFor(loadingOverlayColor)
+            )
         }
     }
 }

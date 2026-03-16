@@ -132,7 +132,7 @@ fun MainScreenUI() {
                     horizontalAlignment = CenterHorizontally,
                     modifier = Modifier.fillMaxWidth().padding(8.dp).animateContentSize()
                 ) {
-                    AnimatedVisibility(operation == null) {
+                    if (operation == null) {
                         Text(
                             text = "What would you like to do?",
                             modifier = Modifier.fillMaxWidth().padding(8.sdp),
@@ -220,7 +220,7 @@ fun MainScreenUI() {
             AnimatedVisibility(showPeerPlatform) {
                 operation?.let {
                     Surface(
-                        modifier = Modifier.fillMaxWidth().padding(8.sdp).animateContentSize(),
+                        modifier = Modifier.fillMaxWidth().padding(8.sdp),
                         tonalElevation = 0.dp,
                         shadowElevation = 8.dp
                     ) {

@@ -51,6 +51,7 @@ class HotspotP2PM(context: Context) : P2PManager() {
                 try {
                     loggy("######### Is waiting for serverSocket Acceptance #########")
                     val socket = serverSocket.accept()
+                    isHandshaking.value = true
                     connection = socket.connection()
                 } catch (e: Exception) {
                     loggy("Accept failed: ${e.stackTraceToString()}")
