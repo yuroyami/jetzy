@@ -78,9 +78,12 @@ class HotspotP2PM(context: Context) : QRDiscoveryP2PM() {
         }
     }
 
-    fun stopLocalHotspot() {
-        reservation?.close()
-        reservation = null
+    override suspend fun cleanup() {
+        super.cleanup()
+        runCatching {
+            reservation?.close()
+            reservation = null
+        }
     }
 
     fun establishTcpServer(): Deferred<QRData?> = p2pScope.async(PreferablyIO) {

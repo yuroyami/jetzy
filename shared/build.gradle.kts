@@ -152,6 +152,10 @@ kotlin {
 //    }
 //}
 
+with(AppConfig) {
+    updateIOSVersion()
+}
+
 buildConfig {
     buildConfigField("APP_VERSION", AppConfig.versionName)
     buildConfigField("DEBUG", true)

@@ -132,8 +132,10 @@ abstract class P2PManager {
     @CallSuper
     open suspend fun cleanup() {
         connection?.let {
-            it.input.cancel()
-            it.output.flushAndClose()
+            runCatching {
+                it.input.cancel()
+                it.output.flushAndClose()
+            }
         }
         connection = null
     }

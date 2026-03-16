@@ -88,7 +88,7 @@ class JetzyViewmodel : ViewModel() {
     val elementsToSend = mutableStateListOf<JetzyElement>().also { list ->
         if (BuildConfig.DEBUG) {
             repeat(10) {
-                list.add(JetzyElement.Text("Hello World!!!"))
+                //list.add(JetzyElement.Text("Hello World!!!"))
             }
         }
     }
