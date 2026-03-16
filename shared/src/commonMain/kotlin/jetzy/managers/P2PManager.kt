@@ -2,7 +2,6 @@ package jetzy.managers
 
 import androidx.annotation.CallSuper
 import androidx.compose.runtime.mutableStateListOf
-import androidx.lifecycle.viewModelScope
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.atomicMove
 import io.ktor.network.sockets.Connection
@@ -134,9 +133,7 @@ abstract class P2PManager {
     open suspend fun cleanup() {
         connection?.let {
             it.input.cancel()
-            viewmodel.viewModelScope.launch {
-                it.output.flushAndClose()
-            }
+            it.output.flushAndClose()
         }
         connection = null
     }

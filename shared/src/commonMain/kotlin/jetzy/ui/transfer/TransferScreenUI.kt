@@ -54,9 +54,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewModelScope
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import jetzy.ui.LocalViewmodel
 import jetzy.utils.Platform
+import kotlinx.coroutines.launch
 
 @Composable
 fun TransferScreenUI() {
@@ -171,8 +173,10 @@ fun TransferScreenUI() {
                 } else {
                     Button(
                         onClick = {
-                            manager.cleanup()
-                            viewmodel.resetEverything()
+                            viewmodel.viewModelScope.launch {
+                                manager.cleanup()
+                                viewmodel.resetEverything()
+                            }
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color.Transparent,
