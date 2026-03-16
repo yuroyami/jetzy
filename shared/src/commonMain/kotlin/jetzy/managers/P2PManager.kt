@@ -255,7 +255,8 @@ abstract class P2PManager {
             transferComplete.value = true
         } catch (e: Exception) {
             loggy(e.stackTraceToString())
-
+            viewmodel.snacky("An error occurred during transfer: Pipe broken")
+            viewmodel.resetEverything()
         }
     }
 
@@ -377,6 +378,8 @@ abstract class P2PManager {
             transferComplete.value = true
         } catch (e: Exception) {
             loggy(e.stackTraceToString())
+            viewmodel.snacky("An error occurred during transfer: Pipe broken")
+            viewmodel.resetEverything()
         }
     }
 
@@ -391,7 +394,6 @@ abstract class P2PManager {
     ) {
         value = value.toMutableList().also { it[index] = transform(it[index]) }
     }
-
 
     fun finalizeReceivedFilesAt(destDir: PlatformFile) {
         p2pScope.launch {
