@@ -17,6 +17,7 @@ import io.ktor.network.sockets.connection
 import jetzy.p2p.P2pPeer
 import jetzy.utils.PreferablyIO
 import jetzy.utils.loggy
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
@@ -29,6 +30,12 @@ class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
 
     private var channel: WifiP2pManager.Channel? = null
     private var receiver: BroadcastReceiver? = null
+
+    /** Whether WiFi P2P is currently enabled on the device */
+    val isWifiP2pEnabled = MutableStateFlow(false)
+
+    /** The device name to use for advertising — saved so we can restart discovery */
+    private var advertisedDeviceName: String? = null
 
     override val requiredPermissions = buildList<String> {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -47,6 +54,7 @@ class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
     // ── Discovery ─────────────────────────────────────────────────────────────
     @SuppressLint("MissingPermission")
     override suspend fun startDiscoveryAndAdvertising(deviceName: String) {
+        advertisedDeviceName = deviceName
         ensureChannel()
         isDiscovering.value = true
         isAdvertising.value = true
@@ -75,6 +83,23 @@ class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
         }
     }
 
+    /** Restart discovery (e.g. after WiFi P2P becomes available again) */
+    @SuppressLint("MissingPermission")
+    private fun restartDiscovery() {
+        val ch = channel ?: return
+        loggy("Restarting WiFi Direct discovery after P2P became available")
+        isDiscovering.value = true
+        isAdvertising.value = true
+        wifiP2pManager.discoverPeers(ch, object : ActionListener {
+            override fun onSuccess() {
+                loggy("WiFi Direct discovery restarted successfully")
+            }
+            override fun onFailure(reason: Int) {
+                loggy("Discovery restart failed: ${wifiDirectError(reason)}")
+            }
+        })
+    }
+
     override suspend fun stopDiscoveryAndAdvertising() {
         isDiscovering.value = false
         isAdvertising.value = false
@@ -89,6 +114,7 @@ class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
     // ── Receiver ──────────────────────────────────────────────────────────────
 
     private fun registerReceiver() {
+        if (receiver != null) return // already registered
         val filter = IntentFilter().apply {
             addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION)
             addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION)
@@ -99,6 +125,23 @@ class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
             @SuppressLint("MissingPermission")
             override fun onReceive(ctx: Context, intent: Intent) {
                 when (intent.action) {
+                    WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION -> {
+                        val state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1)
+                        val enabled = state == WifiP2pManager.WIFI_P2P_STATE_ENABLED
+                        val wasEnabled = isWifiP2pEnabled.value
+                        isWifiP2pEnabled.value = enabled
+                        loggy("WiFi P2P state changed: enabled=$enabled")
+
+                        if (enabled && !wasEnabled) {
+                            // WiFi P2P just became available — auto-restart discovery
+                            restartDiscovery()
+                        } else if (!enabled) {
+                            // WiFi P2P disabled — clear peers and update state
+                            availablePeers.value = emptyList()
+                            isDiscovering.value = false
+                            isAdvertising.value = false
+                        }
+                    }
                     WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION -> {
                         wifiP2pManager.requestPeers(channel) { peerList ->
                             val peers = peerList.deviceList.map { device ->

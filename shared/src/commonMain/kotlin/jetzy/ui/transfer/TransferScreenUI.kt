@@ -32,6 +32,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -50,11 +52,16 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewModelScope
+import compose.icons.FontAwesomeIcons
+import compose.icons.fontawesomeicons.Solid
+import compose.icons.fontawesomeicons.solid.Copy
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import jetzy.ui.LocalViewmodel
 import jetzy.utils.Platform
@@ -74,12 +81,14 @@ fun TransferScreenUI() {
     val transferComplete by manager.transferComplete.collectAsState()
     val saveComplete by manager.saveComplete.collectAsState()
 
+    val colorScheme = MaterialTheme.colorScheme
+
     if (manifest == null || remote == null) return
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(SurfaceBg),
+            .background(colorScheme.surface),
         contentAlignment = Alignment.TopCenter
     ) {
         LazyColumn(
@@ -140,7 +149,11 @@ fun TransferScreenUI() {
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         fileEntries.forEachIndexed { i, entry ->
-                            FileRow(entry = entry, animDelay = i * 60)
+                            if (entry.isText) {
+                                TextRow(entry = entry, animDelay = i * 60)
+                            } else {
+                                FileRow(entry = entry, animDelay = i * 60)
+                            }
                         }
                     }
                 }
@@ -149,7 +162,10 @@ fun TransferScreenUI() {
             item {
                 Spacer(Modifier.height(16.dp))
 
-                if (transferComplete && !viewmodel.isSender && !saveComplete) {
+                // Show "Save files to folder" only when there are actual files (not just texts)
+                val hasFiles = manifest?.hasFiles == true
+
+                if (transferComplete && !viewmodel.isSender && !saveComplete && hasFiles) {
                     var savingStarted by remember { mutableStateOf(false) }
 
                     val destDir = rememberDirectoryPickerLauncher { dir ->
@@ -164,13 +180,19 @@ fun TransferScreenUI() {
                             destDir.launch()
                         },
                         enabled = !savingStarted,
-                        colors = ButtonDefaults.buttonColors(containerColor = Purple600, contentColor = Color.White),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colorScheme.primary,
+                            contentColor = colorScheme.onPrimary
+                        ),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Save files to folder…", fontSize = 13.sp, fontWeight = FontWeight.W500)
                     }
-                } else {
+                }
+
+                // Always show Done/Cancel button
+                if (transferComplete || !(!viewmodel.isSender && !saveComplete && hasFiles)) {
                     Button(
                         onClick = {
                             viewmodel.viewModelScope.launch {
@@ -180,9 +202,9 @@ fun TransferScreenUI() {
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color.Transparent,
-                            contentColor = TextSecondary,
+                            contentColor = colorScheme.onSurfaceVariant,
                         ),
-                        border = androidx.compose.foundation.BorderStroke(0.5.dp, BorderMid),
+                        border = androidx.compose.foundation.BorderStroke(0.5.dp, colorScheme.outlineVariant),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -214,11 +236,12 @@ private fun GlassCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(20.dp))
-            .background(CardBg)
-            .border(0.5.dp, BorderWeak, RoundedCornerShape(20.dp))
+            .background(colorScheme.surfaceContainer)
+            .border(0.5.dp, colorScheme.outlineVariant, RoundedCornerShape(20.dp))
             .padding(20.dp),
         content = content
     )
@@ -234,6 +257,7 @@ private fun PeerAvatar(
     platform: Platform,
     floatDelay: Int,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     val infiniteTransition = rememberInfiniteTransition(label = "float_$name")
     val offsetY by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -253,7 +277,7 @@ private fun PeerAvatar(
                 .size(52.dp)
                 .clip(CircleShape)
                 .background(bgColor)
-                .border(0.5.dp, BorderWeak, CircleShape)
+                .border(0.5.dp, colorScheme.outlineVariant, CircleShape)
         ) {
             Icon(
                 modifier = Modifier.size(48.dp).padding(4.dp),
@@ -267,12 +291,12 @@ private fun PeerAvatar(
             text = name,
             fontSize = 13.sp,
             fontWeight = FontWeight.W500,
-            color = TextPrimary,
+            color = colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.widthIn(max = 90.dp)
         )
-        Text(text = label, fontSize = 11.sp, color = TextTertiary)
+        Text(text = label, fontSize = 11.sp, color = colorScheme.onSurfaceVariant)
     }
 }
 
@@ -280,6 +304,7 @@ private fun PeerAvatar(
 
 @Composable
 private fun PacketAnimation(modifier: Modifier = Modifier) {
+    val colorScheme = MaterialTheme.colorScheme
     val infiniteTransition = rememberInfiniteTransition(label = "packets")
     val offsets = listOf(0, 400, 800).map { delay ->
         infiniteTransition.animateFloat(
@@ -303,7 +328,7 @@ private fun PacketAnimation(modifier: Modifier = Modifier) {
         val p3 = Offset(w, cy)
 
         val pathDash = Path().apply { moveTo(p0.x, p0.y); cubicTo(cp1.x, cp1.y, cp2.x, cp2.y, p3.x, p3.y) }
-        drawPath(path = pathDash, color = BorderWeak, style = Stroke(width = 1.dp.toPx(), cap = StrokeCap.Round))
+        drawPath(path = pathDash, color = colorScheme.outlineVariant, style = Stroke(width = 1.dp.toPx(), cap = StrokeCap.Round))
 
         offsets.forEach { offset ->
             val t = offset.value
@@ -316,7 +341,7 @@ private fun PacketAnimation(modifier: Modifier = Modifier) {
             val x = cubicBezier(p0.x, cp1.x, cp2.x, p3.x, t)
             val y = cubicBezier(p0.y, cp1.y, cp2.y, p3.y, t)
             drawRoundRect(
-                color = Purple400.copy(alpha = alpha),
+                color = colorScheme.primary.copy(alpha = alpha),
                 topLeft = Offset(x - 4.dp.toPx(), y - 4.dp.toPx()),
                 size = androidx.compose.ui.geometry.Size(8.dp.toPx(), 8.dp.toPx()),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()),
@@ -342,6 +367,7 @@ private fun ProgressSection(
     remainingLabel: String,
     modifier: Modifier = Modifier,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     val animatedProgress by animateFloatAsState(
         targetValue = progress.coerceIn(0f, 1f),
         animationSpec = tween(400, easing = FastOutSlowInEasing),
@@ -359,13 +385,13 @@ private fun ProgressSection(
                     if (totalBytes != null) append("  ·  ${totalBytes.toHumanSize()} total")
                 },
                 fontSize = 12.sp,
-                color = TextSecondary,
+                color = colorScheme.onSurfaceVariant,
             )
             Text(
                 text = "${(animatedProgress * 100).toInt()}%",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.W500,
-                color = TextPrimary,
+                color = colorScheme.onSurface,
             )
         }
         Spacer(Modifier.height(8.dp))
@@ -374,14 +400,14 @@ private fun ProgressSection(
                 .fillMaxWidth()
                 .height(4.dp)
                 .clip(RoundedCornerShape(99.dp))
-                .background(BorderWeak)
+                .background(colorScheme.outlineVariant)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
                     .fillMaxWidth(animatedProgress)
                     .clip(RoundedCornerShape(99.dp))
-                    .background(Purple600)
+                    .background(colorScheme.primary)
             )
         }
         Spacer(Modifier.height(8.dp))
@@ -390,7 +416,7 @@ private fun ProgressSection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = remainingLabel, fontSize = 11.sp, color = TextTertiary)
+            Text(text = remainingLabel, fontSize = 11.sp, color = colorScheme.onSurfaceVariant)
             SpeedBadge(speedLabel = speedLabel)
         }
     }
@@ -398,6 +424,7 @@ private fun ProgressSection(
 
 @Composable
 private fun SpeedBadge(speedLabel: String) {
+    val colorScheme = MaterialTheme.colorScheme
     val infiniteTransition = rememberInfiniteTransition(label = "live_dot")
     val dotAlpha by infiniteTransition.animateFloat(
         initialValue = 0.18f,
@@ -413,17 +440,97 @@ private fun SpeedBadge(speedLabel: String) {
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier
             .clip(RoundedCornerShape(99.dp))
-            .background(CardBg2)
-            .border(0.5.dp, BorderWeak, RoundedCornerShape(99.dp))
+            .background(colorScheme.surfaceContainerHigh)
+            .border(0.5.dp, colorScheme.outlineVariant, RoundedCornerShape(99.dp))
             .padding(horizontal = 8.dp, vertical = 3.dp)
     ) {
         Box(
             modifier = Modifier
                 .size(6.dp)
                 .clip(CircleShape)
-                .background(Teal600.copy(alpha = dotAlpha))
+                .background(colorScheme.tertiary.copy(alpha = dotAlpha))
         )
-        Text(text = speedLabel, fontSize = 11.sp, color = TextSecondary)
+        Text(text = speedLabel, fontSize = 11.sp, color = colorScheme.onSurfaceVariant)
+    }
+}
+
+// ─── Text row — for received text entries ─────────────────────────────────────
+
+@Composable
+private fun TextRow(
+    entry: FileTransferEntry,
+    animDelay: Int,
+    modifier: Modifier = Modifier,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val clipboardManager = LocalClipboardManager.current
+    val alpha by produceState(initialValue = 0f, entry.name, animDelay) {
+        kotlinx.coroutines.delay(animDelay.toLong())
+        value = 1f
+    }
+
+    val rowAlpha = if (entry.status == FileTransferStatus.Pending) 0.45f else 1f
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .graphicsLayer { this.alpha = alpha * rowAlpha }
+            .clip(RoundedCornerShape(10.dp))
+            .background(colorScheme.surfaceContainer)
+            .border(0.5.dp, colorScheme.outlineVariant, RoundedCornerShape(10.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            FileTypeIcon(typeLabel = "TXT")
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Text snippet",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.W500,
+                    color = colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(text = entry.sizeLabel, fontSize = 11.sp, color = colorScheme.onSurfaceVariant)
+            }
+
+            if (entry.status == FileTransferStatus.Done && entry.textContent != null) {
+                IconButton(onClick = {
+                    clipboardManager.setText(AnnotatedString(entry.textContent))
+                }) {
+                    Icon(
+                        imageVector = FontAwesomeIcons.Solid.Copy,
+                        contentDescription = "Copy text",
+                        modifier = Modifier.size(16.dp),
+                        tint = colorScheme.primary,
+                    )
+                }
+            } else {
+                FileStatusIndicator(status = entry.status)
+            }
+        }
+
+        // Show a preview of the text content
+        if (entry.status == FileTransferStatus.Done && entry.textContent != null) {
+            Text(
+                text = entry.textContent,
+                fontSize = 12.sp,
+                color = colorScheme.onSurfaceVariant,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(colorScheme.surfaceContainerLowest)
+                    .padding(8.dp)
+            )
+        }
     }
 }
 
@@ -435,6 +542,7 @@ private fun FileRow(
     animDelay: Int,
     modifier: Modifier = Modifier,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     val alpha by produceState(initialValue = 0f, entry.name, animDelay) {
         kotlinx.coroutines.delay(animDelay.toLong())
         value = 1f
@@ -454,8 +562,8 @@ private fun FileRow(
             .fillMaxWidth()
             .graphicsLayer { this.alpha = alpha * rowAlpha }
             .clip(RoundedCornerShape(10.dp))
-            .background(CardBg)
-            .border(0.5.dp, BorderWeak, RoundedCornerShape(10.dp))
+            .background(colorScheme.surfaceContainer)
+            .border(0.5.dp, colorScheme.outlineVariant, RoundedCornerShape(10.dp))
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
@@ -468,10 +576,10 @@ private fun FileRow(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = entry.name,
+                    text = entry.displayName,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.W500,
-                    color = TextPrimary,
+                    color = colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -482,7 +590,7 @@ private fun FileRow(
 
                     else -> entry.sizeLabel
                 }
-                Text(text = sizeText, fontSize = 11.sp, color = TextTertiary)
+                Text(text = sizeText, fontSize = 11.sp, color = colorScheme.onSurfaceVariant)
             }
 
             FileStatusIndicator(status = entry.status)
@@ -495,14 +603,14 @@ private fun FileRow(
                     .fillMaxWidth()
                     .height(2.dp)
                     .clip(RoundedCornerShape(99.dp))
-                    .background(BorderWeak)
+                    .background(colorScheme.outlineVariant)
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
                         .fillMaxWidth(animatedFileProgress)
                         .clip(RoundedCornerShape(99.dp))
-                        .background(Purple400)
+                        .background(colorScheme.primary)
                 )
             }
         }
@@ -513,13 +621,15 @@ private fun FileRow(
 
 @Composable
 private fun FileTypeIcon(typeLabel: String) {
+    val colorScheme = MaterialTheme.colorScheme
     val (bg, fg) = when (typeLabel.uppercase()) {
-        "VID" -> Coral50 to Coral800
-        "DOC" -> Teal50 to Teal800
-        "PDF" -> Coral50 to Coral800
-        "ZIP" -> Purple50 to Purple800
-        "AUD" -> Teal50 to Teal800
-        else -> Purple50 to Purple800
+        "VID" -> colorScheme.errorContainer to colorScheme.onErrorContainer
+        "DOC" -> colorScheme.tertiaryContainer to colorScheme.onTertiaryContainer
+        "PDF" -> colorScheme.errorContainer to colorScheme.onErrorContainer
+        "TXT" -> colorScheme.secondaryContainer to colorScheme.onSecondaryContainer
+        "ZIP" -> colorScheme.primaryContainer to colorScheme.onPrimaryContainer
+        "AUD" -> colorScheme.tertiaryContainer to colorScheme.onTertiaryContainer
+        else  -> colorScheme.primaryContainer to colorScheme.onPrimaryContainer
     }
     Box(
         contentAlignment = Alignment.Center,
@@ -540,6 +650,7 @@ private fun FileTypeIcon(typeLabel: String) {
 // ─── File status indicator ────────────────────────────────────────────────────
 @Composable
 private fun FileStatusIndicator(status: FileTransferStatus) {
+    val colorScheme = MaterialTheme.colorScheme
     when (status) {
         FileTransferStatus.Done -> {
             Box(
@@ -547,9 +658,9 @@ private fun FileStatusIndicator(status: FileTransferStatus) {
                 modifier = Modifier
                     .size(16.dp)
                     .clip(CircleShape)
-                    .background(Teal50)
+                    .background(colorScheme.tertiaryContainer)
             ) {
-                Text("✓", fontSize = 8.sp, color = Teal800)
+                Text("✓", fontSize = 8.sp, color = colorScheme.onTertiaryContainer)
             }
         }
 
@@ -568,9 +679,9 @@ private fun FileStatusIndicator(status: FileTransferStatus) {
                     .drawBehind {
                         val stroke = 1.5.dp.toPx()
                         val r = (size.minDimension - stroke) / 2f
-                        drawCircle(color = Purple100, radius = r, style = Stroke(width = stroke))
+                        drawCircle(color = colorScheme.primaryContainer, radius = r, style = Stroke(width = stroke))
                         drawArc(
-                            color = Purple600,
+                            color = colorScheme.primary,
                             startAngle = 0f,
                             sweepAngle = 270f,
                             useCenter = false,
@@ -585,7 +696,7 @@ private fun FileStatusIndicator(status: FileTransferStatus) {
                 modifier = Modifier
                     .size(16.dp)
                     .clip(CircleShape)
-                    .background(BorderWeak)
+                    .background(colorScheme.outlineVariant)
             )
         }
 
@@ -595,9 +706,9 @@ private fun FileStatusIndicator(status: FileTransferStatus) {
                 modifier = Modifier
                     .size(16.dp)
                     .clip(CircleShape)
-                    .background(Coral50)
+                    .background(colorScheme.errorContainer)
             ) {
-                Text("✕", fontSize = 8.sp, color = Coral800)
+                Text("✕", fontSize = 8.sp, color = colorScheme.onErrorContainer)
             }
         }
     }

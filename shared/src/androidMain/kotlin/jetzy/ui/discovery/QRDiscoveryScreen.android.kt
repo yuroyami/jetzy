@@ -18,8 +18,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -52,21 +55,10 @@ import io.github.alexzhirkevich.qrose.rememberQrCodePainter
 import jetzy.managers.HotspotP2PM
 import jetzy.managers.P2PManager
 import jetzy.models.QRData
-import jetzy.ui.transfer.BorderWeak
-import jetzy.ui.transfer.CardBg
-import jetzy.ui.transfer.CardBg2
-import jetzy.ui.transfer.Purple100
-import jetzy.ui.transfer.Purple400
-import jetzy.ui.transfer.Purple50
-import jetzy.ui.transfer.Purple600
-import jetzy.ui.transfer.SurfaceBg
-import jetzy.ui.transfer.Teal600
-import jetzy.ui.transfer.TextPrimary
-import jetzy.ui.transfer.TextSecondary
-import jetzy.ui.transfer.TextTertiary
 
 @Composable
 actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
+    val colorScheme = MaterialTheme.colorScheme
 
     var qrData by remember { mutableStateOf<QRData?>(null) }
     var refreshor by remember { mutableIntStateOf(0) }
@@ -79,7 +71,7 @@ actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(SurfaceBg),
+            .background(colorScheme.surface),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -87,6 +79,7 @@ actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
         ) {
             // header
@@ -99,19 +92,19 @@ actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
                     fontSize = 11.sp,
                     fontWeight = FontWeight.W500,
                     letterSpacing = 0.08.sp,
-                    color = TextTertiary,
+                    color = colorScheme.onSurfaceVariant,
                 )
                 Text(
                     text = "Share to nearby device",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.W500,
-                    color = TextPrimary,
+                    color = colorScheme.onSurface,
                     textAlign = TextAlign.Center,
                 )
                 Text(
                     text = "Let the other device scan this code to connect instantly",
                     fontSize = 13.sp,
-                    color = TextSecondary,
+                    color = colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     lineHeight = 19.sp,
                 )
@@ -122,8 +115,8 @@ actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
-                    .background(CardBg)
-                    .border(0.5.dp, BorderWeak, RoundedCornerShape(20.dp))
+                    .background(colorScheme.surfaceContainer)
+                    .border(0.5.dp, colorScheme.outlineVariant, RoundedCornerShape(20.dp))
                     .padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -144,7 +137,7 @@ actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
                 Text(
                     text = "Cancel",
                     fontSize = 13.sp,
-                    color = TextSecondary,
+                    color = colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -153,6 +146,7 @@ actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
 
 @Composable
 private fun QrCodeBlock(qrData: QRData) {
+    val colorScheme = MaterialTheme.colorScheme
     val infiniteTransition = rememberInfiniteTransition(label = "scan")
     val scanY by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -177,7 +171,7 @@ private fun QrCodeBlock(qrData: QRData) {
         data = qrData.toString(),
         shapes = QrShapes(darkPixel = QrPixelShape.roundCorners()),
         colors = QrColors(
-            dark = QrBrush.solid(Purple600),
+            dark = QrBrush.solid(colorScheme.primary),
         )
     )
 
@@ -193,7 +187,7 @@ private fun QrCodeBlock(qrData: QRData) {
 
                 // scan line
                 drawLine(
-                    color = Purple400.copy(alpha = .7f),
+                    color = colorScheme.primary.copy(alpha = .7f),
                     start = Offset(w * 0.07f, scanPx),
                     end = Offset(w * 0.93f, scanPx),
                     strokeWidth = 1.5.dp.toPx(),
@@ -204,11 +198,10 @@ private fun QrCodeBlock(qrData: QRData) {
                 val cSize = 18.dp.toPx()
                 val cStroke = 2.5.dp.toPx()
                 val margin = 4.dp.toPx()
-                val color = Purple600.copy(alpha = cornerAlpha)
-                val stroke = Stroke(width = cStroke, cap = StrokeCap.Round)
+                val color = colorScheme.primary.copy(alpha = cornerAlpha)
 
                 // top-left
-                drawLine(color, Offset(margin, margin + cSize), Offset(margin, margin), stroke.width.dp.toPx().let { margin })
+                drawLine(color, Offset(margin, margin + cSize), Offset(margin, margin), cStroke.dp.toPx().let { margin })
                 drawLine(color, start = Offset(margin, margin), end = Offset(margin + cSize, margin), strokeWidth = cStroke)
                 drawLine(color, start = Offset(margin, margin), end = Offset(margin, margin + cSize), strokeWidth = cStroke)
                 // top-right
@@ -234,6 +227,7 @@ private fun QrCodeBlock(qrData: QRData) {
 
 @Composable
 private fun QrLoadingBlock() {
+    val colorScheme = MaterialTheme.colorScheme
     val infiniteTransition = rememberInfiniteTransition(label = "loading")
     val alpha by infiniteTransition.animateFloat(
         initialValue = 0.3f,
@@ -249,7 +243,7 @@ private fun QrLoadingBlock() {
         modifier = Modifier
             .size(200.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Purple50.copy(alpha = alpha))
+            .background(colorScheme.primaryContainer.copy(alpha = alpha))
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -259,7 +253,7 @@ private fun QrLoadingBlock() {
             Text(
                 text = "Starting hotspot...",
                 fontSize = 12.sp,
-                color = TextSecondary,
+                color = colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -267,6 +261,7 @@ private fun QrLoadingBlock() {
 
 @Composable
 private fun SpinnerCircle() {
+    val colorScheme = MaterialTheme.colorScheme
     val infiniteTransition = rememberInfiniteTransition(label = "spin")
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -280,9 +275,9 @@ private fun SpinnerCircle() {
             .drawBehind {
                 val stroke = 2.dp.toPx()
                 val r = (size.minDimension - stroke) / 2f
-                drawCircle(Purple100, radius = r, style = Stroke(stroke))
+                drawCircle(colorScheme.primaryContainer, radius = r, style = Stroke(stroke))
                 drawArc(
-                    color = Purple600,
+                    color = colorScheme.primary,
                     startAngle = rotation,
                     sweepAngle = 270f,
                     useCenter = false,
@@ -294,6 +289,7 @@ private fun SpinnerCircle() {
 
 @Composable
 private fun LivePill(ssid: String) {
+    val colorScheme = MaterialTheme.colorScheme
     val infiniteTransition = rememberInfiniteTransition(label = "dot")
     val dotAlpha by infiniteTransition.animateFloat(
         initialValue = 0.3f,
@@ -310,20 +306,20 @@ private fun LivePill(ssid: String) {
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         modifier = Modifier
             .clip(RoundedCornerShape(99.dp))
-            .background(CardBg2)
-            .border(0.5.dp, BorderWeak, RoundedCornerShape(99.dp))
+            .background(colorScheme.surfaceContainerHigh)
+            .border(0.5.dp, colorScheme.outlineVariant, RoundedCornerShape(99.dp))
             .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
         Box(
             modifier = Modifier
                 .size(7.dp)
                 .clip(CircleShape)
-                .background(Teal600.copy(alpha = dotAlpha))
+                .background(colorScheme.tertiary.copy(alpha = dotAlpha))
         )
         Text(
             text = "Hotspot active — $ssid",
             fontSize = 12.sp,
-            color = TextSecondary,
+            color = colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -351,24 +347,25 @@ private fun CredentialsRow(qrData: QRData) {
 
 @Composable
 private fun CredCard(label: String, value: String, modifier: Modifier = Modifier) {
+    val colorScheme = MaterialTheme.colorScheme
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(CardBg2)
-            .border(0.5.dp, BorderWeak, RoundedCornerShape(12.dp))
+            .background(colorScheme.surfaceContainerHigh)
+            .border(0.5.dp, colorScheme.outlineVariant, RoundedCornerShape(12.dp))
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Text(
             text = label,
             fontSize = 11.sp,
-            color = TextTertiary,
+            color = colorScheme.onSurfaceVariant,
         )
         Text(
             text = value,
             fontSize = 13.sp,
             fontWeight = FontWeight.W500,
-            color = TextPrimary,
+            color = colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
