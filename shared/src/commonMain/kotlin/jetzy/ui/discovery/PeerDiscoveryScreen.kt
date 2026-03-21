@@ -21,12 +21,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -52,25 +56,6 @@ import jetzy.managers.PeerDiscoveryP2PM
 import jetzy.p2p.P2pPeer
 import jetzy.ui.LocalViewmodel
 import jetzy.ui.Screen
-import jetzy.ui.transfer.BorderMid
-import jetzy.ui.transfer.BorderWeak
-import jetzy.ui.transfer.CardBg
-import jetzy.ui.transfer.CardBg2
-import jetzy.ui.transfer.Coral50
-import jetzy.ui.transfer.Coral600
-import jetzy.ui.transfer.Coral800
-import jetzy.ui.transfer.Purple100
-import jetzy.ui.transfer.Purple400
-import jetzy.ui.transfer.Purple50
-import jetzy.ui.transfer.Purple600
-import jetzy.ui.transfer.Purple800
-import jetzy.ui.transfer.SurfaceBg
-import jetzy.ui.transfer.Teal50
-import jetzy.ui.transfer.Teal600
-import jetzy.ui.transfer.Teal800
-import jetzy.ui.transfer.TextPrimary
-import jetzy.ui.transfer.TextSecondary
-import jetzy.ui.transfer.TextTertiary
 import jetzy.utils.getDeviceName
 import kotlinx.coroutines.launch
 import kotlin.math.PI
@@ -80,10 +65,14 @@ import kotlin.math.sin
 // ── Peer color assignment ──────────────────────────────────────────────────────
 private data class PeerColors(val bg: Color, val fg: Color, val accent: Color)
 
-private fun peerColors(index: Int) = when (index % 3) {
-    0    -> PeerColors(Purple50, Purple800, Purple600)
-    1    -> PeerColors(Teal50, Teal800, Teal600)
-    else -> PeerColors(Coral50, Coral800, Coral600)
+@Composable
+private fun peerColors(index: Int): PeerColors {
+    val colorScheme = MaterialTheme.colorScheme
+    return when (index % 3) {
+        0    -> PeerColors(colorScheme.primaryContainer, colorScheme.onPrimaryContainer, colorScheme.primary)
+        1    -> PeerColors(colorScheme.tertiaryContainer, colorScheme.onTertiaryContainer, colorScheme.tertiary)
+        else -> PeerColors(colorScheme.errorContainer, colorScheme.onErrorContainer, colorScheme.error)
+    }
 }
 
 // ── Root screen ────────────────────────────────────────────────────────────────
@@ -91,6 +80,7 @@ private fun peerColors(index: Int) = when (index % 3) {
 fun PeerDiscoveryScreenUI() {
     val viewmodel = LocalViewmodel.current
     val manager = viewmodel.p2pManager as? PeerDiscoveryP2PM ?: return
+    val colorScheme = MaterialTheme.colorScheme
 
     val availablePeers by manager.availablePeers.collectAsState()
     val isDiscovering  by manager.isDiscovering.collectAsState()
@@ -102,16 +92,27 @@ fun PeerDiscoveryScreenUI() {
             manager.startDiscoveryAndAdvertising(getDeviceName())
         }
     }
+
+    // Cleanup when leaving the screen
+    DisposableEffect(Unit) {
+        onDispose {
+            viewmodel.viewModelScope.launch {
+                manager.stopDiscoveryAndAdvertising()
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(SurfaceBg),
+            .background(colorScheme.surface),
         contentAlignment = Alignment.TopCenter
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -125,20 +126,20 @@ fun PeerDiscoveryScreenUI() {
                     text = "PEER DISCOVERY",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.W500,
-                    color = TextTertiary,
+                    color = colorScheme.onSurfaceVariant,
                     letterSpacing = 0.08.sp,
                 )
                 Text(
                     text = "Find nearby devices",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.W500,
-                    color = TextPrimary,
+                    color = colorScheme.onSurface,
                     textAlign = TextAlign.Center,
                 )
                 Text(
                     text = "Select a device below to connect",
                     fontSize = 13.sp,
-                    color = TextSecondary,
+                    color = colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
             }
@@ -156,8 +157,8 @@ fun PeerDiscoveryScreenUI() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(20.dp))
-                    .background(CardBg)
-                    .border(0.5.dp, BorderWeak, RoundedCornerShape(20.dp))
+                    .background(colorScheme.surfaceContainer)
+                    .border(0.5.dp, colorScheme.outlineVariant, RoundedCornerShape(20.dp))
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -170,7 +171,7 @@ fun PeerDiscoveryScreenUI() {
                         text = "Nearby devices",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.W500,
-                        color = TextPrimary,
+                        color = colorScheme.onSurface,
                     )
                     if (isDiscovering) SearchingIndicator()
                 }
@@ -214,13 +215,13 @@ fun PeerDiscoveryScreenUI() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .border(0.5.dp, BorderMid, RoundedCornerShape(12.dp))
+                    .border(0.5.dp, colorScheme.outlineVariant, RoundedCornerShape(12.dp))
                     .clickable {
                         viewmodel.navigateTo(Screen.MainScreen)
                     }
                     .padding(vertical = 10.dp)
             ) {
-                Text("Cancel", fontSize = 13.sp, color = TextSecondary)
+                Text("Cancel", fontSize = 13.sp, color = colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -249,6 +250,7 @@ private fun RadarView(
     onPeerSelected: (P2pPeer) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     val infiniteTransition = rememberInfiniteTransition(label = "radar")
     val sweepAngle by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -283,7 +285,7 @@ private fun RadarView(
             // rings
             listOf(0.35f, 0.65f, 1f).forEach { f ->
                 drawCircle(
-                    color = Purple400.copy(alpha = .15f),
+                    color = colorScheme.primary.copy(alpha = .15f),
                     radius = maxR * f,
                     center = Offset(cx, cy),
                     style = Stroke(0.5.dp.toPx())
@@ -292,7 +294,7 @@ private fun RadarView(
 
             // sweep
             drawArc(
-                color = Purple400.copy(alpha = .2f),
+                color = colorScheme.primary.copy(alpha = .2f),
                 startAngle = sweepAngle - 60f,
                 sweepAngle = 60f,
                 useCenter = true,
@@ -303,7 +305,7 @@ private fun RadarView(
             // sweep leading edge line
             val sweepRad = sweepAngle.toDouble() * (PI / 180.0)
             drawLine(
-                color = Purple400.copy(alpha = .5f),
+                color = colorScheme.primary.copy(alpha = .5f),
                 start = Offset(cx, cy),
                 end = Offset(
                     cx + (maxR * cos(sweepRad)).toFloat(),
@@ -315,7 +317,7 @@ private fun RadarView(
 
             // center dot
             drawCircle(
-                color = Purple600.copy(alpha = centerPulse),
+                color = colorScheme.primary.copy(alpha = centerPulse),
                 radius = 5.dp.toPx(),
                 center = Offset(cx, cy),
             )
@@ -393,6 +395,7 @@ private fun PeerRow(
     animDelay: Int,
     onClick: () -> Unit,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     val animAlpha by produceState(0f, peer) {
         kotlinx.coroutines.delay(animDelay.toLong())
         value = 1f
@@ -405,10 +408,10 @@ private fun PeerRow(
             .fillMaxWidth()
             .graphicsLayer { alpha = animAlpha }
             .clip(RoundedCornerShape(12.dp))
-            .background(if (isSelected) colors.bg else CardBg2)
+            .background(if (isSelected) colors.bg else colorScheme.surfaceContainerHigh)
             .border(
                 width = if (isSelected) 1.5.dp else 0.5.dp,
-                color = if (isSelected) colors.accent else BorderWeak,
+                color = if (isSelected) colors.accent else colorScheme.outlineVariant,
                 shape = RoundedCornerShape(12.dp)
             )
             .clickable(onClick = onClick)
@@ -435,12 +438,12 @@ private fun PeerRow(
                 text = peer.name,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.W500,
-                color = if (isSelected) colors.fg else TextPrimary,
+                color = if (isSelected) colors.fg else colorScheme.onSurface,
             )
             Text(
                 text = "Wi-Fi Direct",
                 fontSize = 11.sp,
-                color = TextTertiary,
+                color = colorScheme.onSurfaceVariant,
             )
         }
 
@@ -452,6 +455,7 @@ private fun PeerRow(
 
 @Composable
 private fun SignalBars(strength: Int, color: Color) {
+    val colorScheme = MaterialTheme.colorScheme
     Row(
         verticalAlignment = Alignment.Bottom,
         horizontalArrangement = Arrangement.spacedBy(2.dp)
@@ -462,7 +466,7 @@ private fun SignalBars(strength: Int, color: Color) {
                     .width(4.dp)
                     .height(h)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(if (index < strength) color else BorderWeak)
+                    .background(if (index < strength) color else colorScheme.outlineVariant)
             )
         }
     }
@@ -472,6 +476,7 @@ private fun SignalBars(strength: Int, color: Color) {
 
 @Composable
 private fun SearchingIndicator() {
+    val colorScheme = MaterialTheme.colorScheme
     val infiniteTransition = rememberInfiniteTransition(label = "search")
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f, targetValue = 360f,
@@ -485,11 +490,11 @@ private fun SearchingIndicator() {
         Box(modifier = Modifier.size(12.dp).drawBehind {
             val stroke = 1.5.dp.toPx()
             val r = (size.minDimension - stroke) / 2f
-            drawCircle(BorderWeak, radius = r, style = Stroke(stroke))
-            drawArc(Purple600, startAngle = rotation, sweepAngle = 270f,
+            drawCircle(colorScheme.outlineVariant, radius = r, style = Stroke(stroke))
+            drawArc(colorScheme.primary, startAngle = rotation, sweepAngle = 270f,
                 useCenter = false, style = Stroke(stroke, cap = StrokeCap.Round))
         })
-        Text("Scanning", fontSize = 11.sp, color = TextTertiary)
+        Text("Scanning", fontSize = 11.sp, color = colorScheme.onSurfaceVariant)
     }
 }
 
@@ -497,6 +502,7 @@ private fun SearchingIndicator() {
 
 @Composable
 private fun EmptyPeersState() {
+    val colorScheme = MaterialTheme.colorScheme
     val infiniteTransition = rememberInfiniteTransition(label = "empty")
     val alpha by infiniteTransition.animateFloat(
         initialValue = 0.4f, targetValue = 0.9f,
@@ -516,15 +522,15 @@ private fun EmptyPeersState() {
             modifier = Modifier
                 .size(36.dp)
                 .clip(CircleShape)
-                .background(Purple50.copy(alpha = alpha))
+                .background(colorScheme.primaryContainer.copy(alpha = alpha))
                 .drawBehind {
                     val stroke = 1.5.dp.toPx()
                     val r = (size.minDimension - stroke) / 2f
-                    drawCircle(Purple400.copy(alpha = alpha), radius = r, style = Stroke(stroke))
+                    drawCircle(colorScheme.primary.copy(alpha = alpha), radius = r, style = Stroke(stroke))
                 }
         )
-        Text("No devices found yet", fontSize = 13.sp, color = TextSecondary)
-        Text("Make sure the other device has Jetzy open", fontSize = 11.sp, color = TextTertiary, textAlign = TextAlign.Center)
+        Text("No devices found yet", fontSize = 13.sp, color = colorScheme.onSurfaceVariant)
+        Text("Make sure the other device has Jetzy open", fontSize = 11.sp, color = colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
     }
 }
 
@@ -532,13 +538,14 @@ private fun EmptyPeersState() {
 
 @Composable
 private fun ConnectButton(peer: P2pPeer?, onClick: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
     val enabled = peer != null
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(if (enabled) Purple600 else Purple600.copy(alpha = 0.35f))
+            .background(if (enabled) colorScheme.primary else colorScheme.primary.copy(alpha = 0.35f))
             .clickable(enabled = enabled, onClick = onClick)
             .padding(vertical = 13.dp)
     ) {
@@ -546,7 +553,7 @@ private fun ConnectButton(peer: P2pPeer?, onClick: () -> Unit) {
             text = if (peer != null) "Connect to ${peer.name}" else "Select a device to connect",
             fontSize = 14.sp,
             fontWeight = FontWeight.W500,
-            color = Purple100,
+            color = colorScheme.onPrimary,
         )
     }
 }

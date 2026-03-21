@@ -4,6 +4,9 @@ import jetzy.utils.Platform
 import kotlinx.io.files.Path
 import kotlin.math.round
 
+/** Type of entry in the transfer manifest */
+enum class EntryType { FILE, TEXT }
+
 // ── Manifest (declared before transfer begins) ────────────────────────────────
 data class TransferManifest(
     val totalFiles: Int,
@@ -11,7 +14,10 @@ data class TransferManifest(
     val entries: List<ManifestEntry>,
     val senderName: String,
     val senderPlatform: Platform
-)
+) {
+    val hasFiles: Boolean get() = entries.any { it.entryType == EntryType.FILE }
+    val hasTexts: Boolean get() = entries.any { it.entryType == EntryType.TEXT }
+}
 
 data class PeerInfo(
     val name: String,
@@ -21,7 +27,11 @@ data class PeerInfo(
 data class ManifestEntry(
     val name: String,
     val sizeBytes: Long,
-    val mimeType: String? = null
+    val mimeType: String? = null,
+    /** Relative path for files inside folders (e.g. "MyFolder/sub/file.txt"), empty for top-level items */
+    val relativePath: String = "",
+    /** Whether this entry is a file or a text snippet */
+    val entryType: EntryType = EntryType.FILE,
 )
 
 // ── Live per-file state during transfer ───────────────────────────────────────
@@ -30,15 +40,27 @@ data class FileTransferEntry(
     val name: String,
     val sizeBytes: Long,
     val mimeType: String? = null,
+    val relativePath: String = "",
+    val entryType: EntryType = EntryType.FILE,
     val status: FileTransferStatus = FileTransferStatus.Pending,
-    val bytesTransferred: Long = 0L
+    val bytesTransferred: Long = 0L,
+    /** For TEXT entries — the received text content (populated after transfer) */
+    val textContent: String? = null,
 ) {
     /** 0f–1f progress for just this file */
     val progress: Float get() = if (sizeBytes == 0L) 1f else bytesTransferred.toFloat() / sizeBytes
 
     val sizeLabel: String get() = sizeBytes.toHumanSize()
 
+    val isText: Boolean get() = entryType == EntryType.TEXT
+
+    val displayName: String get() = when {
+        relativePath.isNotEmpty() -> relativePath
+        else -> name
+    }
+
     val typeLabel: String get() = when {
+        entryType == EntryType.TEXT -> "TXT"
         mimeType != null -> when {
             mimeType.startsWith("video/") -> "VID"
             mimeType.startsWith("image/") -> "IMG"
@@ -60,7 +82,11 @@ data class ReceivedItem(
     val name: String,
     val path: Path,
     val sizeBytes: Long,
-    val mimeType: String? = null
+    val mimeType: String? = null,
+    val relativePath: String = "",
+    val entryType: EntryType = EntryType.FILE,
+    /** For TEXT entries — the text content */
+    val textContent: String? = null,
 )
 
 // ── Helper ────────────────────────────────────────────────────────────────────

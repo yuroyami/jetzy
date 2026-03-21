@@ -15,8 +15,10 @@ import io.ktor.utils.io.writeFully
 import io.ktor.utils.io.writeInt
 import io.ktor.utils.io.writeLong
 import jetzy.models.JetzyElement
+import jetzy.models.flattenFolder
 import jetzy.p2p.P2pOperation
 import jetzy.ui.Screen
+import jetzy.ui.transfer.EntryType
 import jetzy.ui.transfer.FileTransferEntry
 import jetzy.ui.transfer.FileTransferStatus
 import jetzy.ui.transfer.ManifestEntry
@@ -145,15 +147,46 @@ abstract class P2PManager {
 
     val bufferSize = 512 * 1024 //512 KB
 
+    // ── Prepare elements (flatten folders) ──────────────────────────────────────
+    /**
+     * Flattens the element list: Folders are expanded into their constituent files
+     * with relative paths preserved. Other elements pass through unchanged.
+     */
+    private suspend fun prepareElements(elements: List<JetzyElement>): List<JetzyElement> {
+        val result = mutableListOf<JetzyElement>()
+        for (element in elements) {
+            when (element) {
+                is JetzyElement.Folder -> {
+                    val flatFiles = flattenFolder(element.folder)
+                    for (flat in flatFiles) {
+                        result.add(JetzyElement.File(flat.file, relativePath = flat.relativePath))
+                    }
+                }
+                else -> result.add(element)
+            }
+        }
+        return result
+    }
+
     // ── Send ──────────────────────────────────────────────────────────────────
-    private suspend fun sendFiles(files: List<JetzyElement>) {
+    private suspend fun sendFiles(rawFiles: List<JetzyElement>) {
         try {
             val conn = connection ?: run { loggy("[~] sendFiles() called but connection is null — aborting"); return }
             val output = conn.output
             val input = conn.input
 
+            // Flatten folders into individual files with relative paths
+            val files = prepareElements(rawFiles)
+
             // ── 1. Build & send manifest ──────────────────────────────────────────
-            val entries = files.map { ManifestEntry(name = it.name, sizeBytes = it.size()) }
+            val entries = files.map {
+                ManifestEntry(
+                    name = it.name,
+                    sizeBytes = it.size(),
+                    relativePath = it.relativePath,
+                    entryType = it.entryType,
+                )
+            }
             val totalBytes = entries.sumOf { it.sizeBytes }
             val mf = TransferManifest(
                 totalFiles = files.size,
@@ -185,11 +218,29 @@ abstract class P2PManager {
                 val mimeBytes = (entry.mimeType ?: "").encodeToByteArray()
                 output.writeInt(mimeBytes.size)
                 if (mimeBytes.isNotEmpty()) output.writeFully(mimeBytes)
+
+                // write relativePath
+                val relPathBytes = entry.relativePath.encodeToByteArray()
+                output.writeInt(relPathBytes.size)
+                if (relPathBytes.isNotEmpty()) output.writeFully(relPathBytes)
+
+                // write entryType
+                val typeBytes = entry.entryType.name.encodeToByteArray()
+                output.writeInt(typeBytes.size)
+                output.writeFully(typeBytes)
             }
             output.flush()
 
             manifest.value = mf
-            fileEntries.value = entries.map { FileTransferEntry(name = it.name, sizeBytes = it.sizeBytes, mimeType = it.mimeType) }
+            fileEntries.value = entries.map {
+                FileTransferEntry(
+                    name = it.name,
+                    sizeBytes = it.sizeBytes,
+                    mimeType = it.mimeType,
+                    relativePath = it.relativePath,
+                    entryType = it.entryType,
+                )
+            }
 
             // ── read receiver's PeerInfo instead of bare ACK ─────────────────────
             val receiverNameLen = input.readInt()
@@ -296,7 +347,25 @@ abstract class P2PManager {
                 val mimeType = if (mimeLen > 0) {
                     ByteArray(mimeLen).also { b -> input.readFully(b) }.decodeToString()
                 } else null
-                ManifestEntry(name = nameBytes.decodeToString(), sizeBytes = sizeBytes, mimeType = mimeType)
+
+                // read relativePath
+                val relPathLen = input.readInt()
+                val relativePath = if (relPathLen > 0) {
+                    ByteArray(relPathLen).also { b -> input.readFully(b) }.decodeToString()
+                } else ""
+
+                // read entryType
+                val typeLen = input.readInt()
+                val typeStr = ByteArray(typeLen).also { b -> input.readFully(b) }.decodeToString()
+                val entryType = runCatching { EntryType.valueOf(typeStr) }.getOrDefault(EntryType.FILE)
+
+                ManifestEntry(
+                    name = nameBytes.decodeToString(),
+                    sizeBytes = sizeBytes,
+                    mimeType = mimeType,
+                    relativePath = relativePath,
+                    entryType = entryType,
+                )
             }
 
             val mf = TransferManifest(
@@ -307,7 +376,15 @@ abstract class P2PManager {
                 senderPlatform = Platform.valueOf(senderPlatBytes.decodeToString())
             )
             manifest.value = mf
-            fileEntries.value = entries.map { FileTransferEntry(name = it.name, sizeBytes = it.sizeBytes, mimeType = it.mimeType) }
+            fileEntries.value = entries.map {
+                FileTransferEntry(
+                    name = it.name,
+                    sizeBytes = it.sizeBytes,
+                    mimeType = it.mimeType,
+                    relativePath = it.relativePath,
+                    entryType = it.entryType,
+                )
+            }
             loggy("[<] Manifest received from '${mf.senderName}': $totalFiles file(s), $totalBytes bytes total")
 
             // ── reply with our own PeerInfo instead of bare ACK ──────────────────
@@ -365,15 +442,32 @@ abstract class P2PManager {
                 output.writeByte(1)
                 output.flush()
 
+                // For TEXT entries, read back the content from the temp file
+                val textContent = if (entry.entryType == EntryType.TEXT) {
+                    runCatching {
+                        val source = SystemFileSystem.source(tempPath).buffered()
+                        val bytes = source.readByteArray()
+                        source.close()
+                        bytes.decodeToString()
+                    }.getOrNull()
+                } else null
+
                 fileEntries.updateAt(index) {
-                    it.copy(status = FileTransferStatus.Done, bytesTransferred = entry.sizeBytes)
+                    it.copy(
+                        status = FileTransferStatus.Done,
+                        bytesTransferred = entry.sizeBytes,
+                        textContent = textContent,
+                    )
                 }
                 itemsRECEIVED.add(
                     ReceivedItem(
                         name = entry.name,
                         path = tempPath,
                         sizeBytes = entry.sizeBytes,
-                        mimeType = entry.mimeType
+                        mimeType = entry.mimeType,
+                        relativePath = entry.relativePath,
+                        entryType = entry.entryType,
+                        textContent = textContent,
                     )
                 )
                 transferStatus.value = "Received: ${entry.name}"
@@ -405,14 +499,38 @@ abstract class P2PManager {
 
     fun finalizeReceivedFilesAt(destDir: PlatformFile) {
         p2pScope.launch {
-            itemsRECEIVED.forEach { item ->
+            val fileItems = itemsRECEIVED.filter { it.entryType == EntryType.FILE }
+
+            // Group by top-level folder to reconstruct directory structure
+            for (item in fileItems) {
+                if (item.relativePath.isNotEmpty()) {
+                    // Create parent directories for folder-sourced files
+                    val parentPath = item.relativePath.substringBeforeLast('/', "")
+                    if (parentPath.isNotEmpty()) {
+                        // Create the directory structure in the destination
+                        val dirs = parentPath.split('/')
+                        var currentPath = destDir.path ?: continue
+                        for (dir in dirs) {
+                            currentPath = "$currentPath/$dir"
+                            val dirPath = Path(currentPath)
+                            if (!SystemFileSystem.exists(dirPath)) {
+                                SystemFileSystem.createDirectories(dirPath)
+                            }
+                        }
+                        // Move file to the correct subdirectory
+                        val destPath = Path("$currentPath/${item.name}")
+                        val sourcePath = item.path
+                        SystemFileSystem.atomicMove(sourcePath, destPath)
+                        continue
+                    }
+                }
+                // Top-level file — move directly to dest
                 val platformFile = PlatformFile(item.path)
                 platformFile.atomicMove(destDir)
             }
 
             saveComplete.value = true
-
-            viewmodel.snacky("Files moved successfully!")
+            viewmodel.snacky("Files saved successfully!")
         }
     }
 }
