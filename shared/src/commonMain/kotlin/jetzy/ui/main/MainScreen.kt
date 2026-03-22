@@ -58,7 +58,7 @@ fun MainScreenUI() {
                 HorizontalDivider()
                 BottomAppBar {
                     FilledTonalButton(
-                        modifier = Modifier.fillMaxWidth().height(58.sdp).padding(4.dp),
+                        modifier = Modifier.fillMaxWidth().height(48.sdp).padding(4.dp),
                         onClick = c@{
                             if (viewmodel.currentOperation.value == null) {
                                 viewmodel.snacky("Select an operation!")
@@ -119,15 +119,9 @@ fun MainScreenUI() {
                         style = MaterialTheme.typography.bodyMediumEmphasized,
                     )
                 }
-
-                Spacer(Modifier.height(8.sdp))
             }
 
-            Surface(
-                modifier = Modifier.fillMaxWidth().padding(8.sdp),
-                tonalElevation = 0.dp,
-                shadowElevation = 8.dp
-            ) {
+            MainScreenSurface {
                 Column(
                     horizontalAlignment = CenterHorizontally,
                     modifier = Modifier.fillMaxWidth().padding(8.dp).animateContentSize()
@@ -150,11 +144,7 @@ fun MainScreenUI() {
             }
 
             AnimatedVisibility(operation == P2pOperation.SEND) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth().padding(8.sdp),
-                    tonalElevation = 0.dp,
-                    shadowElevation = 8.dp
-                ) {
+                MainScreenSurface {
                     Column(
                         horizontalAlignment = CenterHorizontally,
                         modifier = Modifier.fillMaxWidth().padding(8.dp)
@@ -219,11 +209,7 @@ fun MainScreenUI() {
 
             AnimatedVisibility(showPeerPlatform) {
                 operation?.let {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth().padding(8.sdp),
-                        tonalElevation = 0.dp,
-                        shadowElevation = 8.dp
-                    ) {
+                    MainScreenSurface {
                         Column(
                             horizontalAlignment = CenterHorizontally,
                             modifier = Modifier.fillMaxWidth().padding(8.dp)
@@ -268,4 +254,15 @@ fun MainScreenUI() {
             Spacer(Modifier.height(70.sdp))
         }
     }
+}
+
+@Composable
+fun MainScreenSurface(content: @Composable () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(8.sdp),
+        tonalElevation = 0.dp,
+        shadowElevation = 8.dp,
+        shape = RoundedCornerShape(8.dp),
+        content = content
+    )
 }

@@ -1,12 +1,14 @@
 package jetzy.models
 
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.path
 import jetzy.MainActivity
 
 actual suspend fun flattenFolder(folder: PlatformFile): List<FlatFile> {
     val context = MainActivity.contextGetter()
-    val rootDoc = DocumentFile.fromTreeUri(context, folder.uri)
+    val rootDoc = DocumentFile.fromTreeUri(context, folder.path.toUri())
         ?: return emptyList()
 
     val rootName = rootDoc.name ?: "folder"
