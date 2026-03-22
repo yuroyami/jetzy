@@ -55,9 +55,11 @@ import io.github.alexzhirkevich.qrose.rememberQrCodePainter
 import jetzy.managers.HotspotP2PM
 import jetzy.managers.P2PManager
 import jetzy.models.QRData
+import jetzy.ui.LocalViewmodel
 
 @Composable
 actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
+    val viewmodel = LocalViewmodel.current
     val colorScheme = MaterialTheme.colorScheme
 
     var qrData by remember { mutableStateOf<QRData?>(null) }
@@ -131,7 +133,9 @@ actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
 
             // cancel
             TextButton(
-                onClick = { /* viewmodel.p2pQRpopup.value = false */ },
+                onClick = {
+                    viewmodel.resetEverything()
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(

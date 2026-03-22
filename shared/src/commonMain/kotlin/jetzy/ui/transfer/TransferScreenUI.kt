@@ -65,6 +65,8 @@ import compose.icons.fontawesomeicons.solid.Copy
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import jetzy.ui.LocalViewmodel
 import jetzy.utils.Platform
+import jetzy.utils.getDeviceName
+import jetzy.utils.platform
 import kotlinx.coroutines.launch
 
 @Composable
@@ -101,6 +103,12 @@ fun TransferScreenUI() {
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
 
                     // ── Peer row ──────────────────────────────────────────
+                    val isSender = viewmodel.isSender
+                    val senderName = manifest!!.senderName
+                    val senderPlatform = manifest!!.senderPlatform
+                    val receiverName = if (isSender) remote!!.name else getDeviceName()
+                    val receiverPlatform = if (isSender) remote!!.platform else platform
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -109,19 +117,19 @@ fun TransferScreenUI() {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         PeerAvatar(
-                            name = manifest!!.senderName,
-                            label = "sender",
+                            name = senderName,
+                            label = if (isSender) "sender (You)" else "sender",
                             bgColor = Color.Black,
                             floatDelay = 0,
-                            platform = manifest!!.senderPlatform,
+                            platform = senderPlatform,
                         )
                         PacketAnimation(modifier = Modifier.weight(1f).height(56.dp))
                         PeerAvatar(
-                            name = remote!!.name,
-                            label = "receiver",
+                            name = receiverName,
+                            label = if (!isSender) "receiver (You)" else "receiver",
                             bgColor = Color.Black,
                             floatDelay = 750,
-                            platform = remote!!.platform
+                            platform = receiverPlatform,
                         )
                     }
 
@@ -192,24 +200,22 @@ fun TransferScreenUI() {
                 }
 
                 // Always show Done/Cancel button
-                if (transferComplete || !(!viewmodel.isSender && !saveComplete && hasFiles)) {
-                    Button(
-                        onClick = {
-                            viewmodel.viewModelScope.launch {
-                                manager.cleanup()
-                                viewmodel.resetEverything()
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.Transparent,
-                            contentColor = colorScheme.onSurfaceVariant,
-                        ),
-                        border = androidx.compose.foundation.BorderStroke(0.5.dp, colorScheme.outlineVariant),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(if (transferComplete) "Done" else "Cancel transfer", fontSize = 13.sp, fontWeight = FontWeight.W400)
-                    }
+                Button(
+                    onClick = {
+                        viewmodel.viewModelScope.launch {
+                            manager.cleanup()
+                            viewmodel.resetEverything()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.Transparent,
+                        contentColor = colorScheme.onSurfaceVariant,
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, colorScheme.outlineVariant),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (transferComplete) "Done" else "Cancel transfer", fontSize = 13.sp, fontWeight = FontWeight.W400)
                 }
             }
         }
@@ -656,11 +662,11 @@ private fun FileStatusIndicator(status: FileTransferStatus) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(16.dp)
+                    .size(20.dp)
                     .clip(CircleShape)
                     .background(colorScheme.tertiaryContainer)
             ) {
-                Text("✓", fontSize = 8.sp, color = colorScheme.onTertiaryContainer)
+                Text("✓", fontSize = 12.sp, fontWeight = FontWeight.W600, color = colorScheme.onTertiaryContainer)
             }
         }
 

@@ -44,12 +44,14 @@ import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitViewController
 import jetzy.managers.LanWifiP2PM
 import jetzy.managers.P2PManager
+import jetzy.ui.LocalViewmodel
 import jetzy.uiviewcontroller.QRScannerController
 import kotlinx.cinterop.ExperimentalForeignApi
 
 @OptIn(ExperimentalForeignApi::class)
 @Composable
 actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
+    val viewmodel = LocalViewmodel.current
     val colorScheme = MaterialTheme.colorScheme
 
     val qrController = remember {
@@ -131,7 +133,9 @@ actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
             }
 
             TextButton(
-                onClick = { /* cancel */ },
+                onClick = {
+                    viewmodel.resetEverything()
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Cancel", fontSize = 13.sp, color = colorScheme.onSurfaceVariant)
