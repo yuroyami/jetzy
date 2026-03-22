@@ -58,8 +58,16 @@ import io.github.vinceglb.filekit.name
 import jetzy.models.JetzyElement
 import jetzy.theme.jetzyYellow
 import jetzy.theme.ssp
+import jetzy.shared.generated.resources.Res
+import jetzy.shared.generated.resources.exclude
+import jetzy.shared.generated.resources.no_files_added
+import jetzy.shared.generated.resources.no_folders_added
+import jetzy.shared.generated.resources.select_files_btn
+import jetzy.shared.generated.resources.select_files_desc
+import jetzy.shared.generated.resources.select_folder_btn
 import jetzy.ui.LocalViewmodel
 import jetzy.utils.ComposeUtils.scheme
+import org.jetbrains.compose.resources.stringResource
 
 enum class FileFolderViewMode { Files, Folders }
 
@@ -92,7 +100,7 @@ fun PickFilesSubscreenUI() {
 
         Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = CenterHorizontally) {
             Text(
-                text = "Select files (and/or folders) to send to your peer.\nFiles can be of any size and any format.",
+                text = stringResource(Res.string.select_files_desc),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(bottom = 12.dp, top = 28.dp)
             )
@@ -150,7 +158,7 @@ fun PickFilesSubscreenUI() {
             onClick = {
                 filePicker.launch()
             },
-            text = { Text("Select File(s)") },
+            text = { Text(stringResource(Res.string.select_files_btn)) },
             modifier = Modifier.align(BottomEnd).padding(8.dp).padding(bottom = 12.dp),
             expanded = true
         )
@@ -163,7 +171,7 @@ fun PickFilesSubscreenUI() {
                 onClick = {
                     folderPicker.launch()
                 },
-                text = { Text("Select Folder") },
+                text = { Text(stringResource(Res.string.select_folder_btn)) },
                 modifier = Modifier.align(BottomEnd).padding(8.dp).padding(bottom = 86.dp),
                 expanded = true
             )
@@ -191,7 +199,7 @@ fun PickFilesSubscreenUI() {
 
                     viewmodel.snacky("Excluded $count $itemType from the list")
                 },
-                text = { Text("Exclude", fontSize = 10.ssp) },
+                text = { Text(stringResource(Res.string.exclude), fontSize = 10.ssp) },
                 modifier = Modifier.align(BottomStart).padding(8.dp).padding(bottom = 12.dp),
                 expanded = true
             )
@@ -212,8 +220,8 @@ fun FileFolderGridView(
     if (listIsEmpty) {
         Text(
             text = when (viewMode) {
-                FileFolderViewMode.Files -> "No file(s) added yet."
-                FileFolderViewMode.Folders -> "No folder(s) added yet."
+                FileFolderViewMode.Files -> stringResource(Res.string.no_files_added)
+                FileFolderViewMode.Folders -> stringResource(Res.string.no_folders_added)
             },
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(vertical = 12.dp).fillMaxSize(),

@@ -45,6 +45,9 @@ class JetzyViewmodel : ViewModel() {
 
     @NavigationDsl
     fun navigateTo(screen: Screen, doRefresh: Boolean = false, noWayToReturn: Boolean = false) {
+        // Dismiss any active snackbar when navigating
+        snack.currentSnackbarData?.dismiss()
+
         if (noWayToReturn) {
             // Clear everything and add only the new screen
             backstack.clear()
@@ -100,6 +103,17 @@ class JetzyViewmodel : ViewModel() {
 
     fun resetEverything() {
         elementsToSend.clear()
+        currentOperation.value = null
+        currentPeerPlatform.value = null
+        p2pManager = null
+
+        navigateTo(
+            Screen.MainScreen, doRefresh = true, noWayToReturn = true
+        )
+    }
+
+    /** Cancel discovery/QR screen without clearing selected files */
+    fun cancelDiscovery() {
         currentOperation.value = null
         currentPeerPlatform.value = null
         p2pManager = null

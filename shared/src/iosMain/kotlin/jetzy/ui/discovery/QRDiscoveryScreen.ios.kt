@@ -44,7 +44,13 @@ import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitViewController
 import jetzy.managers.LanWifiP2PM
 import jetzy.managers.P2PManager
+import jetzy.shared.generated.resources.Res
+import jetzy.shared.generated.resources.cancel
+import jetzy.shared.generated.resources.client_device
+import jetzy.shared.generated.resources.connect_to_device
+import jetzy.shared.generated.resources.point_camera_hint
 import jetzy.ui.LocalViewmodel
+import org.jetbrains.compose.resources.stringResource
 import jetzy.uiviewcontroller.QRScannerController
 import kotlinx.cinterop.ExperimentalForeignApi
 
@@ -83,20 +89,20 @@ actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    text = "CLIENT DEVICE",
+                    text = stringResource(Res.string.client_device),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.W500,
                     color = colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = "Connect to a device",
+                    text = stringResource(Res.string.connect_to_device),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.W500,
                     color = colorScheme.onSurface,
                     textAlign = TextAlign.Center,
                 )
                 Text(
-                    text = "Point camera at the host's QR code",
+                    text = stringResource(Res.string.point_camera_hint),
                     fontSize = 13.sp,
                     color = colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -134,11 +140,11 @@ actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
 
             TextButton(
                 onClick = {
-                    viewmodel.resetEverything()
+                    viewmodel.cancelDiscovery()
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Cancel", fontSize = 13.sp, color = colorScheme.onSurfaceVariant)
+                Text(stringResource(Res.string.cancel), fontSize = 13.sp, color = colorScheme.onSurfaceVariant)
             }
         }
     }

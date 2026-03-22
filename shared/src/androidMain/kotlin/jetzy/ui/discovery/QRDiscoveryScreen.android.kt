@@ -55,7 +55,18 @@ import io.github.alexzhirkevich.qrose.rememberQrCodePainter
 import jetzy.managers.HotspotP2PM
 import jetzy.managers.P2PManager
 import jetzy.models.QRData
+import jetzy.shared.generated.resources.Res
+import jetzy.shared.generated.resources.cancel
+import jetzy.shared.generated.resources.host_device
+import jetzy.shared.generated.resources.hotspot_active
+import jetzy.shared.generated.resources.network
+import jetzy.shared.generated.resources.password
+import jetzy.shared.generated.resources.qr_code_desc
+import jetzy.shared.generated.resources.scan_code_hint
+import jetzy.shared.generated.resources.share_to_nearby
+import jetzy.shared.generated.resources.starting_hotspot
 import jetzy.ui.LocalViewmodel
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
@@ -90,21 +101,21 @@ actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    text = "HOST DEVICE",
+                    text = stringResource(Res.string.host_device),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.W500,
                     letterSpacing = 0.08.sp,
                     color = colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = "Share to nearby device",
+                    text = stringResource(Res.string.share_to_nearby),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.W500,
                     color = colorScheme.onSurface,
                     textAlign = TextAlign.Center,
                 )
                 Text(
-                    text = "Let the other device scan this code to connect instantly",
+                    text = stringResource(Res.string.scan_code_hint),
                     fontSize = 13.sp,
                     color = colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -134,12 +145,12 @@ actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
             // cancel
             TextButton(
                 onClick = {
-                    viewmodel.resetEverything()
+                    viewmodel.cancelDiscovery()
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Cancel",
+                    text = stringResource(Res.string.cancel),
                     fontSize = 13.sp,
                     color = colorScheme.onSurfaceVariant,
                 )
@@ -221,7 +232,7 @@ private fun QrCodeBlock(qrData: QRData) {
     ) {
         Image(
             painter = qrPainter,
-            contentDescription = "QR code to connect",
+            contentDescription = stringResource(Res.string.qr_code_desc),
             modifier = Modifier
                 .fillMaxSize()
                 .padding(12.dp)
@@ -255,7 +266,7 @@ private fun QrLoadingBlock() {
         ) {
             SpinnerCircle()
             Text(
-                text = "Starting hotspot...",
+                text = stringResource(Res.string.starting_hotspot),
                 fontSize = 12.sp,
                 color = colorScheme.onSurfaceVariant,
             )
@@ -321,7 +332,7 @@ private fun LivePill(ssid: String) {
                 .background(colorScheme.tertiary.copy(alpha = dotAlpha))
         )
         Text(
-            text = "Hotspot active — $ssid",
+            text = stringResource(Res.string.hotspot_active, ssid),
             fontSize = 12.sp,
             color = colorScheme.onSurfaceVariant,
             maxLines = 1,
@@ -337,12 +348,12 @@ private fun CredentialsRow(qrData: QRData) {
         modifier = Modifier.fillMaxWidth()
     ) {
         CredCard(
-            label = "Network",
+            label = stringResource(Res.string.network),
             value = qrData.hotspotSSID,
             modifier = Modifier.weight(1f)
         )
         CredCard(
-            label = "Password",
+            label = stringResource(Res.string.password),
             value = qrData.hotspotPassword.take(8) + "••••",
             modifier = Modifier.weight(1f)
         )

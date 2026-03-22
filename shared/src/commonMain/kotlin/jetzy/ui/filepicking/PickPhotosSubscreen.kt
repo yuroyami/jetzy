@@ -52,9 +52,16 @@ import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import jetzy.models.JetzyElement
 import jetzy.theme.jetzyYellow
 import jetzy.theme.ssp
+import jetzy.shared.generated.resources.Res
+import jetzy.shared.generated.resources.exclude
+import jetzy.shared.generated.resources.excluded_images
+import jetzy.shared.generated.resources.no_photos_added
+import jetzy.shared.generated.resources.select_photos_btn
+import jetzy.shared.generated.resources.select_photos_desc
 import jetzy.ui.LocalViewmodel
 import jetzy.utils.ComposeUtils.scheme
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun PickPhotosSubscreen() {
@@ -81,7 +88,7 @@ fun PickPhotosSubscreen() {
 
         Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = CenterHorizontally) {
             Text(
-                text = "Select photos to send to your peer.",
+                text = stringResource(Res.string.select_photos_desc),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(bottom = 12.dp, top = 28.dp)
             )
@@ -95,7 +102,7 @@ fun PickPhotosSubscreen() {
                 var cellWidth by remember { mutableStateOf(1.dp) }
                 if (listIsEmpty) {
                     Text(
-                        text = "No photo(s) added yet.",
+                        text = stringResource(Res.string.no_photos_added),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(vertical = 12.dp).fillMaxSize(),
                         style = MaterialTheme.typography.labelMediumEmphasized
@@ -162,7 +169,7 @@ fun PickPhotosSubscreen() {
             onClick = {
                 photoPicker.launch()
             },
-            text = { Text("Select Photo(s)") },
+            text = { Text(stringResource(Res.string.select_photos_btn)) },
             modifier = Modifier.align(BottomEnd).padding(8.dp).padding(bottom = 12.dp),
             expanded = true
         )
@@ -185,7 +192,7 @@ fun PickPhotosSubscreen() {
                     viewmodel.snacky("Excluded $count images from the list")
 
                 },
-                text = { Text("Exclude", fontSize = 10.ssp) },
+                text = { Text(stringResource(Res.string.exclude), fontSize = 10.ssp) },
                 modifier = Modifier.align(BottomStart).padding(8.dp).padding(bottom = 12.dp),
                 expanded = true
             )

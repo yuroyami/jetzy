@@ -51,7 +51,12 @@ import jetzy.theme.sdp
 import jetzy.theme.ssp
 import jetzy.ui.Screen.Companion.nav3Entry
 import jetzy.utils.InitializeCoilSupportForFileKit
+import jetzy.shared.generated.resources.continue_label
+import jetzy.shared.generated.resources.sending_error_nothing
+import jetzy.shared.generated.resources.sending_to_label
+import jetzy.shared.generated.resources.receiving_from_label
 import jetzy.viewmodel.JetzyViewmodel
+import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import org.koin.compose.KoinApplication
 import org.koin.compose.viewmodel.koinViewModel
@@ -105,8 +110,8 @@ fun AdamScreen(onViewmodel: (JetzyViewmodel) -> Unit) {
                                             val prp by viewmodel.currentPeerPlatform.collectAsState()
                                             if (op != null && prp != null) {
                                                 val s1 = when (op) {
-                                                    P2pOperation.SEND -> "Sending to"
-                                                    P2pOperation.RECEIVE -> "Receiving from"
+                                                    P2pOperation.SEND -> stringResource(Res.string.sending_to_label)
+                                                    P2pOperation.RECEIVE -> stringResource(Res.string.receiving_from_label)
                                                     else -> {}
                                                 }
 
@@ -138,11 +143,12 @@ fun AdamScreen(onViewmodel: (JetzyViewmodel) -> Unit) {
                                         }
 
                                         if (currentScreen == Screen.FilePickingScreen) {
+                                            val sendingErrorStr = stringResource(Res.string.sending_error_nothing)
                                             TextButton(
                                                 onClick = c@{
                                                     //Continue sending
                                                     if (viewmodel.elementsToSend.isEmpty()) {
-                                                        viewmodel.snacky("Sending Error: Nothing to send...")
+                                                        viewmodel.snacky(sendingErrorStr)
                                                         haptic.performHapticFeedback(Reject)
                                                         return@c
                                                     }
@@ -150,7 +156,7 @@ fun AdamScreen(onViewmodel: (JetzyViewmodel) -> Unit) {
                                                     viewmodel.navigateTo(Screen.MainScreen)
                                                 }
                                             ) {
-                                                Text("Continue")
+                                                Text(stringResource(Res.string.continue_label))
                                                 Icon(
                                                     imageVector = Icons.AutoMirrored.Default.ArrowForwardIos,
                                                     contentDescription = null

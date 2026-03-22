@@ -38,9 +38,12 @@ import jetzy.utils.loggy
 import jetzy.utils.platform
 import jetzy.viewmodel.JetzyViewmodel
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
@@ -161,6 +164,8 @@ abstract class P2PManager {
 
     @CallSuper
     open suspend fun cleanup() {
+        stallWatchdogJob?.cancel()
+        stallWatchdogJob = null
         connection?.let {
             runCatching {
                 it.input.cancel()
@@ -175,6 +180,10 @@ abstract class P2PManager {
     }
 
     val bufferSize = 512 * 1024 //512 KB
+
+    /** Stall detection: tracks total bytes received for periodic comparison */
+    private var stallWatchdogJob: Job? = null
+    private val stallTimeoutMs = 5000L
 
     // ── Prepare elements (flatten folders) ──────────────────────────────────────
     /**
@@ -436,6 +445,32 @@ abstract class P2PManager {
             var speedWindowStart = generateTimestampMillis()
             var speedWindowBytes = 0L
 
+            // Start stall detection watchdog
+            stallWatchdogJob = p2pScope.launch {
+                var lastBytesSnapshot = 0L
+                while (isActive && !transferComplete.value) {
+                    delay(stallTimeoutMs)
+                    if (transferComplete.value) break
+                    val currentBytes = transferProgress.value
+                    val currentTotalRead = (currentBytes * totalBytes).toLong()
+                    if (currentTotalRead == lastBytesSnapshot && currentTotalRead > 0L) {
+                        // No progress in stallTimeoutMs — mark as stalled
+                        loggy("[!] Stall detected: no bytes received in ${stallTimeoutMs}ms")
+                        fileEntries.value = fileEntries.value.map {
+                            if (it.status == FileTransferStatus.Active) it.copy(status = FileTransferStatus.Failed)
+                            else it
+                        }
+                        transferSpeed.value = 0L
+                        transferComplete.value = true
+                        // Cancel the input channel to unblock any pending readFully
+                        activeInput?.cancel()
+                        viewmodel.snacky("Transfer stalled: no data received. You can save any completed files.")
+                        break
+                    }
+                    lastBytesSnapshot = currentTotalRead
+                }
+            }
+
             entries.forEachIndexed { index, entry ->
                 fileEntries.updateAt(index) { it.copy(status = FileTransferStatus.Active) }
                 loggy("[<] [${index + 1}/${entries.size}] Receiving '${entry.name}' (${entry.sizeBytes} bytes)")
@@ -516,11 +551,13 @@ abstract class P2PManager {
                 loggy("[ok] [${index + 1}/${entries.size}] '${entry.name}' fully received")
             }
 
+            stallWatchdogJob?.cancel()
             transferSpeed.value = 0L
             loggy("[ok] Transfer complete — ${itemsRECEIVED.size} file(s) staged")
 
             transferComplete.value = true
         } catch (e: Exception) {
+            stallWatchdogJob?.cancel()
             loggy(e.stackTraceToString())
             transferSpeed.value = 0L
             // Mark any in-progress files as failed

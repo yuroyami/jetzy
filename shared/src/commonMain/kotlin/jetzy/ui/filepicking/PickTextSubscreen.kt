@@ -51,8 +51,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import jetzy.models.JetzyElement
+import jetzy.shared.generated.resources.Res
+import jetzy.shared.generated.resources.add_new_text
+import jetzy.shared.generated.resources.add_text_btn
+import jetzy.shared.generated.resources.add_text_desc
+import jetzy.shared.generated.resources.cancel
+import jetzy.shared.generated.resources.field_empty
+import jetzy.shared.generated.resources.no_texts_added
+import jetzy.shared.generated.resources.text_to_send
 import jetzy.ui.LocalViewmodel
 import jetzy.utils.ComposeUtils.scheme
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun PickTextSubscreen() {
@@ -65,7 +74,7 @@ fun PickTextSubscreen() {
 
         Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = CenterHorizontally) {
             Text(
-                text = "Add Text strings to send to your peer.",
+                text = stringResource(Res.string.add_text_desc),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(bottom = 12.dp, top = 28.dp)
             )
@@ -86,7 +95,7 @@ fun PickTextSubscreen() {
                     if (listIsEmpty) {
                         item {
                             Text(
-                                text = "No text(s) added yet.",
+                                text = stringResource(Res.string.no_texts_added),
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.padding(vertical = 12.dp).fillMaxSize(),
                                 style = MaterialTheme.typography.labelMediumEmphasized
@@ -137,7 +146,7 @@ fun PickTextSubscreen() {
             onClick = {
                 textAddPopup = true
             },
-            text = { Text("Add new text") },
+            text = { Text(stringResource(Res.string.add_new_text)) },
             modifier = Modifier.align(BottomEnd).padding(8.dp).padding(bottom = 12.dp),
             expanded = true
         )
@@ -157,7 +166,7 @@ fun PickTextSubscreen() {
             },
             dismissButton = {
                 TextButton(onClick = { textAddPopup = false }) {
-                    Text("Cancel")
+                    Text(stringResource(Res.string.cancel))
                 }
             },
             confirmButton = {
@@ -173,7 +182,7 @@ fun PickTextSubscreen() {
                         }
                     }
                 ) {
-                    Text("Add text")
+                    Text(stringResource(Res.string.add_text_btn))
                 }
             },
             text = {
@@ -212,10 +221,10 @@ fun PickTextSubscreen() {
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     onValueChange = { txt2add = it },
                     label = {
-                        Text("Text to send")
+                        Text(stringResource(Res.string.text_to_send))
                     },
                     supportingText = {
-                        if (isError) Text("Field is empty!")
+                        if (isError) Text(stringResource(Res.string.field_empty))
                     },
                     isError = isError,
                     enabled = enabled

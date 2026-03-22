@@ -35,7 +35,13 @@ import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.name
 import jetzy.models.JetzyElement
+import jetzy.shared.generated.resources.Res
+import jetzy.shared.generated.resources.no_videos_added
+import jetzy.shared.generated.resources.remove
+import jetzy.shared.generated.resources.select_videos_btn
+import jetzy.shared.generated.resources.select_videos_desc
 import jetzy.ui.LocalViewmodel
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun PickVideosSubscreen() {
@@ -53,7 +59,7 @@ fun PickVideosSubscreen() {
 
         Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = CenterHorizontally) {
             Text(
-                text = "Select videos to send to your peer.",
+                text = stringResource(Res.string.select_videos_desc),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(bottom = 12.dp, top = 28.dp)
             )
@@ -68,7 +74,7 @@ fun PickVideosSubscreen() {
             ) {
                 if (videosForSending.isEmpty()) {
                     Text(
-                        text = "No video(s) added yet.",
+                        text = stringResource(Res.string.no_videos_added),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(vertical = 12.dp).fillMaxSize(),
                         style = MaterialTheme.typography.labelMedium
@@ -102,7 +108,7 @@ fun PickVideosSubscreen() {
                                 }) {
                                     Icon(
                                         imageVector = Icons.Filled.Close,
-                                        contentDescription = "Remove",
+                                        contentDescription = stringResource(Res.string.remove),
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -121,7 +127,7 @@ fun PickVideosSubscreen() {
             onClick = {
                 videoPicker.launch()
             },
-            text = { Text("Select Video(s)") },
+            text = { Text(stringResource(Res.string.select_videos_btn)) },
             modifier = Modifier.align(BottomEnd).padding(8.dp).padding(bottom = 12.dp),
             expanded = true
         )

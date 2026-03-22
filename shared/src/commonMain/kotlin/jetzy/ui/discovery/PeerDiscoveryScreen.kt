@@ -54,9 +54,21 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewModelScope
 import jetzy.managers.PeerDiscoveryP2PM
 import jetzy.p2p.P2pPeer
+import jetzy.shared.generated.resources.Res
+import jetzy.shared.generated.resources.cancel
+import jetzy.shared.generated.resources.connect_to_peer
+import jetzy.shared.generated.resources.ensure_jetzy_open
+import jetzy.shared.generated.resources.find_nearby_devices
+import jetzy.shared.generated.resources.nearby_devices
+import jetzy.shared.generated.resources.no_devices_found
+import jetzy.shared.generated.resources.peer_discovery
+import jetzy.shared.generated.resources.scanning
+import jetzy.shared.generated.resources.select_device_hint
+import jetzy.shared.generated.resources.select_device_to_connect
+import jetzy.shared.generated.resources.wifi_direct
 import jetzy.ui.LocalViewmodel
-import jetzy.ui.Screen
 import jetzy.utils.getDeviceName
+import org.jetbrains.compose.resources.stringResource
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
@@ -123,21 +135,21 @@ fun PeerDiscoveryScreenUI() {
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    text = "PEER DISCOVERY",
+                    text = stringResource(Res.string.peer_discovery),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.W500,
                     color = colorScheme.onSurfaceVariant,
                     letterSpacing = 0.08.sp,
                 )
                 Text(
-                    text = "Find nearby devices",
+                    text = stringResource(Res.string.find_nearby_devices),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.W500,
                     color = colorScheme.onSurface,
                     textAlign = TextAlign.Center,
                 )
                 Text(
-                    text = "Select a device below to connect",
+                    text = stringResource(Res.string.select_device_hint),
                     fontSize = 13.sp,
                     color = colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -168,7 +180,7 @@ fun PeerDiscoveryScreenUI() {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "Nearby devices",
+                        text = stringResource(Res.string.nearby_devices),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.W500,
                         color = colorScheme.onSurface,
@@ -217,11 +229,11 @@ fun PeerDiscoveryScreenUI() {
                     .clip(RoundedCornerShape(12.dp))
                     .border(0.5.dp, colorScheme.outlineVariant, RoundedCornerShape(12.dp))
                     .clickable {
-                        viewmodel.navigateTo(Screen.MainScreen)
+                        viewmodel.cancelDiscovery()
                     }
                     .padding(vertical = 10.dp)
             ) {
-                Text("Cancel", fontSize = 13.sp, color = colorScheme.onSurfaceVariant)
+                Text(stringResource(Res.string.cancel), fontSize = 13.sp, color = colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -441,7 +453,7 @@ private fun PeerRow(
                 color = if (isSelected) colors.fg else colorScheme.onSurface,
             )
             Text(
-                text = "Wi-Fi Direct",
+                text = stringResource(Res.string.wifi_direct),
                 fontSize = 11.sp,
                 color = colorScheme.onSurfaceVariant,
             )
@@ -494,7 +506,7 @@ private fun SearchingIndicator() {
             drawArc(colorScheme.primary, startAngle = rotation, sweepAngle = 270f,
                 useCenter = false, style = Stroke(stroke, cap = StrokeCap.Round))
         })
-        Text("Scanning", fontSize = 11.sp, color = colorScheme.onSurfaceVariant)
+        Text(stringResource(Res.string.scanning), fontSize = 11.sp, color = colorScheme.onSurfaceVariant)
     }
 }
 
@@ -529,8 +541,8 @@ private fun EmptyPeersState() {
                     drawCircle(colorScheme.primary.copy(alpha = alpha), radius = r, style = Stroke(stroke))
                 }
         )
-        Text("No devices found yet", fontSize = 13.sp, color = colorScheme.onSurfaceVariant)
-        Text("Make sure the other device has Jetzy open", fontSize = 11.sp, color = colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+        Text(stringResource(Res.string.no_devices_found), fontSize = 13.sp, color = colorScheme.onSurfaceVariant)
+        Text(stringResource(Res.string.ensure_jetzy_open), fontSize = 11.sp, color = colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
     }
 }
 
@@ -550,7 +562,7 @@ private fun ConnectButton(peer: P2pPeer?, onClick: () -> Unit) {
             .padding(vertical = 13.dp)
     ) {
         Text(
-            text = if (peer != null) "Connect to ${peer.name}" else "Select a device to connect",
+            text = if (peer != null) stringResource(Res.string.connect_to_peer, peer.name) else stringResource(Res.string.select_device_to_connect),
             fontSize = 14.sp,
             fontWeight = FontWeight.W500,
             color = colorScheme.onPrimary,

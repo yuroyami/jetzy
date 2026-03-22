@@ -63,11 +63,22 @@ import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.Copy
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
+import jetzy.shared.generated.resources.Res
+import jetzy.shared.generated.resources.cancel_transfer
+import jetzy.shared.generated.resources.copy_text
+import jetzy.shared.generated.resources.done
+import jetzy.shared.generated.resources.receiver
+import jetzy.shared.generated.resources.receiver_you
+import jetzy.shared.generated.resources.save_files_to_folder
+import jetzy.shared.generated.resources.sender
+import jetzy.shared.generated.resources.sender_you
+import jetzy.shared.generated.resources.text_snippet
 import jetzy.ui.LocalViewmodel
 import jetzy.utils.Platform
 import jetzy.utils.getDeviceName
 import jetzy.utils.platform
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun TransferScreenUI() {
@@ -118,7 +129,7 @@ fun TransferScreenUI() {
                     ) {
                         PeerAvatar(
                             name = senderName,
-                            label = if (isSender) "sender (You)" else "sender",
+                            label = if (isSender) stringResource(Res.string.sender_you) else stringResource(Res.string.sender),
                             bgColor = Color.Black,
                             floatDelay = 0,
                             platform = senderPlatform,
@@ -126,7 +137,7 @@ fun TransferScreenUI() {
                         PacketAnimation(modifier = Modifier.weight(1f).height(56.dp))
                         PeerAvatar(
                             name = receiverName,
-                            label = if (!isSender) "receiver (You)" else "receiver",
+                            label = if (!isSender) stringResource(Res.string.receiver_you) else stringResource(Res.string.receiver),
                             bgColor = Color.Black,
                             floatDelay = 750,
                             platform = receiverPlatform,
@@ -195,7 +206,7 @@ fun TransferScreenUI() {
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Save files to folder…", fontSize = 13.sp, fontWeight = FontWeight.W500)
+                        Text(stringResource(Res.string.save_files_to_folder), fontSize = 13.sp, fontWeight = FontWeight.W500)
                     }
                 }
 
@@ -215,7 +226,7 @@ fun TransferScreenUI() {
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (transferComplete) "Done" else "Cancel transfer", fontSize = 13.sp, fontWeight = FontWeight.W400)
+                    Text(if (transferComplete) stringResource(Res.string.done) else stringResource(Res.string.cancel_transfer), fontSize = 13.sp, fontWeight = FontWeight.W400)
                 }
             }
         }
@@ -496,7 +507,7 @@ private fun TextRow(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Text snippet",
+                    text = stringResource(Res.string.text_snippet),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.W500,
                     color = colorScheme.onSurface,
@@ -512,7 +523,7 @@ private fun TextRow(
                 }) {
                     Icon(
                         imageVector = FontAwesomeIcons.Solid.Copy,
-                        contentDescription = "Copy text",
+                        contentDescription = stringResource(Res.string.copy_text),
                         modifier = Modifier.size(16.dp),
                         tint = colorScheme.primary,
                     )
