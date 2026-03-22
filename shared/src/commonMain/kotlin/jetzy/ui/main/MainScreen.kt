@@ -1,6 +1,5 @@
 package jetzy.ui.main
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -96,14 +95,16 @@ fun MainScreenUI() {
         val parentScrollState = rememberScrollState()
 
         Column(
-            modifier = Modifier.fillMaxSize().padding(pv).verticalScroll(parentScrollState),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(pv)
+                .verticalScroll(parentScrollState)
+                .animateContentSize(),
             horizontalAlignment = CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceEvenly
+            verticalArrangement = Arrangement.Top
         ) {
 
-            AnimatedVisibility(
-                visible = operation == null
-            ) {
+            if (operation == null) {
                 Column(
                     horizontalAlignment = CenterHorizontally,
                     modifier = Modifier.fillMaxWidth().padding(8.dp)
@@ -143,8 +144,12 @@ fun MainScreenUI() {
                 }
             }
 
-            AnimatedVisibility(operation == P2pOperation.SEND) {
-                MainScreenSurface {
+            if (operation == P2pOperation.SEND) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(8.sdp),
+                    tonalElevation = 0.dp,
+                    shadowElevation = 8.dp
+                ) {
                     Column(
                         horizontalAlignment = CenterHorizontally,
                         modifier = Modifier.fillMaxWidth().padding(8.dp)
@@ -207,7 +212,7 @@ fun MainScreenUI() {
                 (operation == P2pOperation.SEND && viewmodel.elementsToSend.isNotEmpty()) || operation == P2pOperation.RECEIVE
             }
 
-            AnimatedVisibility(showPeerPlatform) {
+            if (showPeerPlatform) {
                 operation?.let {
                     MainScreenSurface {
                         Column(

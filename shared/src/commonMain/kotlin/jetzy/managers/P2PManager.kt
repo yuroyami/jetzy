@@ -6,7 +6,10 @@ import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.atomicMove
 import io.github.vinceglb.filekit.path
 import io.ktor.network.sockets.Connection
+import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.ByteWriteChannel
 import io.ktor.utils.io.cancel
+import io.ktor.utils.io.flushAndClose
 import io.ktor.utils.io.readByte
 import io.ktor.utils.io.readFully
 import io.ktor.utils.io.readInt
@@ -71,6 +74,26 @@ abstract class P2PManager {
             isConnected.value = value != null
             if (value != null) beginTransfer()
         }
+
+    // ── Direct channel support (for non-TCP transports like MPC) ─────────────
+    private var _directInput: ByteReadChannel? = null
+    private var _directOutput: ByteWriteChannel? = null
+
+    /** Active input channel — prefers direct channels over connection */
+    protected val activeInput: ByteReadChannel? get() = _directInput ?: connection?.input
+    /** Active output channel — prefers direct channels over connection */
+    protected val activeOutput: ByteWriteChannel? get() = _directOutput ?: connection?.output
+
+    /**
+     * Start a transfer using raw byte channels (no TCP Connection required).
+     * Used by MPC and other non-socket transports.
+     */
+    protected fun startTransferWithChannels(input: ByteReadChannel, output: ByteWriteChannel) {
+        _directInput = input
+        _directOutput = output
+        isConnected.value = true
+        beginTransfer()
+    }
 
     val isHandshaking = MutableStateFlow(false)
 
@@ -145,6 +168,10 @@ abstract class P2PManager {
             }
         }
         connection = null
+        _directInput?.let { runCatching { it.cancel() } }
+        _directOutput?.let { runCatching { it.flushAndClose() } }
+        _directInput = null
+        _directOutput = null
     }
 
     val bufferSize = 512 * 1024 //512 KB
@@ -173,9 +200,8 @@ abstract class P2PManager {
     // ── Send ──────────────────────────────────────────────────────────────────
     private suspend fun sendFiles(rawFiles: List<JetzyElement>) {
         try {
-            val conn = connection ?: run { loggy("[~] sendFiles() called but connection is null — aborting"); return }
-            val output = conn.output
-            val input = conn.input
+            val output = activeOutput ?: run { loggy("[~] sendFiles() called but no output channel — aborting"); return }
+            val input = activeInput ?: run { loggy("[~] sendFiles() called but no input channel — aborting"); return }
 
             // Flatten folders into individual files with relative paths
             val files = prepareElements(rawFiles)
@@ -316,18 +342,22 @@ abstract class P2PManager {
             transferComplete.value = true
         } catch (e: Exception) {
             loggy(e.stackTraceToString())
-            viewmodel.snacky("An error occurred during transfer: Pipe broken")
-            viewmodel.resetEverything()
+            transferSpeed.value = 0L
+            // Mark any in-progress files as failed
+            fileEntries.value = fileEntries.value.map {
+                if (it.status == FileTransferStatus.Active) it.copy(status = FileTransferStatus.Failed)
+                else it
+            }
+            transferComplete.value = true
+            viewmodel.snacky("Transfer interrupted: connection lost")
         }
     }
 
     // ── Receive ───────────────────────────────────────────────────────────────
-    //TODO Protect against overwrite
     private suspend fun receiveFiles() {
         try {
-            val conn = connection ?: run { loggy("[~] receiveFiles() called but connection is null — aborting"); return }
-            val input = conn.input
-            val output = conn.output
+            val input = activeInput ?: run { loggy("[~] receiveFiles() called but no input channel — aborting"); return }
+            val output = activeOutput ?: run { loggy("[~] receiveFiles() called but no output channel — aborting"); return }
 
             // ── 1. Read manifest ──────────────────────────────────────────────────
             val totalFiles = input.readInt()
@@ -410,7 +440,17 @@ abstract class P2PManager {
                 fileEntries.updateAt(index) { it.copy(status = FileTransferStatus.Active) }
                 loggy("[<] [${index + 1}/${entries.size}] Receiving '${entry.name}' (${entry.sizeBytes} bytes)")
 
-                val tempPath = Path(SystemTemporaryDirectory, entry.name)
+                var tempPath = Path(SystemTemporaryDirectory, entry.name)
+                // Avoid overwriting if a file with the same name already exists in temp
+                if (SystemFileSystem.exists(tempPath)) {
+                    val baseName = entry.name.substringBeforeLast('.', entry.name)
+                    val ext = entry.name.substringAfterLast('.', "").let { if (it == entry.name) "" else ".$it" }
+                    var counter = 1
+                    do {
+                        tempPath = Path(SystemTemporaryDirectory, "${baseName}_${counter}${ext}")
+                        counter++
+                    } while (SystemFileSystem.exists(tempPath))
+                }
                 val sink = SystemFileSystem.sink(tempPath).buffered()
                 val buf = ByteArray(bufferSize)
                 var fileRead = 0L
@@ -482,8 +522,14 @@ abstract class P2PManager {
             transferComplete.value = true
         } catch (e: Exception) {
             loggy(e.stackTraceToString())
-            viewmodel.snacky("An error occurred during transfer: Pipe broken")
-            viewmodel.resetEverything()
+            transferSpeed.value = 0L
+            // Mark any in-progress files as failed
+            fileEntries.value = fileEntries.value.map {
+                if (it.status == FileTransferStatus.Active) it.copy(status = FileTransferStatus.Failed)
+                else it
+            }
+            transferComplete.value = true
+            viewmodel.snacky("Transfer interrupted: connection lost. You can still save received files.")
         }
     }
 
