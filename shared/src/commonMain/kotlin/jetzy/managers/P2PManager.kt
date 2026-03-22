@@ -4,6 +4,7 @@ import androidx.annotation.CallSuper
 import androidx.compose.runtime.mutableStateListOf
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.atomicMove
+import io.github.vinceglb.filekit.path
 import io.ktor.network.sockets.Connection
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.ByteWriteChannel
@@ -45,6 +46,7 @@ import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.files.SystemTemporaryDirectory
+import kotlinx.io.readByteArray
 
 /**
  * Base class for all P2P transfer methods.
@@ -555,7 +557,7 @@ abstract class P2PManager {
                     if (parentPath.isNotEmpty()) {
                         // Create the directory structure in the destination
                         val dirs = parentPath.split('/')
-                        var currentPath = destDir.path ?: continue
+                        var currentPath = destDir.path
                         for (dir in dirs) {
                             currentPath = "$currentPath/$dir"
                             val dirPath = Path(currentPath)
