@@ -1,17 +1,11 @@
 package jetzy.models
 
-import android.content.Context
 import androidx.documentfile.provider.DocumentFile
 import io.github.vinceglb.filekit.PlatformFile
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
-
-private object FolderFlattenerHelper : KoinComponent {
-    val context: Context by inject()
-}
+import jetzy.MainActivity
 
 actual suspend fun flattenFolder(folder: PlatformFile): List<FlatFile> {
-    val context = FolderFlattenerHelper.context
+    val context = MainActivity.contextGetter()
     val rootDoc = DocumentFile.fromTreeUri(context, folder.uri)
         ?: return emptyList()
 
