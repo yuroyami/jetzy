@@ -30,7 +30,6 @@ import jetzy.ui.transfer.PeerInfo
 import jetzy.ui.transfer.ReceivedItem
 import jetzy.ui.transfer.TransferManifest
 import jetzy.utils.P2pIoApi
-import jetzy.utils.Platform
 import jetzy.utils.PreferablyIO
 import jetzy.utils.generateTimestampMillis
 import jetzy.utils.getAvailableStorageBytes
@@ -122,8 +121,8 @@ abstract class P2PManager {
         field = MutableStateFlow(false)
 
     /** Current session ID. Stable across reconnects within one app lifecycle so resume works. */
-    val sessionId: StateFlow<String?>
-        field = MutableStateFlow(null)
+    val sessionId = MutableStateFlow<String?>(null)
+        //field = MutableStateFlow(null)
 
     /** Seed or rotate the session id from outside the manager (e.g. from a scanned QR). */
     fun setSessionId(id: String?) { sessionId.value = id }
