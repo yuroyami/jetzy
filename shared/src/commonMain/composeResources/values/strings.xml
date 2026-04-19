@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App -->
+    <string name="app_name">Jetzy</string>
+
+    <!-- Main Screen -->
+    <string name="welcome_title">Welcome to Jetzy</string>
+    <string name="welcome_subtitle">Quickly send &amp; receive files across different platforms</string>
+    <string name="what_to_do">What would you like to do?</string>
+    <string name="proceed">Proceed</string>
+    <string name="select_operation">Select an operation!</string>
+    <string name="select_platform">Select which platform your peer has!</string>
+    <string name="select_files_to_send">Select files to send!</string>
+    <string name="sending_to">Sending to...</string>
+    <string name="receiving_from">Receiving from...</string>
+    <string name="pick_files_to_send">Pick the files to send</string>
+    <string name="choose_files">Choose files</string>
+    <string name="zero_files_selected">0 files selected</string>
+    <string name="sending_label">Sending: %1$s</string>
+
+    <!-- Top Bar -->
+    <string name="sending_to_label">Sending to</string>
+    <string name="receiving_from_label">Receiving from</string>
+    <string name="continue_label">Continue</string>
+    <string name="sending_error_nothing">Sending Error: Nothing to send...</string>
+
+    <!-- File Picking -->
+    <string name="select_files_desc">Select files (and/or folders) to send to your peer.\nFiles can be of any size and any format.</string>
+    <string name="select_photos_desc">Select photos to send to your peer.</string>
+    <string name="select_videos_desc">Select videos to send to your peer.</string>
+    <string name="add_text_desc">Add Text strings to send to your peer.</string>
+    <string name="no_files_added">No file(s) added yet.</string>
+    <string name="no_folders_added">No folder(s) added yet.</string>
+    <string name="no_photos_added">No photo(s) added yet.</string>
+    <string name="no_videos_added">No video(s) added yet.</string>
+    <string name="no_texts_added">No text(s) added yet.</string>
+    <string name="select_files_btn">Select File(s)</string>
+    <string name="select_folder_btn">Select Folder</string>
+    <string name="select_photos_btn">Select Photo(s)</string>
+    <string name="select_videos_btn">Select Video(s)</string>
+    <string name="add_new_text">Add new text</string>
+    <string name="exclude">Exclude</string>
+    <string name="files_tab">Files</string>
+    <string name="folders_tab">Folders</string>
+    <string name="added_items">Added %1$d item(s)</string>
+    <string name="added_folder">Added folder: %1$s</string>
+    <string name="excluded_items">Excluded %1$d %2$s from the list</string>
+    <string name="excluded_images">Excluded %1$d images from the list</string>
+    <string name="text_removed">Text was removed from the list.</string>
+    <string name="cancel">Cancel</string>
+    <string name="add_text_btn">Add text</string>
+    <string name="text_to_send">Text to send</string>
+    <string name="field_empty">Field is empty!</string>
+
+    <!-- QR Discovery Screen - Host -->
+    <string name="host_device">HOST DEVICE</string>
+    <string name="share_to_nearby">Share to nearby device</string>
+    <string name="scan_code_hint">Let the other device scan this code to connect instantly</string>
+    <string name="starting_hotspot">Starting hotspot...</string>
+    <string name="hotspot_active">Hotspot active — %1$s</string>
+    <string name="network">Network</string>
+    <string name="password">Password</string>
+
+    <!-- QR Discovery Screen - Client -->
+    <string name="client_device">CLIENT DEVICE</string>
+    <string name="connect_to_device">Connect to a device</string>
+    <string name="point_camera_hint">Point camera at the host\'s QR code</string>
+
+    <!-- Peer Discovery Screen -->
+    <string name="peer_discovery">PEER DISCOVERY</string>
+    <string name="find_nearby_devices">Find nearby devices</string>
+    <string name="select_device_hint">Select a device below to connect</string>
+    <string name="nearby_devices">Nearby devices</string>
+    <string name="scanning">Scanning</string>
+    <string name="no_devices_found">No devices found yet</string>
+    <string name="ensure_jetzy_open">Make sure the other device has Jetzy open</string>
+    <string name="wifi_direct">Wi-Fi Direct</string>
+    <string name="connect_to_peer">Connect to %1$s</string>
+    <string name="select_device_to_connect">Select a device to connect</string>
+
+    <!-- Transfer Screen -->
+    <string name="sender_you">sender (You)</string>
+    <string name="sender">sender</string>
+    <string name="receiver_you">receiver (You)</string>
+    <string name="receiver">receiver</string>
+    <string name="text_snippet">Text snippet</string>
+    <string name="copy_text">Copy text</string>
+    <string name="save_files_to_folder">Save files to folder…</string>
+    <string name="done">Done</string>
+    <string name="cancel_transfer">Cancel transfer</string>
+    <string name="reconnect_and_resume">Reconnect and resume where we left off</string>
+    <string name="calculating">Calculating…</string>
+    <string name="seconds_remaining">%1$ds remaining</string>
+    <string name="minutes_remaining">%1$dm %2$ds remaining</string>
+    <string name="hours_remaining">%1$dh %2$dm remaining</string>
+    <string name="files_saved">Files saved successfully!</string>
+    <string name="transfer_interrupted">Transfer interrupted: connection lost</string>
+    <string name="transfer_interrupted_save">Transfer interrupted: connection lost. You can still save received files.</string>
+    <string name="transfer_stalled">Transfer stalled: no data received. You can save any completed files.</string>
+
+    <!-- Plurals helpers -->
+    <string name="file_count">%1$d file</string>
+    <string name="files_count">%1$d files</string>
+    <string name="folder_count">%1$d folder</string>
+    <string name="folders_count">%1$d folders</string>
+    <string name="photo_count">%1$d photo</string>
+    <string name="photos_count">%1$d photos</string>
+    <string name="video_count">%1$d video</string>
+    <string name="videos_count">%1$d videos</string>
+    <string name="text_count">%1$d text</string>
+    <string name="texts_count">%1$d texts</string>
+
+    <!-- Transfer progress -->
+    <string name="files_of_total">%1$d of %2$d files</string>
+    <string name="total_size">  ·  %1$s total</string>
+    <string name="qr_code_desc">QR code to connect</string>
+    <string name="remove">Remove</string>
+</resources>

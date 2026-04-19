@@ -1,0 +1,99 @@
+[versions] ########################################################################################
+#KMM-Plugins
+fontAwesome = "1.1.1"
+kotlin = "2.3.10"
+agp = "9.0.1" #"9.0.0-alpha05"
+compose-multiplatform = "1.11.0-alpha04"
+kSerialization = "1.10.0"
+ksp = "2.3.6"
+skie = "0.10.10"
+buildConfig = "6.0.9"
+
+## KMM Libs
+koroutines = "1.10.2"
+koin = "4.2.0-RC1"
+kermit = "2.1.0"
+ktor  = "3.4.1"
+compose-multiplatform-icons = "1.7.3"
+compose-material3 = "1.11.0-alpha04"
+composeViewmodelNav3 = "2.10.0-beta01"
+navigation3Runtime = "1.1.0-alpha05"
+navigation3Ui = "1.1.0-alpha04"
+compose-unstyled = "1.49.0"
+coil = "3.4.0"
+kotlinx-io = "0.9.0"
+filekit = "0.13.0"
+uriKmp = "0.0.21"
+kotlinx-datetime = "0.7.1"
+qrose = "1.1.2"
+
+## Android-only
+coreSplashscreen = "1.2.0"
+activityCompose = "1.13.0"
+appcompat = "1.7.1"
+coreKtx = "1.18.0"
+documentfile = "1.1.0"
+desugaring = "2.1.5"
+media3 = "1.8.0"
+
+[libraries] #######################################################################################
+## KMM
+font-awesome = { module = "br.com.devsrsouza.compose.icons:font-awesome", version.ref = "fontAwesome" }
+kotlinstdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
+koroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "koroutines" }
+kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
+filekit = { module = "io.github.vinceglb:filekit-dialogs-compose", version.ref = "filekit" }
+filekit-coil = { module = "io.github.vinceglb:filekit-coil", version.ref = "filekit" }
+coil = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose-multiplatform" }
+compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose-multiplatform" }
+compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "compose-material3" }
+compose-desktop = { module = "org.jetbrains.compose.desktop:desktop", version.ref = "compose-multiplatform" }
+compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "compose-multiplatform-icons" }
+compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose-multiplatform" }
+compose-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "composeViewmodelNav3" }
+navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3Runtime" }
+navigation3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "navigation3Ui" }
+ktor-network = { module = "io.ktor:ktor-network", version.ref = "ktor" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+kotlinx-io = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx-io" }
+qrose = { module = "io.github.alexzhirkevich:qrose", version.ref = "qrose" }
+koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin" }
+koin-core = { module = "io.insert-koin:koin-core" }
+koin-compose = { module = "io.insert-koin:koin-compose" }
+koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel" }
+koin-compose-navigation3 = { module = "io.insert-koin:koin-compose-navigation3" }
+
+## Android-only
+koroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "koroutines" }
+jetpack-core = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+jetpack-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
+jetpack-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
+jetpack-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+jetpack-documentfile = { module = "androidx.documentfile:documentfile", version.ref = "documentfile" }
+desugaring = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugaring" }
+
+[bundles] ########################################################################################
+kotlin-essentials = ["kotlinstdlib", "kotlinx-datetime", "koroutines-core"]
+android-essentials = [
+    "jetpack-core", "jetpack-appcompat", "jetpack-splashscreen",
+    "jetpack-activity-compose", "jetpack-documentfile", "koroutines-android"
+]
+
+koin = ["koin-core", "koin-compose", "koin-compose-viewmodel", "koin-compose-navigation3"]
+compose-multiplatform = [
+    "compose-foundation", "compose-ui", "compose-material3",
+    "compose-components-resources", "compose-material-icons-extended",
+    "compose-viewmodel", "navigation3-runtime", "navigation3-ui"
+]
+
+[plugins] ########################################################################################
+multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+cocoapods = { id = "org.jetbrains.kotlin.native.cocoapods", version.ref = "kotlin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+compose-plugin = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
+buildConfig = { id = "com.github.gmazzo.buildconfig", version.ref = "buildConfig" }
+kSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
