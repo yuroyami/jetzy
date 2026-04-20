@@ -21,8 +21,8 @@ kotlin {
 
     android {
         namespace = "jetzy"
-        compileSdk { version = release(36) }
-        minSdk = 26
+        compileSdk { version = release(providers.gradleProperty("android.compileSdk").get().toInt()) }
+        minSdk = providers.gradleProperty("android.minSdk").get().toInt()
         androidResources { enable = true }
     }
 //

@@ -12,10 +12,10 @@ kotlin {
 
 android {
     namespace = "jetzyApp.android"
-    compileSdk = 36
+    compileSdk = providers.gradleProperty("android.compileSdk").get().toInt()
     defaultConfig {
-        minSdk = 26
-        targetSdk = 36
+        minSdk = providers.gradleProperty("android.minSdk").get().toInt()
+        targetSdk = providers.gradleProperty("android.targetSdk").get().toInt()
     }
     // applicationId, versionCode/Name, compileOptions (java version),
     // manifestPlaceholders[appName], resourceConfigurations — handled by kmpSsot.
