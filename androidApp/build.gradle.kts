@@ -7,12 +7,18 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain(AppConfig.javaVersion)
+    jvmToolchain(21)
 }
 
 android {
     namespace = "jetzyApp.android"
-    compileSdk = AppConfig.compileSdk
+    compileSdk = 36
+    defaultConfig {
+        minSdk = 26
+        targetSdk = 36
+    }
+    // applicationId, versionCode/Name, compileOptions (java version),
+    // manifestPlaceholders[appName], resourceConfigurations — handled by kmpSsot.
 
     signingConfigs {
         file("${rootDir}/keystore/yuroyamikey.jks").takeIf { it.exists() }?.let { keystoreFile ->
@@ -30,14 +36,6 @@ android {
                 }
             }
         }
-    }
-
-    defaultConfig {
-        minSdk = AppConfig.minSdk
-        targetSdk = AppConfig.compileSdk
-        applicationId = "com.yuroyami.jetzy"
-        versionCode = AppConfig.versionCode
-        versionName = AppConfig.versionName
     }
 
     compileOptions {

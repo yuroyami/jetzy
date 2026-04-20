@@ -1,6 +1,9 @@
 @file:OptIn(ExperimentalDistributionDsl::class)
 @file:Suppress("WrongGradleMethod")
+import com.yuroyami.kmpssot.KmpSsotExtension
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalDistributionDsl
+
+val ssot = rootProject.extensions.getByType(KmpSsotExtension::class.java)
 
 plugins {
     alias(libs.plugins.multiplatform)
@@ -18,8 +21,8 @@ kotlin {
 
     android {
         namespace = "jetzy"
-        compileSdk = AppConfig.compileSdk
-        minSdk = AppConfig.minSdk
+        compileSdk { version = release(36) }
+        minSdk = 26
         androidResources { enable = true }
     }
 //
@@ -152,13 +155,7 @@ kotlin {
 //    }
 //}
 
-with(AppConfig) {
-    //updateIOSVersion()
-}
-
-""
-
 buildConfig {
-    buildConfigField("APP_VERSION", AppConfig.versionName)
+    buildConfigField("APP_VERSION", ssot.versionName.get())
     buildConfigField("DEBUG", true)
 }
