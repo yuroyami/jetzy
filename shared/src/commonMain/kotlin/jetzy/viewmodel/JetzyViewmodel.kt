@@ -58,7 +58,7 @@ class JetzyViewmodel : ViewModel() {
             if (backstack.lastOrNull() == screen) {
                 if (doRefresh) {
                     // Remove and re-add to trigger refresh
-                    backstack.removeLast()
+                    backstack.removeAt(backstack.lastIndex)
                     backstack.add(screen)
                 } else {
                     // else: do nothing, we're already there

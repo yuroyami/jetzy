@@ -1,5 +1,5 @@
 plugins {
-    id("com.yuroyami.kmpssot") version "1.0.2"
+    id("com.yuroyami.kmpssot") version "1.0.3"
     alias(libs.plugins.multiplatform).apply(false)
     alias(libs.plugins.cocoapods).apply(false)
     alias(libs.plugins.compose.compiler).apply(false)
