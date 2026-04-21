@@ -22,7 +22,7 @@ kmpSsot {
     androidAppModule = "androidApp"
 
     appLogoXml = file("shared/src/commonMain/composeResources/drawable/jetzy_vector.xml")
-    appLogoPng = file("shared/src/commonMain/composeResources/drawable/jetzy_raster.png")
+    appLogoPng = file("shared/src/commonMain/composeResources/drawable/jetzy_raster_withbg.png")
 
     // locales auto-detected from shared/src/commonMain/composeResources/values-*
     // (Jetzy has none yet, so the list stays empty.)
