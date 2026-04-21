@@ -13,7 +13,7 @@ plugins {
 
 kmpSsot {
     appName         = "Jetzy"
-    versionName     = "0.3.0"
+    versionName     = "0.3.1"
     bundleIdBase    = "com.yuroyami.jetzy"
     iosBundleSuffix = ".ios"        // explicit
     javaVersion     = 21
