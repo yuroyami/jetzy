@@ -499,6 +499,8 @@ private fun SpeedBadge(speedLabel: String) {
 
 // ─── Text row — for received text entries ─────────────────────────────────────
 
+// TODO: migrate from deprecated LocalClipboardManager to LocalClipboard (suspend API).
+@Suppress("DEPRECATION")
 @Composable
 private fun TextRow(
     entry: FileTransferEntry,

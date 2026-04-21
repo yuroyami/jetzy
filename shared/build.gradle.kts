@@ -1,9 +1,7 @@
 @file:OptIn(ExperimentalDistributionDsl::class)
 @file:Suppress("WrongGradleMethod")
-import com.yuroyami.kmpssot.KmpSsotExtension
+import com.yuroyami.kmpssot.kmpSsot
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalDistributionDsl
-
-val ssot = rootProject.extensions.getByType(KmpSsotExtension::class.java)
 
 plugins {
     alias(libs.plugins.multiplatform)
@@ -18,6 +16,14 @@ plugins {
 
 kotlin {
     jvmToolchain(21)
+
+    compilerOptions {
+        freeCompilerArgs.addAll(
+            "-Xexplicit-backing-fields",
+            "-Xexpect-actual-classes",
+            "-Xcontext-parameters",
+        )
+    }
 
     android {
         namespace = "jetzy"
@@ -77,10 +83,6 @@ kotlin {
                 optIn("kotlinx.cinterop.ExperimentalForeignApi") //for iOS
                 optIn("kotlinx.cinterop.BetaInteropApi") //for iOS
                 optIn("kotlin.time.ExperimentalTime")
-                enableLanguageFeature("ExplicitBackingFields") //same as -Xexplicit-baxcking-fields compiler flag
-                enableLanguageFeature("NestedTypeAliases") //-Xnested-type-aliases
-                enableLanguageFeature("ExpectActualClasses") //-Xexpect-actual-classes
-                enableLanguageFeature("ContextParameters") //Xcontext-parameters
             }
         }
 
@@ -156,6 +158,6 @@ kotlin {
 //}
 
 buildConfig {
-    buildConfigField("APP_VERSION", ssot.versionName.get())
+    buildConfigField("APP_VERSION", kmpSsot.versionName.get())
     buildConfigField("DEBUG", true)
 }

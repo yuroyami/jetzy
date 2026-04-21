@@ -10,11 +10,11 @@ import io.github.vinceglb.filekit.coil.addPlatformFileSupport
  * These utilities are used in common code using common libraries and do not need to use expect/actuals  *
  *********************************************************************************************************/
 
-@DslMarker annotation class LoggingApi
+annotation class LoggingApi
 
-@DslMarker annotation class NavigationDsl
+annotation class NavigationDsl
 
-@DslMarker annotation class P2pIoApi
+annotation class P2pIoApi
 
 /** Logs the [s] message to the platform's corresponding log output */
 @LoggingApi

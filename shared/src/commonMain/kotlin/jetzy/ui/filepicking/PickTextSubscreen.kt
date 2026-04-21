@@ -65,6 +65,9 @@ import jetzy.ui.LocalViewmodel
 import jetzy.utils.ComposeUtils.scheme
 import org.jetbrains.compose.resources.stringResource
 
+// TODO: migrate from deprecated LocalClipboardManager to LocalClipboard (suspend API).
+// Migration requires rememberCoroutineScope() to call clipboard.getClipEntry()/setClipEntry.
+@Suppress("DEPRECATION")
 @Composable
 fun PickTextSubscreen() {
     val viewmodel = LocalViewmodel.current

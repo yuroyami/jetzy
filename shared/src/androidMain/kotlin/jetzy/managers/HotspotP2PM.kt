@@ -158,13 +158,17 @@ class HotspotP2PM(context: Context) : P2PManager() {
                         return
                     }
 
+                    // SoftApConfiguration.ssid and legacy WifiConfiguration.SSID/preSharedKey are
+                    // marked @Deprecated on Android 33+. Keeping both paths (pre-30 and 30+) intentionally
+                    // because modern SoftApConfiguration.wifiSsid (API 33+) returns a WifiSsid object that
+                    // requires another codepath just to extract the plain-text SSID. Suppressing here.
+                    @Suppress("DEPRECATION")
                     val credentials: Pair<String, String>? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         val config = reservation.softApConfiguration
                         val ssid = config.ssid ?: return cont.resumeWithException(Exception("SSID was null"))
                         val password = config.passphrase ?: return cont.resumeWithException(Exception("Passphrase was null"))
                         Pair(ssid, password)
                     } else {
-                        @Suppress("DEPRECATION")
                         val config = reservation.wifiConfiguration
                         val ssid = config?.SSID ?: return cont.resumeWithException(Exception("SSID was null"))
                         val password = config.preSharedKey ?: return cont.resumeWithException(Exception("Password was null"))

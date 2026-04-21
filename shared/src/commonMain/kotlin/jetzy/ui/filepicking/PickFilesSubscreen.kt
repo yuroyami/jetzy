@@ -164,19 +164,17 @@ fun PickFilesSubscreenUI() {
             expanded = true
         )
 
-        if (folderPicker != null) {
-            SmallExtendedFloatingActionButton(
-                icon = {
-                    Icon(Icons.Filled.CreateNewFolder, null)
-                },
-                onClick = {
-                    folderPicker.launch()
-                },
-                text = { Text(stringResource(Res.string.select_folder_btn)) },
-                modifier = Modifier.align(BottomEnd).padding(6.sdp).padding(bottom = 56.sdp),
-                expanded = true
-            )
-        }
+        SmallExtendedFloatingActionButton(
+            icon = {
+                Icon(Icons.Filled.CreateNewFolder, null)
+            },
+            onClick = {
+                folderPicker.launch()
+            },
+            text = { Text(stringResource(Res.string.select_folder_btn)) },
+            modifier = Modifier.align(BottomEnd).padding(6.sdp).padding(bottom = 56.sdp),
+            expanded = true
+        )
 
         if ((longClickedFiles.isNotEmpty() && tab == FileFolderViewMode.Files) || (longClickedFolders.isNotEmpty() && tab == FileFolderViewMode.Folders)) {
             SmallExtendedFloatingActionButton(

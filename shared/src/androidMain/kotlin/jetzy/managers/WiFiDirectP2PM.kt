@@ -170,12 +170,16 @@ class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
                         }
                     }
                     WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
+                        // android.net.NetworkInfo is deprecated (use ConnectivityManager.NetworkCallback +
+                        // NetworkCapabilities), but the Wi-Fi Direct broadcast extra is still shipped as
+                        // NetworkInfo — there is no modern equivalent on the WifiP2pManager broadcast.
+                        @Suppress("DEPRECATION")
                         val networkInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                             intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO, android.net.NetworkInfo::class.java)
                         } else {
-                            @Suppress("DEPRECATION")
                             intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO)
                         }
+                        @Suppress("DEPRECATION")
                         if (networkInfo?.isConnected == true) {
                             wifiP2pManager.requestConnectionInfo(channel) { info ->
                                 if (info?.groupFormed == true) {
