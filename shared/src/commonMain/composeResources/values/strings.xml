@@ -115,4 +115,30 @@
     <string name="total_size">  ·  %1$s total</string>
     <string name="qr_code_desc">QR code to connect</string>
     <string name="remove">Remove</string>
+
+    <!-- Permission gate -->
+    <string name="permission_gate_title">A few permissions first</string>
+    <string name="permission_gate_subtitle">Jetzy needs the following before it can pair with your peer.</string>
+    <string name="permission_gate_continue">Continue</string>
+    <string name="permission_gate_grant">Grant</string>
+    <string name="permission_gate_open_settings">Open settings</string>
+    <string name="permission_gate_allow">Allow</string>
+    <string name="permission_gate_granted">Granted</string>
+    <string name="permission_gate_enabled">Enabled</string>
+
+    <!-- Permission requirement labels (Android) -->
+    <string name="perm_nearby_title">Nearby devices</string>
+    <string name="perm_nearby_desc">Lets Jetzy see your peer over Wi-Fi without sharing your location.</string>
+    <string name="perm_location_title">Precise location</string>
+    <string name="perm_location_desc">On older Android versions, peer discovery requires this permission.</string>
+    <string name="perm_notifications_title">Notifications</string>
+    <string name="perm_notifications_desc">So Jetzy can keep transferring while you switch to another app.</string>
+    <string name="perm_wifi_state_title">Wi-Fi must be on</string>
+    <string name="perm_wifi_state_desc">Both Wi-Fi Direct and the QR hotspot need Wi-Fi enabled to start.</string>
+    <string name="perm_location_services_title">Location services on</string>
+    <string name="perm_location_services_desc">Android 9–12 require location services for the hotspot to broadcast its name.</string>
+    <string name="perm_hotspot_off_title">Mobile hotspot off</string>
+    <string name="perm_hotspot_off_desc">A running mobile hotspot blocks Jetzy from starting its own. Turn it off in Settings.</string>
+    <string name="perm_background_title">Background activity</string>
+    <string name="perm_background_desc">Allow Jetzy to keep the transfer running when the screen turns off.</string>
 </resources>

@@ -1,7 +1,6 @@
 package jetzy
 
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -16,7 +15,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -24,10 +22,10 @@ import jetzy.managers.HotspotP2PM
 import jetzy.managers.P2PManager
 import jetzy.managers.WiFiDirectP2PM
 import jetzy.p2p.P2pPlatformCallback
+import jetzy.services.JetzyForegroundService
 import jetzy.theme.NightMode
 import jetzy.ui.AdamScreen
 import jetzy.utils.Platform
-import jetzy.utils.toasty
 import jetzy.viewmodel.JetzyViewmodel
 
 class MainActivity: ComponentActivity(), P2pPlatformCallback {
@@ -86,16 +84,28 @@ class MainActivity: ComponentActivity(), P2pPlatformCallback {
 
     private val p2pPermissioner = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { results ->
-        val allGranted = results.values.all { it }
-        if (!allGranted) toasty("Some P2P permissions were denied")
+    ) {
+        // Result deliberately ignored: the permission gate dialog re-polls each
+        // requirement's `isGrantedNow` while open, so denial/grant flips show up
+        // in the UI without us having to thread the result back here.
     }
 
-    override fun ensurePermissions(perms: List<String>) {
-        val notYetGranted = perms.filter {
-            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
-        }
-        if (notYetGranted.isNotEmpty()) p2pPermissioner.launch(notYetGranted.toTypedArray())
+    /**
+     * Launch the OS prompt for [perms]. Called by [PermissionRequirement.request]
+     * lambdas built in [jetzy.permissions.AndroidPermissionRequirements]. The
+     * result is observed via the gate dialog's polling rather than a callback.
+     */
+    fun requestRuntimePermissions(perms: Array<String>) {
+        if (perms.isEmpty()) return
+        runCatching { p2pPermissioner.launch(perms) }
+    }
+
+    override fun startBackgroundService() {
+        JetzyForegroundService.start(applicationContext)
+    }
+
+    override fun stopBackgroundService() {
+        JetzyForegroundService.stop(applicationContext)
     }
 
     companion object {

@@ -70,12 +70,54 @@ class JetzyViewmodel : ViewModel() {
         }
     }
 
+    /**
+     * What's parked between the user tapping "Proceed" on the main screen and the
+     * permission-gate dialog handing control back to us. The dialog reads the
+     * manager's [permissionRequirements][jetzy.managers.P2PManager.permissionRequirements]
+     * and only when every requirement is satisfied does the user confirm, at which
+     * point [confirmPendingProceed] runs and we finally navigate.
+     */
+    data class PendingProceed(
+        val manager: jetzy.managers.P2PManager,
+        val operation: P2pOperation,
+        val peerPlatform: Platform,
+    )
+
+    val pendingProceed = MutableStateFlow<PendingProceed?>(null)
+
     fun proceedFromMainScreen(peerPlatform: Platform, operation: P2pOperation) {
         val manager = platformCallback.getSuitableP2pManager(peerPlatform) ?: return
+        // Initialize early so the manager has a viewmodel ref while we're showing
+        // the gate dialog (it needs `viewmodel` for `snacky` calls etc.).
         manager.initialize(viewmodel = this)
 
-        p2pManager = manager
+        if (manager.permissionRequirements.isEmpty()) {
+            // Nothing to gate — go straight through. iOS managers fall here today.
+            commitProceed(manager)
+        } else {
+            pendingProceed.value = PendingProceed(manager, operation, peerPlatform)
+        }
+    }
 
+    /** Called by the permission-gate dialog once every requirement is satisfied. */
+    fun confirmPendingProceed() {
+        val pending = pendingProceed.value ?: return
+        pendingProceed.value = null
+        commitProceed(pending.manager)
+    }
+
+    /** Called when the user backs out of the gate dialog. */
+    fun cancelPendingProceed() {
+        val pending = pendingProceed.value ?: return
+        pendingProceed.value = null
+        viewModelScope.launch(PreferablyIO) {
+            runCatching { pending.manager.cleanup() }
+        }
+    }
+
+    private fun commitProceed(manager: jetzy.managers.P2PManager) {
+        p2pManager = manager
+        runCatching { platformCallback.startBackgroundService() }
         navigateTo(
             screen = when (manager.usesPeerDiscovery) {
                 true -> Screen.PeerDiscoveryScreen

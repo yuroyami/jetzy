@@ -1,6 +1,5 @@
 package jetzy.managers
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.location.LocationManager
@@ -11,7 +10,10 @@ import io.ktor.network.sockets.ServerSocket
 import io.ktor.network.sockets.aSocket
 import io.ktor.network.sockets.connection
 import io.ktor.network.sockets.port
+import jetzy.MainActivity
 import jetzy.models.QRData
+import jetzy.permissions.AndroidPermissionRequirements
+import jetzy.permissions.PermissionRequirement
 import jetzy.utils.PreferablyIO
 import jetzy.utils.getDeviceName
 import jetzy.utils.loggy
@@ -30,7 +32,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-class HotspotP2PM(context: Context) : P2PManager() {
+class HotspotP2PM(private val context: Context) : P2PManager() {
 
     private val appContext = context.applicationContext
     private val wifiManager = appContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
@@ -38,13 +40,21 @@ class HotspotP2PM(context: Context) : P2PManager() {
     private var reservation: WifiManager.LocalOnlyHotspotReservation? = null
     private var serverSocket: ServerSocket? = null
 
-    override val requiredPermissions: List<String> = buildList {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            add(Manifest.permission.NEARBY_WIFI_DEVICES)
-        } else {
-            add(Manifest.permission.ACCESS_FINE_LOCATION)
+    override val permissionRequirements: List<PermissionRequirement>
+        get() {
+            val activity = context as? MainActivity ?: return emptyList()
+            return buildList {
+                add(AndroidPermissionRequirements.nearbyDevices(activity))
+                add(AndroidPermissionRequirements.postNotifications(activity))
+                add(AndroidPermissionRequirements.wifiEnabled(activity))
+                // Android 9–12 (P..S_V2) need location services for the SSID to broadcast.
+                if (Build.VERSION.SDK_INT in Build.VERSION_CODES.P..Build.VERSION_CODES.S_V2) {
+                    add(AndroidPermissionRequirements.locationServicesEnabled(activity))
+                }
+                add(AndroidPermissionRequirements.mobileHotspotOff(activity))
+                add(AndroidPermissionRequirements.ignoreBatteryOptimizations(activity))
+            }
         }
-    }
 
     @OptIn(ExperimentalUuidApi::class)
     fun establishTcpServer(): Deferred<QRData?> = p2pScope.async(PreferablyIO) {

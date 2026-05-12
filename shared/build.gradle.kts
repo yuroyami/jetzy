@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalDistributionDsl::class)
 @file:Suppress("WrongGradleMethod")
-import com.yuroyami.kmpssot.kmpSsot
+import io.github.yuroyami.kmpssot.kmpSsot
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalDistributionDsl
 
 plugins {

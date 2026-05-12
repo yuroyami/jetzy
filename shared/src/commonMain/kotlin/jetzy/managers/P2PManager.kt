@@ -21,6 +21,7 @@ import jetzy.managers.JetzyProtocol.ManifestFrame
 import jetzy.models.JetzyElement
 import jetzy.models.flattenFolder
 import jetzy.p2p.P2pOperation
+import jetzy.permissions.PermissionRequirement
 import jetzy.ui.Screen
 import jetzy.ui.transfer.EntryType
 import jetzy.ui.transfer.FileTransferEntry
@@ -139,13 +140,18 @@ abstract class P2PManager {
     val itemsRECEIVED = mutableStateListOf<ReceivedItem>()
 
     // ── Subclass contracts ────────────────────────────────────────────────────
-    open val requiredPermissions: List<String> = listOf()
+    /**
+     * Everything the OS / user must satisfy before this manager can run.
+     * Read by the permission-gate dialog *before* [initialize] is called, so
+     * the user has a chance to flip toggles and grant runtime permissions.
+     * Default is empty (iOS managers rely on system-level prompts at use-site).
+     */
+    open val permissionRequirements: List<PermissionRequirement> = emptyList()
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
     @CallSuper
     open fun initialize(viewmodel: JetzyViewmodel) {
         this.viewmodel = viewmodel
-        viewmodel.platformCallback.ensurePermissions(requiredPermissions)
     }
 
     @P2pIoApi
@@ -176,6 +182,7 @@ abstract class P2PManager {
         _directInput = null
         _directOutput = null
         purgeUnsavedReceivedFiles()
+        runCatching { viewmodel.platformCallback.stopBackgroundService() }
     }
 
     /**

@@ -1,5 +1,5 @@
 plugins {
-    id("com.yuroyami.kmpssot") version "1.0.3"
+    id("io.github.yuroyami.kmpssot") version "1.0.4"
     alias(libs.plugins.multiplatform).apply(false)
     alias(libs.plugins.cocoapods).apply(false)
     alias(libs.plugins.compose.compiler).apply(false)
@@ -13,7 +13,7 @@ plugins {
 
 kmpSsot {
     appName         = "Jetzy"
-    versionName     = "0.3.1"
+    versionName     = "0.4.0"
     bundleIdBase    = "com.yuroyami.jetzy"
     iosBundleSuffix = ".ios"        // explicit
     javaVersion     = 21

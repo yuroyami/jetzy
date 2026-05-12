@@ -1,6 +1,5 @@
 package jetzy.managers
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -15,7 +14,10 @@ import android.os.Build
 import io.ktor.network.selector.SelectorManager
 import io.ktor.network.sockets.aSocket
 import io.ktor.network.sockets.connection
+import jetzy.MainActivity
 import jetzy.p2p.P2pPeer
+import jetzy.permissions.AndroidPermissionRequirements
+import jetzy.permissions.PermissionRequirement
 import jetzy.utils.PreferablyIO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,13 +48,20 @@ class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
     /** Peer currently being connected — so the broadcast-driven TCP step can pair with its retry loop. */
     private var pendingPeer: P2pPeer? = null
 
-    override val requiredPermissions = buildList<String> {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            add(Manifest.permission.NEARBY_WIFI_DEVICES)
-        } else {
-            add(Manifest.permission.ACCESS_FINE_LOCATION)
+    override val permissionRequirements: List<PermissionRequirement>
+        get() {
+            // Cast is safe because MainActivity is what constructs the manager
+            // (see MainActivity.getSuitableP2pManager). If a future caller changes
+            // that contract we silently fall back to no requirements rather than
+            // crash — the discovery screen would still surface its own errors.
+            val activity = context as? MainActivity ?: return emptyList()
+            return buildList {
+                add(AndroidPermissionRequirements.nearbyDevices(activity))
+                add(AndroidPermissionRequirements.postNotifications(activity))
+                add(AndroidPermissionRequirements.wifiEnabled(activity))
+                add(AndroidPermissionRequirements.ignoreBatteryOptimizations(activity))
+            }
         }
-    }
 
     // ── Setup ─────────────────────────────────────────────────────────────────
     private fun ensureChannel() {

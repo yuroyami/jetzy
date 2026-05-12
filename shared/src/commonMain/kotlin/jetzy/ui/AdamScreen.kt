@@ -64,6 +64,7 @@ import jetzy.theme.NightMode
 import jetzy.theme.sdp
 import jetzy.theme.ssp
 import jetzy.ui.Screen.Companion.nav3Entry
+import jetzy.ui.main.PermissionGateDialog
 import jetzy.utils.InitializeCoilSupportForFileKit
 import jetzy.shared.generated.resources.continue_label
 import jetzy.shared.generated.resources.sending_error_nothing
@@ -214,6 +215,15 @@ fun AdamScreen(onViewmodel: (JetzyViewmodel) -> Unit) {
 
                     if (showAbout) {
                         AboutDialog(onDismiss = { showAbout = false })
+                    }
+
+                    val pending by viewmodel.pendingProceed.collectAsState()
+                    pending?.let { p ->
+                        PermissionGateDialog(
+                            requirements = p.manager.permissionRequirements,
+                            onConfirm = { viewmodel.confirmPendingProceed() },
+                            onDismiss = { viewmodel.cancelPendingProceed() },
+                        )
                     }
                 }
             }
