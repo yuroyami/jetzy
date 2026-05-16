@@ -85,17 +85,78 @@ class JetzyViewmodel : ViewModel() {
 
     val pendingProceed = MutableStateFlow<PendingProceed?>(null)
 
+    /**
+     * Index into [P2pPlatformCallback.getFallbackP2pManagers] for the current
+     * peerPlatform. Bumped each time the user taps "try a different transport"
+     * on the discovery screen; null means "we haven't started the ladder yet
+     * (using the primary [P2pPlatformCallback.getSuitableP2pManager])".
+     */
+    val fallbackIndex = MutableStateFlow<Int?>(null)
+
+    /**
+     * Total number of fallback rungs available for the current pair, surfaced
+     * for the UI to decide whether to show the "try a different transport"
+     * affordance at all. 0 means "no ladder; primary only".
+     */
+    val fallbackCount = MutableStateFlow(0)
+
     fun proceedFromMainScreen(peerPlatform: Platform, operation: P2pOperation) {
         val manager = platformCallback.getSuitableP2pManager(peerPlatform) ?: return
         // Initialize early so the manager has a viewmodel ref while we're showing
         // the gate dialog (it needs `viewmodel` for `snacky` calls etc.).
         manager.initialize(viewmodel = this)
 
+        fallbackIndex.value = null
+        fallbackCount.value = platformCallback.getFallbackP2pManagers(peerPlatform).size
+
         if (manager.permissionRequirements.isEmpty()) {
-            // Nothing to gate — go straight through. iOS managers fall here today.
             commitProceed(manager)
         } else {
             pendingProceed.value = PendingProceed(manager, operation, peerPlatform)
+        }
+    }
+
+    /**
+     * Tear down the current discovery manager and start the next one in the
+     * fallback ladder, keeping the same operation + peer-platform + selected
+     * files intact. The UI calls this from the "Try a different transport"
+     * button on the peer-discovery screen.
+     */
+    fun switchToNextFallbackTransport() {
+        val peer = currentPeerPlatform.value ?: return
+        val ladder = platformCallback.getFallbackP2pManagers(peer)
+        if (ladder.isEmpty()) return
+        val next = ((fallbackIndex.value ?: -1) + 1) % ladder.size
+        fallbackIndex.value = next
+
+        val factory = ladder[next]
+        val newManager = factory.invoke() ?: return
+        newManager.initialize(viewmodel = this)
+
+        val oldManager = p2pManager
+        p2pManager = newManager
+
+        viewModelScope.launch(PreferablyIO) {
+            // Tear down the previous manager without dropping the operation/files state.
+            runCatching { oldManager?.cleanup() }
+            // If the new manager has permissions, route through the gate dialog;
+            // otherwise navigate straight to the matching discovery screen.
+            if (newManager.permissionRequirements.isEmpty()) {
+                navigateTo(
+                    screen = when (newManager.usesPeerDiscovery) {
+                        true -> Screen.PeerDiscoveryScreen
+                        false -> Screen.QRDiscoveryScreen
+                    },
+                    doRefresh = true,
+                    noWayToReturn = true,
+                )
+            } else {
+                pendingProceed.value = PendingProceed(
+                    newManager,
+                    currentOperation.value ?: return@launch,
+                    peer,
+                )
+            }
         }
     }
 

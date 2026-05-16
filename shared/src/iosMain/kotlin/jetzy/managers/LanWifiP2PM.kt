@@ -53,15 +53,21 @@ class LanWifiP2PM : P2PManager() {
             // a resume-scenario (same QR rescanned after a drop).
             qrData.sessionId?.let { setSessionId(it) }
 
-            diag("joining Wi-Fi '${qrData.hotspotSSID}'…")
-            val joined = joinWithRetry(qrData)
-            if (!joined) {
-                diag("Wi-Fi join gave up after $WIFI_JOIN_ATTEMPTS attempts")
-                viewmodel.snacky("Couldn't join ${qrData.hotspotSSID}. Tap Retry to try again.")
-                return
+            if (qrData.hotspotSSID.isBlank()) {
+                // PC (LanHostP2PM) emits a QR with no SSID — both devices are expected
+                // to already share a LAN, so we skip the Wi-Fi join and dial directly.
+                diag("no SSID in QR; assuming same-LAN, skipping Wi-Fi join")
+            } else {
+                diag("joining Wi-Fi '${qrData.hotspotSSID}'…")
+                val joined = joinWithRetry(qrData)
+                if (!joined) {
+                    diag("Wi-Fi join gave up after $WIFI_JOIN_ATTEMPTS attempts")
+                    viewmodel.snacky("Couldn't join ${qrData.hotspotSSID}. Tap Retry to try again.")
+                    return
+                }
+                diag("Wi-Fi joined; waiting for network to settle")
+                delay(2.seconds)
             }
-            diag("Wi-Fi joined; waiting for network to settle")
-            delay(2.seconds)
 
             diag("connecting to ${qrData.ipAddress}:${qrData.port}…")
             val connected = tcpConnectWithTimeout(qrData)

@@ -97,6 +97,18 @@ fun PeerDiscoveryScreenUI() {
 
     val availablePeers by manager.availablePeers.collectAsState()
     val isDiscovering  by manager.isDiscovering.collectAsState()
+    val fallbackCount  by viewmodel.fallbackCount.collectAsState()
+
+    // The fallback affordance only makes sense after the user has given the
+    // current transport a real chance to find something — 6s with no peers.
+    var emptyLongEnough by remember { mutableStateOf(false) }
+    LaunchedEffect(availablePeers.isEmpty(), isDiscovering) {
+        emptyLongEnough = false
+        if (availablePeers.isEmpty() && isDiscovering) {
+            kotlinx.coroutines.delay(6000)
+            emptyLongEnough = availablePeers.isEmpty()
+        }
+    }
 
     var selectedPeer by remember { mutableStateOf<P2pPeer?>(null) }
 
@@ -219,6 +231,31 @@ fun PeerDiscoveryScreenUI() {
                     }
                 }
             )
+
+            // ── Try-different-transport affordance ───────────────────────────
+            // Only shown when the user has given the current transport a chance
+            // (6s with no peers found) AND the platform callback offers a ladder.
+            if (emptyLongEnough && fallbackCount > 0) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.sdp))
+                        .background(colorScheme.surfaceContainerHigh)
+                        .border(0.5.dp, colorScheme.outlineVariant, RoundedCornerShape(10.sdp))
+                        .clickable {
+                            viewmodel.switchToNextFallbackTransport()
+                        }
+                        .padding(vertical = 8.sdp, horizontal = 12.sdp)
+                ) {
+                    Text(
+                        text = "Try a different transport",
+                        fontSize = 10.ssp,
+                        fontWeight = FontWeight.W500,
+                        color = colorScheme.onSurface,
+                    )
+                }
+            }
 
             // ── Cancel ───────────────────────────────────────────────────────
             Box(

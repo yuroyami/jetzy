@@ -56,3 +56,35 @@ expect fun getAvailableStorageBytes(): Long
 
 /** Absolute filesystem path to the app's persistent data directory (per-user, sandboxed). */
 expect fun getPersistentStoragePath(): String
+
+/**
+ * Whether Wi-Fi Aware (NAN — Neighbor Awareness Networking, IEEE 802.11) is usable
+ * on *this device, right now*. Distinct from compile-time support: even when both
+ * the OS version and the framework are present, the underlying Wi-Fi chipset may
+ * not implement NAN. Read every time it matters — `P2pTechnology.WiFiAware.isAvailable`
+ * delegates here, and the transport selector uses it to silently fall back to LAN/hotspot
+ * for users on un-blessed hardware or older OS releases.
+ *
+ * Per-platform truth table:
+ *  - Android: API 26+ AND `PackageManager.FEATURE_WIFI_AWARE` declared by the device.
+ *  - iOS: 26.0+ runtime (the framework class isn't present below).
+ *  - macOS / Windows / Linux / Web: not supported (Apple hasn't shipped it on macOS;
+ *    Microsoft has no roadmap; Linux support via wpa_supplicant exists but is too
+ *    hardware-dependent to claim in this shape).
+ */
+expect fun isWifiAwareSupported(): Boolean
+
+/** Service name advertised by Jetzy on Wi-Fi Aware NAN clusters. Both sides publish *and* subscribe to it. */
+const val JETZY_WIFI_AWARE_SERVICE = "jetzy"
+
+/**
+ * mDNS / Bonjour service type advertised on the LAN. The leading underscore and
+ * `._tcp.local.` suffix are the standard form RFC 6763 wants; Android NsdManager
+ * sometimes strips/re-adds the trailing dot, iOS's NWListener keeps it explicit,
+ * jmdns normalises to one of the two — all three end up speaking the same wire.
+ */
+const val JETZY_MDNS_SERVICE_TYPE = "_jetzy._tcp."
+const val JETZY_MDNS_SERVICE_TYPE_NO_DOT = "_jetzy._tcp"
+
+/** RFCOMM SPP UUID for Bluetooth Classic between Jetzy peers. v4 random, stable across builds. */
+const val JETZY_BLUETOOTH_SPP_UUID = "f4f8e3d1-2b8a-4d6c-9f1e-7a8b3c4d5e6f"

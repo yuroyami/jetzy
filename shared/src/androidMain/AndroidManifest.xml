@@ -29,8 +29,24 @@
     <!-- Battery optimization opt-out so the OS doesn't kill us mid-transfer. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- Bluetooth Classic SPP transport (fallback when Wi-Fi-based paths fail). API 31+
+         splits BT permissions into _CONNECT (pair/socket) and _SCAN (discovery); older
+         APIs used the umbrella BLUETOOTH/BLUETOOTH_ADMIN, both kept for compatibility. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" tools:targetApi="31" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+
     <uses-feature
         android:name="android.hardware.wifi.direct"
+        android:required="false" />
+
+    <!-- Wi-Fi Aware (NAN). Optional — devices without the chip silently fall back
+         to HotspotLAN, no app behavior change for them. Required=false keeps the
+         app installable on phones lacking the feature (most phones from before ~2020). -->
+    <uses-feature
+        android:name="android.hardware.wifi.aware"
         android:required="false" />
 
     <application>

@@ -1,6 +1,8 @@
 package jetzy.utils
 
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.StatFs
@@ -25,6 +27,12 @@ actual fun getAvailableStorageBytes(): Long = runCatching {
 }.getOrDefault(Long.MAX_VALUE)
 
 actual fun getPersistentStoragePath(): String = MainActivity.contextGetter().filesDir.absolutePath
+
+actual fun isWifiAwareSupported(): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
+    val ctx = runCatching { MainActivity.contextGetter() }.getOrNull() ?: return false
+    return ctx.packageManager.hasSystemFeature(PackageManager.FEATURE_WIFI_AWARE)
+}
 
 fun getLocalIpAddress(): String? {
     try {

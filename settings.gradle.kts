@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 rootProject.name = "Jetzy"
 include(":shared")
 include(":androidApp")
+include(":desktopApp")

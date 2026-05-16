@@ -2,7 +2,7 @@
 #KMM-Plugins
 fontAwesome = "1.1.1"
 kotlin = "2.3.20"
-agp = "9.1.1" #"9.0.0-alpha05"
+agp = "9.0.0" #"9.0.0-alpha05"
 compose-multiplatform = "1.11.0-beta02"
 kSerialization = "1.10.0"
 ksp = "2.3.6"
@@ -36,6 +36,10 @@ documentfile = "1.1.0"
 desugaring = "2.1.5"
 media3 = "1.8.0"
 
+## Desktop-only
+zxing = "3.5.3"
+jmdns = "3.6.0"
+
 [libraries] #######################################################################################
 ## KMM
 font-awesome = { module = "br.com.devsrsouza.compose.icons:font-awesome", version.ref = "fontAwesome" }
@@ -66,6 +70,10 @@ koin-compose-navigation3 = { module = "io.insert-koin:koin-compose-navigation3" 
 
 ## Android-only
 koroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "koroutines" }
+koroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "koroutines" }
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
+zxing-javase = { module = "com.google.zxing:javase", version.ref = "zxing" }
+jmdns = { module = "org.jmdns:jmdns", version.ref = "jmdns" }
 jetpack-core = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 jetpack-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 jetpack-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
@@ -89,6 +97,7 @@ compose-multiplatform = [
 
 [plugins] ########################################################################################
 multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 cocoapods = { id = "org.jetbrains.kotlin.native.cocoapods", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 compose-plugin = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }

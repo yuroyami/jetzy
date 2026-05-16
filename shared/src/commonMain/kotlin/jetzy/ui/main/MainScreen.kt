@@ -184,7 +184,7 @@ fun MainScreenUI() {
                             modifier = Modifier.fillMaxWidth().padding(3.sdp),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            val platforms = listOf(Platform.Android, Platform.IOS/*, Platform.PC, Platform.Web*/)
+                            val platforms = listOf(Platform.Android, Platform.IOS, Platform.PC/*, Platform.Web*/)
                             platforms.forEach { platform ->
                                 val isSelected by derivedStateOf { platform == peerPlatform }
                                 VerticalCardButton(

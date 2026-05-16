@@ -5,6 +5,7 @@ import io.ktor.utils.io.readAvailable
 import io.ktor.utils.io.writeFully
 import jetzy.p2p.P2pPeer
 import jetzy.utils.PreferablyIO
+import jetzy.utils.getDeviceName
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
@@ -38,7 +39,7 @@ private val STREAM_READY_TIMEOUT = 15.seconds
 
 class MpcP2PM : PeerDiscoveryP2PM() {
 
-    private val localPeerID = MCPeerID(displayName = platform.UIKit.UIDevice.currentDevice.name)
+    private val localPeerID = MCPeerID(displayName = getDeviceName())
     private val session = MCSession(peer = localPeerID, securityIdentity = null, encryptionPreference = MCEncryptionOptional)
 
     private var advertiser: MCNearbyServiceAdvertiser? = null

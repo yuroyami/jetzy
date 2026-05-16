@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalDistributionDsl::class)
 @file:Suppress("WrongGradleMethod")
 import io.github.yuroyami.kmpssot.kmpSsot
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalDistributionDsl
 
 plugins {
@@ -53,6 +54,22 @@ kotlin {
     iosArm64()
     //iosSimulatorArm64()
 
+    // Native macOS target (Apple Silicon). Compiles the shared module's Apple
+    // surface — MPC, NSSharingService/AirDrop, Bonjour discovery — for macOS,
+    // so a future `:macosApp` module (Kotlin/Native Compose) can consume it.
+    // We don't emit a standalone executable here yet because Compose
+    // Multiplatform's macOS-native window API (`application { Window {...} }`)
+    // hasn't shipped a stable entry point as of Compose 1.11. The shared module
+    // still compiles as a klib usable from a future AppKit-hosted Compose
+    // wrapper. Intel Mac target (macosX64) is deprecated in Kotlin/Native's
+    // tier list and not included.
+    macosArm64()
+
+    // Apple-only shared source set (parent of iosMain + macosMain). MPC, AirDrop
+    // and any other Apple framework code lives here; the per-OS source sets keep
+    // the OS-specific entry points + delegates.
+    applyDefaultHierarchyTemplate()
+
     cocoapods {
         summary = "Some description for the Shared Module"
         homepage = "Link to the Shared Module homepage"
@@ -65,7 +82,7 @@ kotlin {
         }
     }
 
-    //jvm()
+    jvm("desktop")
 
     sourceSets {
         all {
@@ -130,14 +147,24 @@ kotlin {
             //api("com.google.android.gms:play-services-nearby:19.3.0")
         }
 
-//        jvmMain.dependencies {
-//            implementation(libs.compose.desktop)
-//            implementation(compose.desktop.currentOs)
-//        }
-//
-//        jsMain.dependencies {
-//
-//        }
+        val desktopMain by getting {
+            dependencies {
+                /* Compose Desktop runtime (Skia + Swing host for the current OS) */
+                implementation(compose.desktop.currentOs)
+
+                /* Coroutines on Swing-EDT for any UI-thread dispatching */
+                implementation(libs.koroutines.swing)
+
+                /* ZXing — decode QR codes pasted as text isn't enough; we also let the
+                 * user load a QR screenshot from disk since the desktop has no camera path. */
+                implementation(libs.zxing.core)
+                implementation(libs.zxing.javase)
+
+                /* jmdns — mDNS / Bonjour service advertising + discovery on the LAN.
+                 * Matches what Android's NsdManager and iOS's NWBrowser/NWListener speak. */
+                implementation(libs.jmdns)
+            }
+        }
 
         iosMain.dependencies {
 

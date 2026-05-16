@@ -26,6 +26,35 @@
 	<string>Jetzy needs permission to access your camera in order to scan peer's QR code.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Jetzy needs location permission to automatically connect to peer's hotspot.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Jetzy uses the local network to discover and send to nearby devices.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_jetzy._tcp</string>
+	</array>
+	<key>WiFiAwareServices</key>
+	<dict>
+		<key>jetzy</key>
+		<dict>
+			<key>Roles</key>
+			<dict>
+				<key>Publisher</key>
+				<dict>
+					<key>SupportsPairing</key>
+					<true/>
+					<key>SupportsRanging</key>
+					<false/>
+				</dict>
+				<key>Subscriber</key>
+				<dict>
+					<key>SupportsPairing</key>
+					<true/>
+					<key>SupportsRanging</key>
+					<false/>
+				</dict>
+			</dict>
+		</dict>
+	</dict>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

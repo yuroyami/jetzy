@@ -5,6 +5,7 @@ import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.toKString
+import kotlinx.cinterop.useContents
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import platform.Foundation.NSDate
@@ -12,6 +13,7 @@ import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSFileSystemFreeSize
 import platform.Foundation.NSNumber
+import platform.Foundation.NSProcessInfo
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSUserDomainMask
@@ -41,6 +43,19 @@ actual fun getAvailableStorageBytes(): Long {
 actual fun getPersistentStoragePath(): String {
     val paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true)
     return paths.firstOrNull() as? String ?: NSTemporaryDirectory()
+}
+
+/**
+ * iOS 26.0+ runtime check. We compile against iOS 26 SDK (Xcode 26) but the deployment
+ * target stays at 16 — so the `WiFiAware` framework classes only resolve on devices
+ * actually running iOS 26 or later. Lazy-load avoidance is handled by us refusing to
+ * instantiate `WifiAwareP2PM` when this returns false; the framework is not touched
+ * at all on iOS 16–18 (Apple jumped from 18 straight to 26 in 2025).
+ */
+@OptIn(ExperimentalForeignApi::class)
+actual fun isWifiAwareSupported(): Boolean {
+    val v = NSProcessInfo.processInfo.operatingSystemVersion
+    return v.useContents { majorVersion >= 26L }
 }
 
 @OptIn(ExperimentalForeignApi::class)
