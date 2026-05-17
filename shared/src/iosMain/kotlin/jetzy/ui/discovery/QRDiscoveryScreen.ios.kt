@@ -22,6 +22,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -48,6 +51,7 @@ import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.cancel
 import jetzy.shared.generated.resources.client_device
 import jetzy.shared.generated.resources.connect_to_device
+import jetzy.shared.generated.resources.ios_hotspot_autojoin_tip
 import jetzy.shared.generated.resources.point_camera_hint
 import jetzy.ui.LocalViewmodel
 import org.jetbrains.compose.resources.stringResource
@@ -106,6 +110,35 @@ actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
                     fontSize = 13.sp,
                     color = colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
+                )
+            }
+
+            // Auto-Join tip — appears only on iOS because the auto-join race
+            // (iOS racing back to a known home Wi-Fi mid-association) is an
+            // iOS-specific behavior. The SSID-verification retry in
+            // LanWifiP2PM.joinWithRetry handles the race transparently when it
+            // can, but the user-facing nudge avoids the retry altogether.
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.Top,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(colorScheme.surfaceContainerHigh)
+                    .border(0.5.dp, colorScheme.outlineVariant, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 14.dp, vertical = 11.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = null,
+                    tint = colorScheme.primary,
+                    modifier = Modifier.size(16.dp),
+                )
+                Text(
+                    text = stringResource(Res.string.ios_hotspot_autojoin_tip),
+                    fontSize = 11.sp,
+                    color = colorScheme.onSurfaceVariant,
+                    lineHeight = 15.sp,
                 )
             }
 

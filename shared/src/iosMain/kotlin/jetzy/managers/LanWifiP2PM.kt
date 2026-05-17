@@ -5,6 +5,7 @@ import io.ktor.network.sockets.aSocket
 import io.ktor.network.sockets.connection
 import jetzy.models.QRData
 import jetzy.utils.PreferablyIO
+import jetzy.utils.generateTimestampMillis
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
@@ -15,8 +16,10 @@ import kotlinx.coroutines.withTimeoutOrNull
 import platform.Foundation.NSError
 import platform.NetworkExtension.NEHotspotConfiguration
 import platform.NetworkExtension.NEHotspotConfigurationManager
+import platform.NetworkExtension.NEHotspotNetwork
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 class LanWifiP2PM : P2PManager() {
@@ -84,13 +87,29 @@ class LanWifiP2PM : P2PManager() {
     }
 
     /**
-     * Repeatedly applies the hotspot config until iOS reports success or we exhaust attempts.
+     * Repeatedly applies the hotspot config until iOS reports success *and* the
+     * device is actually associated with the requested SSID, or we exhaust attempts.
      * Each attempt is bounded by a timeout so a wedged call can't hang forever.
+     *
+     * The two-stage success criterion (apply + verify) is deliberate: `applyConfiguration`
+     * fires its completion handler when iOS *accepts* the join, not when the radio
+     * finishes associating. Between those two moments iOS's auto-join policy can
+     * race the new join — if a strong known network (e.g. home Wi-Fi) is in range,
+     * the device may briefly flap back to it and the apply "succeeds" while the
+     * radio is actually on the wrong SSID. The TCP step would then chase an IP
+     * we're not on the same subnet as and time out 20s later. Verifying via
+     * [verifyJoinedExpectedSsid] catches the race in seconds so we can retry.
      */
     private suspend fun joinWithRetry(qrData: QRData): Boolean {
         repeat(WIFI_JOIN_ATTEMPTS) { attempt ->
             val ok = withTimeoutOrNull(WIFI_JOIN_TIMEOUT) {
-                runCatching { connectToWifi(qrData) }.isSuccess
+                runCatching {
+                    connectToWifi(qrData)
+                    if (!verifyJoinedExpectedSsid(qrData.hotspotSSID)) {
+                        diag("apply OK but device is not on '${qrData.hotspotSSID}' — auto-join race")
+                        throw Exception("Joined wrong SSID")
+                    }
+                }.isSuccess
             }
             if (ok == true) return true
             diag("Wi-Fi join attempt ${attempt + 1}/$WIFI_JOIN_ATTEMPTS failed")
@@ -101,6 +120,31 @@ class LanWifiP2PM : P2PManager() {
             }
         }
         return false
+    }
+
+    /**
+     * Polls [NEHotspotNetwork.fetchCurrentWithCompletionHandler] until the
+     * device's current SSID matches [expectedSsid] or [JOIN_VERIFY_TIMEOUT]
+     * elapses. The apply-configuration callback doesn't wait for association
+     * to finish, so the radio may still be settling when we get here.
+     *
+     * Returns true once the SSID matches; false on timeout (which the caller
+     * treats as a failed attempt eligible for retry).
+     */
+    private suspend fun verifyJoinedExpectedSsid(expectedSsid: String): Boolean {
+        val deadline = generateTimestampMillis() + JOIN_VERIFY_TIMEOUT.inWholeMilliseconds
+        while (generateTimestampMillis() < deadline) {
+            val ssid = fetchCurrentSsid()
+            if (ssid == expectedSsid) return true
+            delay(JOIN_VERIFY_POLL_INTERVAL)
+        }
+        return false
+    }
+
+    private suspend fun fetchCurrentSsid(): String? = suspendCancellableCoroutine { cont ->
+        NEHotspotNetwork.fetchCurrentWithCompletionHandler { network ->
+            cont.resume(network?.SSID)
+        }
     }
 
     /** Once we're on the sender's Wi-Fi, dial the TCP server with bounded retries. */
@@ -150,5 +194,11 @@ class LanWifiP2PM : P2PManager() {
         private const val WIFI_JOIN_ATTEMPTS = 3
         private const val TCP_CONNECT_ATTEMPTS = 5
         private val WIFI_JOIN_TIMEOUT = 20.seconds
+        // Per-attempt budget for fetchCurrent to start returning the expected SSID
+        // after apply. Tuned so a clean join settles inside one attempt while a
+        // lost race still bails fast enough that we get all three retries inside
+        // [WIFI_JOIN_TIMEOUT].
+        private val JOIN_VERIFY_TIMEOUT = 6.seconds
+        private val JOIN_VERIFY_POLL_INTERVAL = 400.milliseconds
     }
 }

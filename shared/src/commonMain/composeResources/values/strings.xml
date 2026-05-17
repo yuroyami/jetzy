@@ -65,6 +65,7 @@
     <string name="client_device">CLIENT DEVICE</string>
     <string name="connect_to_device">Connect to a device</string>
     <string name="point_camera_hint">Point camera at the host\'s QR code</string>
+    <string name="ios_hotspot_autojoin_tip">If iOS keeps drifting back to your home Wi-Fi, open Settings → Wi-Fi, tap the ⓘ next to your home network and turn Auto-Join off before scanning. You can turn it back on after the transfer.</string>
 
     <!-- Peer Discovery Screen -->
     <string name="peer_discovery">PEER DISCOVERY</string>

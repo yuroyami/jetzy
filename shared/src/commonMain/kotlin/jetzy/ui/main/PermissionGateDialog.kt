@@ -5,18 +5,20 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +32,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -115,7 +118,7 @@ fun PermissionGateDialog(
 
                 Text(
                     text = stringResource(Res.string.permission_gate_title),
-                    fontSize = 13.ssp,
+                    fontSize = 11.ssp,
                     fontWeight = FontWeight.W600,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.fillMaxWidth(),
@@ -124,7 +127,7 @@ fun PermissionGateDialog(
 
                 Text(
                     text = stringResource(Res.string.permission_gate_subtitle),
-                    fontSize = 9.ssp,
+                    fontSize = 8.ssp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -132,14 +135,47 @@ fun PermissionGateDialog(
                     textAlign = TextAlign.Center,
                 )
 
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(6.sdp),
-                    modifier = Modifier
-                        .heightIn(max = 440.sdp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    requirements.forEachIndexed { index, req ->
-                        RequirementRow(req, isGranted = grantedFlags.getOrElse(index) { false })
+                val listScrollState = rememberScrollState()
+                Box(modifier = Modifier.heightIn(max = 380.sdp)) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(6.sdp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(listScrollState)
+                            // Leave room at the bottom so the last card isn't
+                            // hidden behind the fade-overlay when scrolled.
+                            .padding(bottom = 18.sdp)
+                    ) {
+                        requirements.forEachIndexed { index, req ->
+                            RequirementRow(req, isGranted = grantedFlags.getOrElse(index) { false })
+                        }
+                    }
+                    // Edge fade + chevron — only when there's still content
+                    // below the fold. Disappears once the user scrolls to the
+                    // last card, signalling "you've seen everything."
+                    if (listScrollState.canScrollForward) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .height(28.sdp)
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color.Transparent,
+                                            MaterialTheme.colorScheme.surface,
+                                        )
+                                    )
+                                ),
+                            contentAlignment = Alignment.BottomCenter,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.sdp),
+                            )
+                        }
                     }
                 }
 
@@ -226,10 +262,10 @@ private fun RequirementRow(req: PermissionRequirement, isGranted: Boolean) {
         ) {
             Text(
                 text = stringResource(req.titleRes),
-                fontSize = 10.ssp,
+                fontSize = 9.ssp,
                 fontWeight = FontWeight.W500,
                 color = scheme.onSurface,
-                lineHeight = 13.ssp,
+                lineHeight = 12.ssp,
             )
             Text(
                 text = stringResource(req.descriptionRes),
@@ -237,36 +273,44 @@ private fun RequirementRow(req: PermissionRequirement, isGranted: Boolean) {
                 color = scheme.onSurfaceVariant,
                 lineHeight = 11.ssp,
             )
-        }
 
-        Box(modifier = Modifier.width(6.sdp))
-
-        if (isGranted) {
-            Text(
-                text = when (req.kind) {
-                    PermissionRequirement.Kind.RUNTIME_PERMISSION -> stringResource(Res.string.permission_gate_granted)
-                    else -> stringResource(Res.string.permission_gate_enabled)
-                },
-                fontSize = 8.ssp,
-                color = grantedColor,
-                fontWeight = FontWeight.W500,
-                modifier = Modifier.padding(top = 2.sdp),
-            )
-        } else {
-            FilledTonalButton(
-                onClick = req.request,
-                shape = RoundedCornerShape(7.sdp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.sdp, vertical = 3.sdp),
+            // Action/status lives in the same column as the text so its label
+            // can never starve the title's width (which used to wrap titles
+            // letter-by-letter when the button label was long, e.g. "Open
+            // settings" on a SYSTEM_TOGGLE row).
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.sdp),
+                horizontalArrangement = Arrangement.End,
             ) {
-                Text(
-                    text = when (req.kind) {
-                        PermissionRequirement.Kind.RUNTIME_PERMISSION -> stringResource(Res.string.permission_gate_grant)
-                        PermissionRequirement.Kind.SYSTEM_TOGGLE -> stringResource(Res.string.permission_gate_open_settings)
-                        PermissionRequirement.Kind.BACKGROUND_OPTIN -> stringResource(Res.string.permission_gate_allow)
-                    },
-                    fontSize = 8.ssp,
-                    fontWeight = FontWeight.W500,
-                )
+                if (isGranted) {
+                    Text(
+                        text = when (req.kind) {
+                            PermissionRequirement.Kind.RUNTIME_PERMISSION -> stringResource(Res.string.permission_gate_granted)
+                            else -> stringResource(Res.string.permission_gate_enabled)
+                        },
+                        fontSize = 8.ssp,
+                        color = grantedColor,
+                        fontWeight = FontWeight.W500,
+                    )
+                } else {
+                    FilledTonalButton(
+                        onClick = req.request,
+                        shape = RoundedCornerShape(7.sdp),
+                        contentPadding = PaddingValues(horizontal = 10.sdp, vertical = 3.sdp),
+                    ) {
+                        Text(
+                            text = when (req.kind) {
+                                PermissionRequirement.Kind.RUNTIME_PERMISSION -> stringResource(Res.string.permission_gate_grant)
+                                PermissionRequirement.Kind.SYSTEM_TOGGLE -> stringResource(Res.string.permission_gate_open_settings)
+                                PermissionRequirement.Kind.BACKGROUND_OPTIN -> stringResource(Res.string.permission_gate_allow)
+                            },
+                            fontSize = 8.ssp,
+                            fontWeight = FontWeight.W500,
+                        )
+                    }
+                }
             }
         }
     }

@@ -1,5 +1,5 @@
 plugins {
-    id("io.github.yuroyami.kmpssot") version "1.0.4"
+    id("io.github.yuroyami.kmpssot") version "1.3.1"
     alias(libs.plugins.multiplatform).apply(false)
     alias(libs.plugins.cocoapods).apply(false)
     alias(libs.plugins.compose.compiler).apply(false)
@@ -13,7 +13,7 @@ plugins {
 
 kmpSsot {
     appName         = "Jetzy"
-    versionName     = "0.4.0"
+    versionName     = "0.4.1"
     bundleIdBase    = "com.yuroyami.jetzy"
     iosBundleSuffix = ".ios"        // explicit
     javaVersion     = 21
@@ -21,8 +21,14 @@ kmpSsot {
     sharedModule     = "shared"
     androidAppModule = "androidApp"
 
-    appLogoXml = file("shared/src/commonMain/composeResources/drawable/jetzy_vector.xml")
-    appLogoPng = file("shared/src/commonMain/composeResources/drawable/jetzy_raster_withbg.png")
+    appLogoPngForeground   = file("shared/src/commonMain/composeResources/drawable/jetzy_raster.png")
+    appLogoBackgroundColor = "#55555B"
+    appLogoAndroidSafeZoneRatio = 0.7
+
+    ios {
+        usesNonExemptEncryption = false   // silences App Store "Missing Compliance"
+        proMotion120Hz          = true    // unlock 120 Hz on ProMotion iPhones
+    }
 
     // locales auto-detected from shared/src/commonMain/composeResources/values-*
     // (Jetzy has none yet, so the list stays empty.)
