@@ -12,6 +12,7 @@ import io.ktor.network.sockets.connection
 import io.ktor.network.sockets.port
 import jetzy.MainActivity
 import jetzy.models.QRData
+import jetzy.p2p.P2pTechnology
 import jetzy.permissions.AndroidPermissionRequirements
 import jetzy.permissions.PermissionRequirement
 import jetzy.utils.PreferablyIO
@@ -127,6 +128,11 @@ class HotspotP2PM(private val context: Context) : P2PManager() {
                 port = boundSocket.port,
                 deviceName = getDeviceName(),
                 sessionId = session,
+                // Advertised so a scanner who supports a faster mutual transport
+                // (e.g. Wi-Fi Aware) can spot it and offer to upgrade after the
+                // initial hotspot connection is up. Zero-cost when no upgrade is
+                // possible — older scanners ignore the trailing QR field.
+                capabilities = P2pTechnology.localCapabilitiesMask(),
             )
         } catch (e: Exception) {
             diag("hotspot start failed: ${e.message ?: e::class.simpleName}")

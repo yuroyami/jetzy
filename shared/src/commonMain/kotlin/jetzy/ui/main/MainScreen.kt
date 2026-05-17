@@ -53,6 +53,7 @@ import jetzy.ui.Screen
 import jetzy.utils.ComposeUtils.JetzyText
 import jetzy.utils.ComposeUtils.scheme
 import jetzy.utils.Platform
+import jetzy.utils.platform
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -184,7 +185,17 @@ fun MainScreenUI() {
                             modifier = Modifier.fillMaxWidth().padding(3.sdp),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            val platforms = listOf(Platform.Android, Platform.IOS, Platform.PC/*, Platform.Web*/)
+                            // PC is hidden on iOS until the App Store build ships:
+                            // [Platform.peerLabel] anonymizes non-self platforms as
+                            // "Another platform" to satisfy App Store guidelines, so
+                            // PC + Android would render as two indistinguishable
+                            // buttons. On Android (and other hosts), PC stays visible.
+                            val platforms = buildList {
+                                add(Platform.Android)
+                                add(Platform.IOS)
+                                if (platform != Platform.IOS) add(Platform.PC)
+                                // add(Platform.Web)
+                            }
                             platforms.forEach { platform ->
                                 val isSelected by derivedStateOf { platform == peerPlatform }
                                 VerticalCardButton(

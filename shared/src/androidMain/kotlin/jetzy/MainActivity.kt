@@ -92,7 +92,14 @@ class MainActivity: ComponentActivity(), P2pPlatformCallback {
                 if (isWifiAwareSupported()) WifiAwareP2PM(this) else WiFiDirectP2PM(this)
             }
             Platform.IOS -> {
-                if (isWifiAwareSupported()) WifiAwareP2PM(this) else HotspotP2PM(this)
+                // Default to hotspot+QR. Wi-Fi Aware needs *both* sides to support it
+                // and there's no pre-pairing handshake to find that out — iOS 26+ on
+                // a NAN-capable chip is still rare in the wild, so optimistically
+                // picking Wi-Fi Aware here ends up publishing on an empty NAN cluster
+                // while the iOS side sits on its QR scanner. Hotspot+QR works on
+                // every iOS we support. Users who *know* both sides have Wi-Fi
+                // Aware can opt into it via the "Try a different transport" ladder.
+                HotspotP2PM(this)
             }
             // Android↔PC priority:
             //   1. Wi-Fi Direct (Linux/Windows side speaks the standard)
@@ -122,9 +129,14 @@ class MainActivity: ComponentActivity(), P2pPlatformCallback {
             { BluetoothSppP2PM(this) },
         )
         Platform.IOS -> listOf(
-            { if (isWifiAwareSupported()) WifiAwareP2PM(this) else HotspotP2PM(this) },
-            { LanMdnsP2PM(this) },
+            // First rung mirrors the primary so "Try a different transport" cleanly
+            // restarts a broken hotspot session before changing strategy.
             { HotspotP2PM(this) },
+            // mDNS works when both happen to be on the same Wi-Fi.
+            { LanMdnsP2PM(this) },
+            // Wi-Fi Aware: opportunistic upgrade for users who know both sides
+            // support it (iOS 26+ on a NAN-capable chip).
+            { if (isWifiAwareSupported()) WifiAwareP2PM(this) else HotspotP2PM(this) },
         )
         Platform.PC -> listOf(
             { LanMdnsP2PM(this) },

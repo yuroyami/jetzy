@@ -41,7 +41,15 @@ fun MainViewController(): UIViewController = ComposeUIViewController(
                 override fun getSuitableP2pManager(peerPlatform: jetzy.utils.Platform): P2PManager? {
                     return when (peerPlatform) {
                         jetzy.utils.Platform.Android -> {
-                            wifiAwareBridge?.let { WifiAwareP2PM.create(it) } ?: LanWifiP2PM()
+                            // Default to the QR/hotspot-join path. Wi-Fi Aware needs
+                            // *both* sides to support it and there's no pre-pairing
+                            // handshake to know that — optimistically picking it
+                            // leaves the iPhone on a NAN cluster while the Android
+                            // side is hosting a hotspot the user is trying to scan
+                            // a QR for. LanWifi works against any Android we
+                            // support. Wi-Fi Aware is available via the manual
+                            // fallback ladder for users who know both sides do.
+                            LanWifiP2PM()
                         }
                         Platform.IOS -> MpcP2PM()
                         Platform.PC -> LanMdnsP2PM()
@@ -51,9 +59,17 @@ fun MainViewController(): UIViewController = ComposeUIViewController(
 
                 override fun getFallbackP2pManagers(peerPlatform: jetzy.utils.Platform): List<() -> P2PManager?> = when (peerPlatform) {
                     jetzy.utils.Platform.Android -> listOf(
-                        { wifiAwareBridge?.let { WifiAwareP2PM.create(it) } ?: LanWifiP2PM() },
-                        { LanMdnsP2PM() },
+                        // First rung mirrors the primary — re-scanning the QR cleanly
+                        // restarts a broken hotspot session before we change strategy.
                         { LanWifiP2PM() },
+                        // Same-Wi-Fi shortcut: skip the hotspot dance if both sides
+                        // happen to be on the same network already.
+                        { LanMdnsP2PM() },
+                        // Wi-Fi Aware: opportunistic upgrade for users who know both
+                        // sides support it (iOS 26+ on a NAN-capable chip + an
+                        // Android with FEATURE_WIFI_AWARE). Falls back to LanWifi
+                        // when the bridge isn't available.
+                        { wifiAwareBridge?.let { WifiAwareP2PM.create(it) } ?: LanWifiP2PM() },
                     )
                     Platform.IOS -> listOf(
                         { MpcP2PM() },

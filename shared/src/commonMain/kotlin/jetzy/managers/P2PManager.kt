@@ -21,6 +21,7 @@ import jetzy.managers.JetzyProtocol.ManifestFrame
 import jetzy.models.JetzyElement
 import jetzy.models.flattenFolder
 import jetzy.p2p.P2pOperation
+import jetzy.p2p.P2pTechnology
 import jetzy.permissions.PermissionRequirement
 import jetzy.ui.Screen
 import jetzy.ui.transfer.EntryType
@@ -658,17 +659,35 @@ abstract class P2PManager {
     private suspend fun performHandshakeAsSender(input: ByteReadChannel, output: ByteWriteChannel) {
         JetzyProtocol.writeHandshake(output)
         JetzyProtocol.readHandshake(input)
-        JetzyProtocol.writeHello(output, HelloFrame(getDeviceName(), platform))
+        JetzyProtocol.writeHello(output, HelloFrame(getDeviceName(), platform, P2pTechnology.localCapabilitiesMask()))
         val peer = JetzyProtocol.readHello(input)
         remotePeerInfo.value = PeerInfo(peer.name, peer.platform)
+        logPeerCapabilities(peer.capabilities)
     }
 
     private suspend fun performHandshakeAsReceiver(input: ByteReadChannel, output: ByteWriteChannel) {
         JetzyProtocol.readHandshake(input)
         JetzyProtocol.writeHandshake(output)
         val peer = JetzyProtocol.readHello(input)
-        JetzyProtocol.writeHello(output, HelloFrame(getDeviceName(), platform))
+        JetzyProtocol.writeHello(output, HelloFrame(getDeviceName(), platform, P2pTechnology.localCapabilitiesMask()))
         remotePeerInfo.value = PeerInfo(peer.name, peer.platform)
+        logPeerCapabilities(peer.capabilities)
+    }
+
+    /**
+     * Diagnostic-only for now: surface the mutual capability set so we can see
+     * what an opportunistic-upgrade negotiator would have to work with. When
+     * the upgrade logic lands it'll consume the same intersection.
+     */
+    private fun logPeerCapabilities(peerMask: Long) {
+        if (peerMask == 0L) {
+            diag("peer caps: (none advertised — pre-v3 build)")
+            return
+        }
+        with(P2pTechnology) {
+            val mutual = (peerMask and localCapabilitiesMask()).toCapabilities()
+            diag("peer caps mask=0x${peerMask.toString(16)}; mutual=${mutual.joinToString { it.id }.ifEmpty { "(none)" }}")
+        }
     }
 
     // ── Resume helpers ───────────────────────────────────────────────────────

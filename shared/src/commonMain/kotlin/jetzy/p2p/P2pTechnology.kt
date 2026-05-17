@@ -17,7 +17,14 @@ sealed class P2pTechnology(
     val icon: ImageVector,
     val supportedPlatforms: Set<Platform>,
     val priority: P2pTechPriority,
-    val discoveryMode: P2pDiscoveryMode
+    val discoveryMode: P2pDiscoveryMode,
+    /**
+     * Stable bit assignment for the [jetzy.managers.JetzyProtocol.HelloFrame.capabilities]
+     * bitmask and the `caps` field in [jetzy.models.QRData]. Each technology owns one bit
+     * for life; new technologies take the next free bit. Never re-number a shipped bit —
+     * older peers will misinterpret the mask. 64 slots available (Long width).
+     */
+    val capabilityBit: Int,
 ) {
     companion object Registry {
         val allMethods = listOf(
@@ -32,6 +39,22 @@ sealed class P2pTechnology(
         }
 
         fun getMethodById(id: String): P2pTechnology? = allMethods.find { it.id == id }
+
+        /**
+         * Capabilities of the local device — every technology where [supportedPlatforms]
+         * includes our platform and the technology's own `isAvailable` self-check passes
+         * (e.g. [WiFiAware] also needs the Wi-Fi Aware feature to be present at runtime).
+         * Shipped in QR codes (host → client) and in HELLO frames (both directions) so
+         * a future negotiation step can pick the best mutual transport without anyone
+         * having to guess about the peer's hardware.
+         */
+        fun localCapabilitiesMask(): Long =
+            allMethods.filter { it.isAvailable(platform, platform) }
+                .fold(0L) { acc, t -> acc or (1L shl t.capabilityBit) }
+
+        /** Inverse of the bitmask — useful for diagnostics / negotiation. */
+        fun Long.toCapabilities(): Set<P2pTechnology> =
+            allMethods.filterTo(mutableSetOf()) { (this and (1L shl it.capabilityBit)) != 0L }
     }
 
     abstract fun isAvailable(currentPlatform: Platform, targetPlatform: Platform): Boolean
@@ -51,6 +74,7 @@ sealed class P2pTechnology(
         priority = P2pTechPriority.RECOMMENDED,
         icon = Icons.Outlined.Sensors,
         discoveryMode = P2pDiscoveryMode.PeerDiscovery,
+        capabilityBit = 0,
     ) {
         override fun isAvailable(currentPlatform: Platform, targetPlatform: Platform): Boolean {
             if (currentPlatform !in supportedPlatforms || targetPlatform !in supportedPlatforms) return false
@@ -73,6 +97,7 @@ sealed class P2pTechnology(
         priority = P2pTechPriority.RECOMMENDED,
         icon = Icons.Outlined.Lan,
         discoveryMode = P2pDiscoveryMode.PeerDiscovery,
+        capabilityBit = 4,
     ) {
         override fun isAvailable(currentPlatform: Platform, targetPlatform: Platform): Boolean {
             // We can't *know* the peer is on the same LAN, only that both platforms support mDNS.
@@ -89,8 +114,8 @@ sealed class P2pTechnology(
         supportedPlatforms = setOf(Platform.Web, Platform.PC),
         priority = P2pTechPriority.ACCEPTABLE,
         icon = Icons.Outlined.Lan,
-        discoveryMode = P2pDiscoveryMode.QRCode
-
+        discoveryMode = P2pDiscoveryMode.QRCode,
+        capabilityBit = 5,
     ) {
         override fun isAvailable(currentPlatform: Platform, targetPlatform: Platform): Boolean {
             return currentPlatform in supportedPlatforms && targetPlatform in supportedPlatforms
@@ -109,6 +134,7 @@ sealed class P2pTechnology(
         priority = P2pTechPriority.FALLBACK,
         icon = Icons.Outlined.Bluetooth,
         discoveryMode = P2pDiscoveryMode.PeerDiscovery,
+        capabilityBit = 7,
     ) {
         override fun isAvailable(currentPlatform: Platform, targetPlatform: Platform): Boolean {
             return currentPlatform in supportedPlatforms && targetPlatform in supportedPlatforms
@@ -122,7 +148,8 @@ sealed class P2pTechnology(
         supportedPlatforms = setOf(Platform.Android, Platform.IOS, Platform.PC),
         priority = P2pTechPriority.FALLBACK,
         icon = Icons.Outlined.Bluetooth,
-        discoveryMode = P2pDiscoveryMode.PeerDiscovery
+        discoveryMode = P2pDiscoveryMode.PeerDiscovery,
+        capabilityBit = 8,
     ) {
         override fun isAvailable(currentPlatform: Platform, targetPlatform: Platform): Boolean {
             // Until we ship a Bluetooth Classic stack on iOS (MFi-gated) or BLE-based transfer,
@@ -141,7 +168,8 @@ sealed class P2pTechnology(
         supportedPlatforms = setOf(Platform.Android, Platform.PC),
         priority = P2pTechPriority.RECOMMENDED,
         icon = Icons.Outlined.LeakAdd,
-        discoveryMode = P2pDiscoveryMode.PeerDiscovery
+        discoveryMode = P2pDiscoveryMode.PeerDiscovery,
+        capabilityBit = 1,
     ) {
         override fun isAvailable(currentPlatform: Platform, targetPlatform: Platform): Boolean {
             return currentPlatform in supportedPlatforms && targetPlatform in supportedPlatforms
@@ -153,7 +181,8 @@ sealed class P2pTechnology(
         supportedPlatforms = setOf(Platform.Android),
         priority = P2pTechPriority.RECOMMENDED,
         icon = Icons.Outlined.Hub,
-        discoveryMode = P2pDiscoveryMode.PeerDiscovery
+        discoveryMode = P2pDiscoveryMode.PeerDiscovery,
+        capabilityBit = 2,
     ) {
         override fun isAvailable(currentPlatform: Platform, targetPlatform: Platform): Boolean {
             return currentPlatform == Platform.Android && targetPlatform == Platform.Android
@@ -165,7 +194,8 @@ sealed class P2pTechnology(
         supportedPlatforms = setOf(Platform.Android, Platform.IOS),
         priority = P2pTechPriority.ACCEPTABLE,
         icon = Icons.Outlined.WifiTethering,
-        discoveryMode = P2pDiscoveryMode.QRCode
+        discoveryMode = P2pDiscoveryMode.QRCode,
+        capabilityBit = 6,
     ) {
         override fun isAvailable(currentPlatform: Platform, targetPlatform: Platform): Boolean {
             return currentPlatform in setOf(Platform.Android, Platform.IOS) &&
@@ -179,7 +209,8 @@ sealed class P2pTechnology(
         supportedPlatforms = setOf(Platform.IOS),
         priority = P2pTechPriority.RECOMMENDED,
         icon = Icons.Outlined.Hub,
-        discoveryMode = P2pDiscoveryMode.PeerDiscovery
+        discoveryMode = P2pDiscoveryMode.PeerDiscovery,
+        capabilityBit = 3,
     ) {
         override fun isAvailable(currentPlatform: Platform, targetPlatform: Platform): Boolean {
             return currentPlatform == Platform.IOS && targetPlatform == Platform.IOS
