@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
@@ -28,6 +29,22 @@ class LanWifiP2PM : P2PManager() {
 
     private var activeJob: Job? = null
     private var lastQrData: QRData? = null
+    private var selectorManager: SelectorManager? = null
+
+    private fun selector(): SelectorManager =
+        selectorManager ?: SelectorManager(PreferablyIO).also { selectorManager = it }
+
+    /**
+     * Non-null when [joinWithRetry] gave up because iOS associated with a
+     * *different* network than the one in the QR — i.e. the auto-join policy
+     * raced our join and won. Carries the requested SSID so the UI can name it
+     * in the recovery dialog. Cleared on [retryConnect] and after a successful
+     * join. Stays null for cellular-only users (they have nothing to race
+     * against), for users with Auto-Join disabled on conflicting networks, and
+     * for non-race failures like an apply-timeout or user cancellation — those
+     * still go through the regular snack-based error path.
+     */
+    val joinRaceDetected = MutableStateFlow<String?>(null)
 
     fun establishTcpClient(qrData: QRData): Job {
         activeJob?.cancel()
@@ -43,6 +60,10 @@ class LanWifiP2PM : P2PManager() {
     fun retryConnect(): Boolean {
         val qr = lastQrData ?: return false
         activeJob?.cancel()
+        // Clear race state so the dialog dismisses; if the race repeats, the
+        // next [joinWithRetry] pass will set it again.
+        joinRaceDetected.value = null
+        isHandshaking.value = true  // show the overlay again for the duration of this attempt
         activeJob = p2pScope.launch(PreferablyIO) {
             diag("user-triggered retry")
             connectAttempt(qr)
@@ -65,7 +86,15 @@ class LanWifiP2PM : P2PManager() {
                 val joined = joinWithRetry(qrData)
                 if (!joined) {
                     diag("Wi-Fi join gave up after $WIFI_JOIN_ATTEMPTS attempts")
-                    viewmodel.snacky("Couldn't join ${qrData.hotspotSSID}. Tap Retry to try again.")
+                    // Clear the blocking handshake overlay so the snackbar / race-recovery
+                    // dialog is actually reachable (otherwise the spinner traps the screen).
+                    isHandshaking.value = false
+                    // When the auto-join race lost, the UI's race-recovery dialog
+                    // owns the messaging — don't double up with a snack. Only the
+                    // generic non-race failure path falls through to snacky.
+                    if (joinRaceDetected.value == null) {
+                        viewmodel.snacky("Couldn't join ${qrData.hotspotSSID}. Tap Retry to try again.")
+                    }
                     return
                 }
                 diag("Wi-Fi joined; waiting for network to settle")
@@ -76,11 +105,13 @@ class LanWifiP2PM : P2PManager() {
             val connected = tcpConnectWithTimeout(qrData)
             if (!connected) {
                 diag("TCP connect gave up after $TCP_CONNECT_ATTEMPTS attempts")
+                isHandshaking.value = false
                 viewmodel.snacky("Couldn't reach sender at ${qrData.ipAddress}:${qrData.port}. Tap Retry to try again.")
                 return
             }
             diag("connected")
         } catch (e: Exception) {
+            isHandshaking.value = false
             diag("connect attempt failed: ${e.message ?: e::class.simpleName}")
             viewmodel.snacky("Connection error: ${e.message ?: "unknown"}")
         }
@@ -101,18 +132,35 @@ class LanWifiP2PM : P2PManager() {
      * [verifyJoinedExpectedSsid] catches the race in seconds so we can retry.
      */
     private suspend fun joinWithRetry(qrData: QRData): Boolean {
+        // Cleared at the top of each call so a stale race-state from a prior
+        // attempt doesn't keep the dialog up if the radio finally settles right.
+        joinRaceDetected.value = null
         repeat(WIFI_JOIN_ATTEMPTS) { attempt ->
             val ok = withTimeoutOrNull(WIFI_JOIN_TIMEOUT) {
                 runCatching {
                     connectToWifi(qrData)
                     if (!verifyJoinedExpectedSsid(qrData.hotspotSSID)) {
                         diag("apply OK but device is not on '${qrData.hotspotSSID}' — auto-join race")
+                        joinRaceDetected.value = qrData.hotspotSSID
                         throw Exception("Joined wrong SSID")
                     }
                 }.isSuccess
             }
-            if (ok == true) return true
+            if (ok == true) {
+                joinRaceDetected.value = null
+                return true
+            }
             diag("Wi-Fi join attempt ${attempt + 1}/$WIFI_JOIN_ATTEMPTS failed")
+            // Auto-join policy is deterministic over short windows — if the
+            // race lost once, retrying with the same network conditions will
+            // lose again. Bail immediately so the UI can prompt the user to
+            // disable Auto-Join (the one thing that actually unblocks this).
+            // Non-race failures (apply-timeout, user-cancelled join) still
+            // get the full retry budget.
+            if (joinRaceDetected.value != null) {
+                diag("race detected; skipping remaining retries — user action required")
+                return false
+            }
             if (attempt < WIFI_JOIN_ATTEMPTS - 1) {
                 // Back off: 1s, 2s, 4s… (capped)
                 val backoffSec = (1L shl attempt).coerceAtMost(4L)
@@ -151,7 +199,7 @@ class LanWifiP2PM : P2PManager() {
     private suspend fun tcpConnectWithTimeout(qrData: QRData): Boolean {
         repeat(TCP_CONNECT_ATTEMPTS) { attempt ->
             val ok = runCatching {
-                val ktor = aSocket(SelectorManager(Dispatchers.IO))
+                val ktor = aSocket(selector())
                     .tcp()
                     .connect(qrData.ipAddress, qrData.port)
                 connection = ktor.connection()
@@ -186,6 +234,8 @@ class LanWifiP2PM : P2PManager() {
     override suspend fun cleanup() {
         activeJob?.cancel()
         activeJob = null
+        runCatching { selectorManager?.close() }
+        selectorManager = null
         lastQrData?.let { NEHotspotConfigurationManager.sharedManager.removeConfigurationForSSID(it.hotspotSSID) }
         super.cleanup()
     }
