@@ -5,7 +5,6 @@ import io.ktor.network.sockets.aSocket
 import io.ktor.network.sockets.connection
 import jetzy.models.QRData
 import jetzy.utils.PreferablyIO
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -31,6 +30,10 @@ class LanP2PM : P2PManager() {
 
     private var activeJob: Job? = null
     private var lastQrData: QRData? = null
+    private var selectorManager: SelectorManager? = null
+
+    private fun selector(): SelectorManager =
+        selectorManager ?: SelectorManager(PreferablyIO).also { selectorManager = it }
 
     fun establishTcpClient(qrData: QRData): Job {
         activeJob?.cancel()
@@ -60,6 +63,7 @@ class LanP2PM : P2PManager() {
             diag("connecting to ${qrData.ipAddress}:${qrData.port}…")
             if (!tcpConnectWithRetry(qrData)) {
                 diag("TCP connect gave up after $TCP_CONNECT_ATTEMPTS attempts")
+                isHandshaking.value = false  // clear the blocking overlay so the user can retry
                 viewmodel.snacky(
                     "Couldn't reach sender at ${qrData.ipAddress}:${qrData.port}. " +
                             "Are you joined to ${qrData.hotspotSSID.ifBlank { "the right Wi-Fi" }}?"
@@ -68,6 +72,7 @@ class LanP2PM : P2PManager() {
             }
             diag("connected")
         } catch (e: Exception) {
+            isHandshaking.value = false
             diag("connect attempt failed: ${e.message ?: e::class.simpleName}")
             viewmodel.snacky("Connection error: ${e.message ?: "unknown"}")
         }
@@ -76,7 +81,7 @@ class LanP2PM : P2PManager() {
     private suspend fun tcpConnectWithRetry(qrData: QRData): Boolean {
         repeat(TCP_CONNECT_ATTEMPTS) { attempt ->
             val ok = runCatching {
-                val ktor = aSocket(SelectorManager(Dispatchers.IO))
+                val ktor = aSocket(selector())
                     .tcp()
                     .connect(qrData.ipAddress, qrData.port)
                 connection = ktor.connection()
@@ -91,6 +96,8 @@ class LanP2PM : P2PManager() {
     override suspend fun cleanup() {
         activeJob?.cancel()
         activeJob = null
+        runCatching { selectorManager?.close() }
+        selectorManager = null
         super.cleanup()
     }
 

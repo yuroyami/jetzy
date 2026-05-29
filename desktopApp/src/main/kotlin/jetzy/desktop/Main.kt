@@ -10,7 +10,6 @@ import jetzy.managers.LanHostP2PM
 import jetzy.managers.LanMdnsP2PM
 import jetzy.managers.LanP2PM
 import jetzy.managers.P2PManager
-import jetzy.managers.WiFiDirectP2PM
 import jetzy.p2p.P2pOperation
 import jetzy.p2p.P2pPlatformCallback
 import jetzy.ui.AdamScreen
@@ -48,10 +47,10 @@ fun main() = application {
  */
 private class DesktopP2pCallback(private val vm: JetzyViewmodel) : P2pPlatformCallback {
     override fun getSuitableP2pManager(peerPlatform: Platform): P2PManager? = when (peerPlatform) {
-        // PC↔Android: try Wi-Fi Direct first (where supported — Linux only for now);
-        // mDNS otherwise. Wi-Fi Direct currently no-ops on Win/macOS, falling silently
-        // through to the next attempt the user makes.
-        Platform.Android -> if (canUseWiFiDirect()) WiFiDirectP2PM() else LanMdnsP2PM()
+        // PC↔Android: mDNS over the shared Wi-Fi/Ethernet. Desktop Wi-Fi Direct can form a
+        // group but has no implemented data path yet (it would hang the transfer), so it's
+        // kept out of the default and the fallback ladder until that lands.
+        Platform.Android -> LanMdnsP2PM()
         // PC↔iOS: mDNS is the cleanest path. The legacy LanHostP2PM with empty SSID
         // is also valid via the fallback ladder.
         Platform.IOS -> LanMdnsP2PM()
@@ -61,16 +60,8 @@ private class DesktopP2pCallback(private val vm: JetzyViewmodel) : P2pPlatformCa
         else -> null
     }
 
-    private fun canUseWiFiDirect(): Boolean {
-        val os = System.getProperty("os.name").orEmpty().lowercase()
-        // Linux via wpa_supplicant, Windows via PowerShell+WinRT. macOS deferred —
-        // Apple doesn't expose Wi-Fi Direct publicly.
-        return "linux" in os || "nix" in os || "nux" in os || "win" in os
-    }
-
     override fun getFallbackP2pManagers(peerPlatform: Platform): List<() -> P2PManager?> = when (peerPlatform) {
         Platform.Android -> listOf(
-            { if (canUseWiFiDirect()) WiFiDirectP2PM() else LanMdnsP2PM() },
             { LanMdnsP2PM() },
             { LanP2PM() },           // legacy hotspot-join QR-paste flow
             { BluetoothSppP2PM() },  // Linux-only for now; gracefully no-ops on other OSes
