@@ -39,6 +39,7 @@ import WiFiAware
 
     private var activeConnections: [String: NWConnection] = [:]
     private var pairedDevicesById: [String: WAPairedDevice] = [:]
+    private var endpointsByPeerId: [String: NWEndpoint] = [:]
     private var pairedDevicesTask: Task<Void, Never>?
 
     // MARK: - JZWifiAwareBridge
@@ -73,7 +74,11 @@ import WiFiAware
 
     public func connectToPeer(peerId: String) {
         guard let cb = listenerCallback else { return }
-        guard let device = pairedDevicesById[peerId] else {
+        // peerId is the browse-result endpoint id we emitted in onPeerFound — dial that endpoint
+        // directly. (The old code looked peerId up in pairedDevicesById, which is keyed by the
+        // paired-device id — a different namespace — so connectToPeer always failed with
+        // "Unknown peer id" for every real selection.)
+        guard let endpoint = endpointsByPeerId[peerId] else {
             cb.onError(message: "Unknown peer id: \(peerId)")
             return
         }
@@ -82,22 +87,15 @@ import WiFiAware
             return
         }
 
-        // Spin up a one-shot browser targeting just this device; first result is the endpoint we dial.
         let provider: WASubscriberBrowser = .wifiAware(
-            .connecting(to: .selected([device]), from: subscribeService)
+            .connecting(to: .allPairedDevices, from: subscribeService)
         )
         let parameters = NWParameters().wifiAware { (p: inout WAParameters) in
             p.performanceMode = .bulk
         }
         provider.configureParameters(parameters)
 
-        let oneShot = NWBrowser(for: provider.makeDescriptor(), using: parameters)
-        oneShot.browseResultsChangedHandler = { [weak self] (results: Set<NWBrowser.Result>, _: Set<NWBrowser.Result.Change>) in
-            guard let self = self, let firstResult = results.first else { return }
-            oneShot.cancel()
-            self.startConnection(to: firstResult.endpoint, peerId: peerId, parameters: parameters)
-        }
-        oneShot.start(queue: DispatchQueue.global(qos: .userInitiated))
+        startConnection(to: endpoint, peerId: peerId, parameters: parameters)
     }
 
     public func cleanup() {
@@ -105,6 +103,7 @@ import WiFiAware
         for (_, c) in activeConnections { c.cancel() }
         activeConnections.removeAll()
         pairedDevicesById.removeAll()
+        endpointsByPeerId.removeAll()
         listenerCallback = nil
     }
 
@@ -166,6 +165,7 @@ import WiFiAware
 
     private func consumeBrowseResult(_ result: NWBrowser.Result, callback cb: JZWifiAwareBridgeListener) {
         let stableId = String(describing: result.endpoint)
+        endpointsByPeerId[stableId] = result.endpoint   // so connectToPeer(peerId:) can dial it
         let displayName = bestNameForResult(result)
         DispatchQueue.main.async { [weak self] in
             self?.listenerCallback?.onPeerFound(peerId: stableId, peerName: displayName)

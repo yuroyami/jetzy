@@ -32,6 +32,8 @@ class QRScannerController(
     @OptIn(ExperimentalForeignApi::class)
     override fun viewDidLoad() {
         super.viewDidLoad()
+        // Note: creating the AVCaptureDeviceInput below triggers iOS's camera-permission
+        // prompt automatically (NSCameraUsageDescription is set in Info.plist).
 
         try {
             captureSession = AVCaptureSession()

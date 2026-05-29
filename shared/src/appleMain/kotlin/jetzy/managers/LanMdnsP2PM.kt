@@ -36,6 +36,15 @@ class LanMdnsP2PM : PeerDiscoveryP2PM() {
     private var advertiser: NSNetService? = null
     private var browser: NSNetServiceBrowser? = null
     private var serverSocket: ServerSocket? = null
+    private var selectorManager: SelectorManager? = null
+
+    private fun selector(): SelectorManager =
+        selectorManager ?: SelectorManager(PreferablyIO).also { selectorManager = it }
+
+    // NSNetService.delegate is a *weak* reference, so we must hold the resolving delegates
+    // ourselves for the duration of the resolve — otherwise they deallocate and the
+    // netServiceDidResolveAddress callback never fires (peers silently never resolve).
+    private val resolvingDelegates = mutableListOf<ResolvingDelegate>()
 
     private val advertisingDelegate = AdvertisingDelegate()
     private val browsingDelegate = BrowsingDelegate()
@@ -60,6 +69,7 @@ class LanMdnsP2PM : PeerDiscoveryP2PM() {
                         diag("mDNS resolved ${resolved.name} @ $addr:${resolved.port}")
                     }
                 }
+                resolvingDelegates += resolveDelegate
                 service.delegate = resolveDelegate
                 pendingResolve += service
                 service.resolveWithTimeout(5.0)
@@ -81,7 +91,7 @@ class LanMdnsP2PM : PeerDiscoveryP2PM() {
         isAdvertising.value = true
 
         // Bind TCP server before advertising so the port can be announced.
-        val bound = aSocket(SelectorManager(PreferablyIO)).tcp().bind("0.0.0.0", 0)
+        val bound = aSocket(selector()).tcp().bind("0.0.0.0", 0)
         serverSocket = bound
         diag("mDNS server bound on port ${bound.port}")
 
@@ -142,7 +152,7 @@ class LanMdnsP2PM : PeerDiscoveryP2PM() {
         p2pScope.launch(PreferablyIO) {
             try {
                 diag("dialing $host:${service.port}…")
-                val ktor = aSocket(SelectorManager(PreferablyIO))
+                val ktor = aSocket(selector())
                     .tcp()
                     .connect(host, service.port.toInt())
                 isHandshaking.value = true
@@ -166,9 +176,12 @@ class LanMdnsP2PM : PeerDiscoveryP2PM() {
         stopDiscoveryAndAdvertising()
         runCatching { serverSocket?.close() }
         serverSocket = null
+        runCatching { selectorManager?.close() }
+        selectorManager = null
         connectionReady?.complete(false)
         connectionReady = null
         resolvedPeers.clear()
+        resolvingDelegates.clear()
     }
 
     companion object {
@@ -227,12 +240,14 @@ private class ResolvingDelegate(
 @OptIn(ExperimentalForeignApi::class)
 private fun NSNetService.firstResolvableAddress(): String? {
     val addrs = addresses ?: return null
+    var firstV6: String? = null
     for (anyAddr in addrs) {
         val data = anyAddr as? platform.Foundation.NSData ?: continue
-        val text = data.toHostString() ?: continue
-        if (text.isNotBlank()) return text
+        val text = data.toHostString()?.takeIf { it.isNotBlank() } ?: continue
+        // Prefer IPv4 — a bare IPv6 link-local address needs a %scope suffix to be dialable.
+        if (':' in text) { if (firstV6 == null) firstV6 = text } else return text
     }
-    return null
+    return firstV6
 }
 
 @OptIn(ExperimentalForeignApi::class)

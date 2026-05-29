@@ -228,6 +228,7 @@ abstract class P2PManager {
         transferStatus.value = ""
         isHandshaking.value = false
         anyBytesMoved = false
+        bytesMovedTotal = 0L
         transferBegun = false
     }
 
@@ -260,6 +261,10 @@ abstract class P2PManager {
 
     /** True once we've made any forward progress with the current connection. */
     @Volatile private var anyBytesMoved: Boolean = false
+
+    /** Monotonic count of payload bytes moved on the current connection. Drives stall
+     *  detection precisely; the watchdog used to reconstruct it from a lossy Float progress. */
+    @Volatile private var bytesMovedTotal: Long = 0L
 
     // ── Resume ledgers (in-memory) ───────────────────────────────────────────
     /** For the receiver: map fileIndex → (tempPath, bytesWritten, sizeBytes). */
@@ -412,6 +417,7 @@ abstract class P2PManager {
                         totalBytesSent += read
                         speedWindowBytes += read
                         anyBytesMoved = true
+                        bytesMovedTotal = totalBytesSent
 
                         fileEntries.updateAt(index) { it.copy(bytesTransferred = bytesTransferred) }
                         transferProgress.value = totalBytesSent.toFloat() / totalBytes.coerceAtLeast(1L)
@@ -604,6 +610,7 @@ abstract class P2PManager {
                         totalBytesRead += toRead
                         speedWindowBytes += toRead
                         anyBytesMoved = true
+                        bytesMovedTotal = totalBytesRead
 
                         receiverLedger[index] = ReceiverFileState(tempPath, fileRead, entry.sizeBytes)
 
@@ -771,7 +778,7 @@ abstract class P2PManager {
             while (isActive && !transferComplete.value) {
                 delay(stallTimeoutMs)
                 if (transferComplete.value) break
-                val current = (transferProgress.value * (manifest.value?.totalBytes ?: 0L)).toLong()
+                val current = bytesMovedTotal
                 if (current == lastBytesSeen && current > 0L) {
                     diag("send stall detected: no bytes for ${stallTimeoutMs}ms")
                     activeOutput?.let { runCatching { it.flushAndClose() } }
@@ -790,8 +797,7 @@ abstract class P2PManager {
             while (isActive && !transferComplete.value) {
                 delay(stallTimeoutMs)
                 if (transferComplete.value) break
-                val totalBytes = manifest.value?.totalBytes ?: 0L
-                val current = (transferProgress.value * totalBytes).toLong()
+                val current = bytesMovedTotal
                 if (current == lastBytesSeen && current > 0L) {
                     diag("receive stall detected: no bytes for ${stallTimeoutMs}ms")
                     markAllNonDoneAsFailed()
