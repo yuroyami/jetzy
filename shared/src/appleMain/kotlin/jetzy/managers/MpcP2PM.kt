@@ -154,8 +154,10 @@ class MpcP2PM : PeerDiscoveryP2PM() {
 
     private fun openStream(stream: platform.Foundation.NSStream): Boolean {
         stream.open()
-        // give the runtime a microsecond to progress state
-        return stream.streamStatus != NSStreamStatus.MAX_VALUE // sanity check; real validation happens on first read/write
+        // A freshly opened stream sits in Opening/Open; only Error means it failed to open.
+        // (MAX_VALUE is Kotlin's synthetic enum sentinel, not a real NSStream state, so the
+        // old check never detected a wedged stream.)
+        return stream.streamStatus != platform.Foundation.NSStreamStatusError
     }
 
     private var alreadyBridged = false

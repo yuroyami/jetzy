@@ -1,12 +1,18 @@
 package jetzy.models
 
 import io.github.vinceglb.filekit.PlatformFile
+import kotlinx.cinterop.BooleanVar
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.value
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSURL
 import platform.Foundation.NSDirectoryEnumerationSkipsHiddenFiles
-import platform.Foundation.pathExtension
 import platform.Foundation.lastPathComponent
 
+@OptIn(ExperimentalForeignApi::class)
 actual suspend fun flattenFolder(folder: PlatformFile): List<FlatFile> {
     val fileManager = NSFileManager.defaultManager
     val folderUrl = folder.nsUrl
@@ -29,20 +35,23 @@ actual suspend fun flattenFolder(folder: PlatformFile): List<FlatFile> {
         while (nextObject != null) {
             val fileUrl = nextObject as? NSURL
             if (fileUrl != null) {
-                // Check if it's a file (has an extension or is not a directory)
-                val isDirectory = fileManager.fileExistsAtPath(fileUrl.path ?: "", isDirectory = null)
+                // Properly determine directory-ness via the out-param (the old code passed null,
+                // so it dropped extension-less files like README/Makefile and mis-classified
+                // dotted folders like "My.Photos" as files).
+                val path = fileUrl.path ?: ""
+                val isDirectory = memScoped {
+                    val isDir = alloc<BooleanVar>()
+                    val exists = fileManager.fileExistsAtPath(path, isDirectory = isDir.ptr)
+                    exists && isDir.value
+                }
                 val relativePath = fileUrl.path?.removePrefix(folderUrl.path ?: "")?.trimStart('/')
-                if (relativePath != null && relativePath.isNotEmpty()) {
-                    // Only add files, not directories
-                    val pathExtension = fileUrl.pathExtension
-                    if (pathExtension != null && pathExtension.isNotEmpty()) {
-                        result.add(
-                            FlatFile(
-                                relativePath = "$folderName/$relativePath",
-                                file = PlatformFile(fileUrl)
-                            )
+                if (!isDirectory && relativePath != null && relativePath.isNotEmpty()) {
+                    result.add(
+                        FlatFile(
+                            relativePath = "$folderName/$relativePath",
+                            file = PlatformFile(fileUrl)
                         )
-                    }
+                    )
                 }
             }
             nextObject = enumerator.nextObject()

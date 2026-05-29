@@ -31,6 +31,8 @@
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_jetzy._tcp</string>
+		<string>_jetzy-p2p._tcp</string>
+		<string>_jetzy-p2p._udp</string>
 	</array>
 	<key>WiFiAwareServices</key>
 	<dict>

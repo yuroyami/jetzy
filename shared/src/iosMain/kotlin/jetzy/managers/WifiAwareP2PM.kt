@@ -121,7 +121,7 @@ class WifiAwareP2PM private constructor(
 
         input.open()
         output.open()
-        if (input.streamStatus == NSStreamStatus.MAX_VALUE || output.streamStatus == NSStreamStatus.MAX_VALUE) {
+        if (input.streamStatus == platform.Foundation.NSStreamStatusError || output.streamStatus == platform.Foundation.NSStreamStatusError) {
             diag("Wi-Fi Aware streams refused to open")
             connectionReady?.complete(false)
             return
