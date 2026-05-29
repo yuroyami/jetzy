@@ -365,17 +365,26 @@ abstract class P2PManager {
                 diag("[>] ${index + 1}/${files.size} '${file.name}' offset=$offset size=$fileSize")
 
                 val src = file.source.buffered()
-                try {
-                    if (offset > 0) src.skip(offset)
-                } catch (e: Exception) {
-                    diag("skip($offset) failed on '${file.name}': ${e.message} — falling back to re-send from 0")
-                    // Receiver will simply overwrite; restart file at 0
-                }
                 val buf = ByteArray(bufferSize)
                 val crc = Crc32()
                 var bytesTransferred = offset
 
                 try {
+                    // Resume: feed the bytes the receiver already has [0, offset) through our
+                    // CRC *without* re-sending them. The receiver rebuilds its CRC the same way
+                    // from its partial file, so the final whole-file CRC matches on both ends.
+                    // (Sequential reads are more portable than skip(), which not every
+                    // RawSource supports — and skip() never fed the prefix to the CRC, which is
+                    // why every resumed file used to fail verification.)
+                    var prefixRemaining = offset
+                    while (prefixRemaining > 0) {
+                        val toRead = minOf(buf.size.toLong(), prefixRemaining).toInt()
+                        val read = src.readAtMostTo(buf, 0, toRead)
+                        if (read == -1) break
+                        crc.update(buf, 0, read)
+                        prefixRemaining -= read
+                    }
+
                     while (bytesTransferred < fileSize) {
                         val toRead = minOf(buf.size.toLong(), fileSize - bytesTransferred).toInt()
                         val read = src.readAtMostTo(buf, 0, toRead)
@@ -550,10 +559,17 @@ abstract class P2PManager {
                     runCatching {
                         val src = SystemFileSystem.source(tempPath).buffered()
                         val rebuildBuf = ByteArray(bufferSize)
-                        while (true) {
-                            val r = src.readAtMostTo(rebuildBuf)
+                        // Hash exactly the [0, startOffset) prefix the sender is skipping — this
+                        // mirrors the sender's prefix-CRC so the whole-file CRCs line up. Bounding
+                        // to startOffset (rather than reading to EOF) keeps us correct even if a
+                        // stale temp file happens to be longer than the ledger's byte count.
+                        var remaining = startOffset
+                        while (remaining > 0) {
+                            val toRead = minOf(rebuildBuf.size.toLong(), remaining).toInt()
+                            val r = src.readAtMostTo(rebuildBuf, 0, toRead)
                             if (r == -1) break
                             crc.update(rebuildBuf, 0, r)
+                            remaining -= r
                         }
                         src.close()
                     }.onFailure { diag("CRC rebuild from partial failed: ${it.message}") }
