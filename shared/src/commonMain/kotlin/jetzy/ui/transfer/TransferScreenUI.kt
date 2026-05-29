@@ -31,6 +31,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -67,6 +68,7 @@ import compose.icons.fontawesomeicons.solid.Copy
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.cancel_transfer
+import jetzy.shared.generated.resources.connecting
 import jetzy.shared.generated.resources.copy_text
 import jetzy.shared.generated.resources.done
 import jetzy.shared.generated.resources.receiver
@@ -100,7 +102,19 @@ fun TransferScreenUI() {
 
     val colorScheme = MaterialTheme.colorScheme
 
-    if (manifest == null || remote == null) return
+    // On the receiver, the manifest/peer only arrive after the handshake. Show a connecting
+    // state with a way out instead of a blank screen that traps the user if it hangs.
+    if (manifest == null || remote == null) {
+        ConnectingState(
+            onCancel = {
+                viewmodel.viewModelScope.launch {
+                    manager.cleanup()
+                    viewmodel.resetEverything()
+                }
+            }
+        )
+        return
+    }
 
     Box(
         modifier = Modifier
@@ -189,11 +203,12 @@ fun TransferScreenUI() {
                 val hasFiles = manifest?.hasFiles == true
 
                 if (transferComplete && !viewmodel.isSender && !saveComplete && hasFiles) {
-                    var savingStarted by remember { mutableStateOf(false) }
+                    // Driven by the manager so a failed save (which leaves saveComplete=false)
+                    // re-enables the button for a retry instead of disabling it forever.
+                    val isSaving by manager.isSaving.collectAsState()
 
                     val destDir = rememberDirectoryPickerLauncher { dir ->
                         dir?.let { destinationDir ->
-                            savingStarted = true
                             manager.finalizeReceivedFilesAt(destinationDir)
                         }
                     }
@@ -202,7 +217,7 @@ fun TransferScreenUI() {
                         onClick = {
                             destDir.launch()
                         },
-                        enabled = !savingStarted,
+                        enabled = !isSaving,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colorScheme.primary,
                             contentColor = colorScheme.onPrimary
@@ -254,6 +269,40 @@ fun TransferScreenUI() {
                 ) {
                     Text(if (transferComplete) stringResource(Res.string.done) else stringResource(Res.string.cancel_transfer), fontSize = 10.ssp, fontWeight = FontWeight.W400)
                 }
+            }
+        }
+    }
+}
+
+// ─── Connecting / handshake state ─────────────────────────────────────────────
+
+@Composable
+private fun ConnectingState(onCancel: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
+    Box(
+        modifier = Modifier.fillMaxSize().background(colorScheme.surface),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.sdp)
+        ) {
+            CircularProgressIndicator(color = colorScheme.primary)
+            Text(
+                text = stringResource(Res.string.connecting),
+                fontSize = 11.ssp,
+                color = colorScheme.onSurfaceVariant,
+            )
+            Button(
+                onClick = onCancel,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Transparent,
+                    contentColor = colorScheme.onSurfaceVariant,
+                ),
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, colorScheme.outlineVariant),
+                shape = RoundedCornerShape(8.sdp),
+            ) {
+                Text(stringResource(Res.string.cancel_transfer), fontSize = 10.ssp)
             }
         }
     }

@@ -81,18 +81,23 @@ fun PickFilesSubscreenUI() {
     val filePicker = rememberFilePickerLauncher(
         type = FileKitType.File(), mode = FileKitMode.Multiple(),
     ) { files ->
-        files?.map { JetzyElement.File(it) }?.forEach {
-            viewmodel.elementsToSend.add(it)
+        files?.let { picked ->
+            picked.forEach { viewmodel.elementsToSend.add(JetzyElement.File(it)) }
+            viewmodel.snacky("Added ${picked.size} item(s)")
+            tab = FileFolderViewMode.Files
         }
-        viewmodel.snacky("Added ${files?.size} item(s)")
-        tab = FileFolderViewMode.Files
     }
 
     val folderPicker = rememberDirectoryPickerLauncher { folder ->
-        folder?.let { viewmodel.elementsToSend.add(JetzyElement.Folder(it)) }
-        viewmodel.snacky("Added folder: ${folder?.name}")
-        tab = FileFolderViewMode.Folders
+        folder?.let {
+            viewmodel.elementsToSend.add(JetzyElement.Folder(it))
+            viewmodel.snacky("Added folder: ${it.name}")
+            tab = FileFolderViewMode.Folders
+        }
     }
+
+    val filesForSending by viewmodel.file2Send.collectAsState()
+    val foldersForSending by viewmodel.folders2Send.collectAsState()
 
     val longClickedFiles = remember { mutableStateListOf<Int>() }
     val longClickedFolders = remember { mutableStateListOf<Int>() }
@@ -133,9 +138,6 @@ fun PickFilesSubscreenUI() {
                             icon = { Icon(Icons.Filled.FolderSpecial, null) }
                         )
                     }
-
-                    val filesForSending by viewmodel.file2Send.collectAsState()
-                    val foldersForSending by viewmodel.folders2Send.collectAsState()
 
                     FileFolderGridView(
                         viewMode = tab,
@@ -182,19 +184,17 @@ fun PickFilesSubscreenUI() {
                     Icon(Icons.Filled.ClearAll, null)
                 },
                 onClick = {
-                    val (longClickedItems, items, itemType) = when (tab) {
-                        FileFolderViewMode.Files -> Triple(longClickedFiles, viewmodel.elementsToSend, "file(s)")
-                        FileFolderViewMode.Folders -> Triple(longClickedFolders, viewmodel.elementsToSend, "folder(s)")
+                    // Highlights are indices into the *filtered* (files/folders) list; resolve them
+                    // to the actual elements and remove those by identity from the full send list.
+                    // (The old removeAt(filteredIndex) on the full list deleted the wrong items.)
+                    val (highlighted, filtered, itemType) = when (tab) {
+                        FileFolderViewMode.Files -> Triple(longClickedFiles, filesForSending, "file(s)")
+                        FileFolderViewMode.Folders -> Triple(longClickedFolders, foldersForSending, "folder(s)")
                     }
-
-                    val count = longClickedItems.size
-                    val processedIndices = mutableListOf<Int>()
-
-                    for (index in longClickedItems) {
-                        items.removeAt(index)
-                        processedIndices.add(index)
-                    }
-                    longClickedItems.removeAll(processedIndices)
+                    val toRemove = highlighted.mapNotNull { filtered.getOrNull(it) }
+                    val count = toRemove.size
+                    viewmodel.elementsToSend.removeAll { el -> toRemove.any { it === el } }
+                    highlighted.clear()
 
                     viewmodel.snacky("Excluded $count $itemType from the list")
                 },

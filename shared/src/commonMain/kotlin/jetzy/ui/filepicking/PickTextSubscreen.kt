@@ -31,7 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -84,8 +84,8 @@ fun PickTextSubscreen() {
                 modifier = Modifier.padding(bottom = 8.sdp, top = 16.sdp)
             )
 
-            val stringsForSending by derivedStateOf { viewmodel.elementsToSend.filter { it is JetzyElement.Text } }
-            val listIsEmpty by derivedStateOf { stringsForSending.isEmpty() }
+            val stringsForSending by viewmodel.texts2Send.collectAsState()
+            val listIsEmpty = stringsForSending.isEmpty()
 
             Surface(
                 modifier = Modifier.fillMaxSize().padding(top = 10.sdp, start = 6.sdp, end = 6.sdp, bottom = 60.sdp),
@@ -119,7 +119,7 @@ fun PickTextSubscreen() {
                             }
                         ) {
                             Text(
-                                text = "${i+1}       $text",
+                                text = "${i+1}       ${text.text}",
                                 maxLines = if (expanded) 25 else 1,
                                 modifier = Modifier.weight(1f).padding(horizontal = 3.sdp),
                                 overflow = TextOverflow.MiddleEllipsis,
@@ -129,7 +129,7 @@ fun PickTextSubscreen() {
 
                             IconButton(
                                 onClick = {
-                                    viewmodel.elementsToSend.remove(text)
+                                    viewmodel.elementsToSend.removeAll { it === text }
                                     haptic.performHapticFeedback(HapticFeedbackType.Reject)
                                     viewmodel.snacky("Text was removed from the list.")
                                 }

@@ -31,7 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -91,7 +91,7 @@ fun AdamScreen(onViewmodel: (JetzyViewmodel) -> Unit) {
             val viewmodel = koinViewModel<JetzyViewmodel>()
             val haptic = LocalHapticFeedback.current
 
-            SideEffect {
+            LaunchedEffect(viewmodel) {
                 onViewmodel(viewmodel)
             }
 
@@ -173,7 +173,9 @@ fun AdamScreen(onViewmodel: (JetzyViewmodel) -> Unit) {
                                                         return@c
                                                     }
 
-                                                    viewmodel.navigateTo(Screen.MainScreen)
+                                                    // Pop back to a clean Main stack (don't push a
+                                                    // duplicate MainScreen on top of FilePicking).
+                                                    viewmodel.navigateTo(Screen.MainScreen, noWayToReturn = true)
                                                 }
                                             ) {
                                                 Text(stringResource(Res.string.continue_label))
@@ -194,6 +196,9 @@ fun AdamScreen(onViewmodel: (JetzyViewmodel) -> Unit) {
                             NavDisplay(
                                 modifier = Modifier.padding(top = pv.calculateTopPadding()),
                                 backStack = viewmodel.backstack,
+                                // Route system back through the VM so leaf screens tear down their
+                                // live P2PManager instead of leaking sockets/discovery/temp files.
+                                onBack = { viewmodel.onSystemBack() },
                                 entryDecorators = listOf(
                                     rememberSaveableStateHolderNavEntryDecorator(),
                                     rememberViewModelStoreNavEntryDecorator()

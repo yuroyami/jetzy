@@ -24,7 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -76,14 +76,15 @@ fun PickPhotosSubscreen() {
 
     val photoPicker = rememberFilePickerLauncher(
         type = FileKitType.Image, mode = FileKitMode.Multiple(),
-    ) {
-        it?.map { image -> JetzyElement.Photo(image) }?.forEach { photo ->
-            viewmodel.elementsToSend.add(photo)
+    ) { picked ->
+        picked?.let {
+            it.forEach { image -> viewmodel.elementsToSend.add(JetzyElement.Photo(image)) }
+            viewmodel.snacky("Added ${it.size} photo(s)")
         }
     }
 
-    val photosForSending by derivedStateOf { viewmodel.elementsToSend.filter { it is JetzyElement.Photo } }
-    val listIsEmpty by derivedStateOf { photosForSending.isEmpty() }
+    val photosForSending by viewmodel.photos2Send.collectAsState()
+    val listIsEmpty = photosForSending.isEmpty()
 
     Box(modifier = Modifier.fillMaxSize()) {
 
@@ -116,8 +117,8 @@ fun PickPhotosSubscreen() {
                         },
                         state = gridState
                     ) {
-                        itemsIndexed(viewmodel.elementsToSend ) { i, photoFile ->
-                            val isHighlighted by derivedStateOf { longclickedPhotos.contains(i) }
+                        itemsIndexed(photosForSending) { i, photo ->
+                            val isHighlighted = longclickedPhotos.contains(i)
                             Box(Modifier.size(cellWidth)) {
                                 Icon(Icons.Filled.Check, null, Modifier.align(TopEnd).padding(8.sdp))
 
@@ -132,7 +133,7 @@ fun PickPhotosSubscreen() {
 
                                 key("$i $recomposePlease") {
                                     AsyncImage(
-                                        model = photoFile,
+                                        model = photo.image,
                                         contentDescription = null,
                                         contentScale = ContentScale.Crop,
                                         colorFilter = if (isHighlighted) ColorFilter.tint(jetzyYellow.copy(alpha = 0.75f), blendMode = BlendMode.DstOut) else null,
@@ -181,17 +182,13 @@ fun PickPhotosSubscreen() {
                     Icon(Icons.Filled.ClearAll, null)
                 },
                 onClick = {
-                    val count = longclickedPhotos.size
-
-                    val processedIndices = mutableListOf<Int>()
-                    for (photoIndex in longclickedPhotos) {
-                        viewmodel.elementsToSend.removeAt(photoIndex)
-                        processedIndices.add(photoIndex)
-                    }
-                    longclickedPhotos.removeAll(processedIndices)
+                    // Resolve highlighted filtered-list indices to Photo instances, remove by identity.
+                    val toRemove = longclickedPhotos.mapNotNull { photosForSending.getOrNull(it) }
+                    val count = toRemove.size
+                    viewmodel.elementsToSend.removeAll { el -> toRemove.any { it === el } }
+                    longclickedPhotos.clear()
 
                     viewmodel.snacky("Excluded $count images from the list")
-
                 },
                 text = { Text(stringResource(Res.string.exclude), fontSize = 10.ssp) },
                 modifier = Modifier.align(BottomStart).padding(6.sdp).padding(bottom = 8.sdp),

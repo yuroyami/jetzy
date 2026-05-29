@@ -46,27 +46,51 @@ class JetzyViewmodel : ViewModel() {
 
     @NavigationDsl
     fun navigateTo(screen: Screen, doRefresh: Boolean = false, noWayToReturn: Boolean = false) {
-        // Dismiss any active snackbar when navigating
-        snack.currentSnackbarData?.dismiss()
+        // Navigation mutates Compose snapshot state + the snackbar host, both of which expect the
+        // main thread. Several callers (beginTransfer, fallback switch, resume) run on background
+        // dispatchers, so marshal here. Main.immediate runs synchronously when already on main.
+        viewModelScope.launch(Dispatchers.Main.immediate) {
+            // Dismiss any active snackbar when navigating
+            snack.currentSnackbarData?.dismiss()
 
-        if (noWayToReturn) {
-            // Clear everything and add only the new screen
-            backstack.clear()
-            backstack.add(screen)
-        } else {
-            // Check if we're already on this screen
-            if (backstack.lastOrNull() == screen) {
-                if (doRefresh) {
-                    // Remove and re-add to trigger refresh
-                    backstack.removeAt(backstack.lastIndex)
-                    backstack.add(screen)
-                } else {
-                    // else: do nothing, we're already there
-                }
-            } else {
-                // Navigate to new screen
+            if (noWayToReturn) {
+                // Clear everything and add only the new screen
+                backstack.clear()
                 backstack.add(screen)
+            } else {
+                // Check if we're already on this screen
+                if (backstack.lastOrNull() == screen) {
+                    if (doRefresh) {
+                        // Remove and re-add to trigger refresh
+                        backstack.removeAt(backstack.lastIndex)
+                        backstack.add(screen)
+                    } else {
+                        // else: do nothing, we're already there
+                    }
+                } else {
+                    // Navigate to new screen
+                    backstack.add(screen)
+                }
             }
+        }
+    }
+
+    /**
+     * Central handler for system back, wired to NavDisplay's `onBack`. Leaf screens that own a
+     * live [P2PManager] (discovery / QR / transfer) must tear it down — closing sockets, stopping
+     * discovery/advertising + the foreground service, and purging unsaved temp files — instead of
+     * silently popping the backstack and leaking the session. NavDisplay only invokes this while
+     * the backstack has more than one entry, so the root (Main) screen still falls through to the
+     * OS (exit app).
+     */
+    @NavigationDsl
+    fun onSystemBack() {
+        when (backstack.lastOrNull()) {
+            Screen.PeerDiscoveryScreen,
+            Screen.QRDiscoveryScreen,
+            Screen.TransferScreen -> cancelDiscovery() // tears the manager down, returns to Main
+            Screen.FilePickingScreen -> navigateTo(Screen.MainScreen, noWayToReturn = true)
+            else -> if (backstack.size > 1) backstack.removeAt(backstack.lastIndex)
         }
     }
 

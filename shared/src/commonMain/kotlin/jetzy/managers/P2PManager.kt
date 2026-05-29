@@ -116,6 +116,10 @@ abstract class P2PManager {
     val saveComplete: StateFlow<Boolean>
         field = MutableStateFlow(false)
 
+    /** True while [finalizeReceivedFilesAt] is moving staged files to the user's chosen folder. */
+    val isSaving: StateFlow<Boolean>
+        field = MutableStateFlow(false)
+
     val transferSpeed: StateFlow<Long>
         field = MutableStateFlow(0L)
 
@@ -155,8 +159,19 @@ abstract class P2PManager {
         this.viewmodel = viewmodel
     }
 
+    /**
+     * Guards against starting the transfer twice. Symmetric transports run a server
+     * (accept) *and* a client (dial) and can establish both — each would set [connection]
+     * or call [startTransferWithChannels], firing [beginTransfer] a second time and
+     * launching a duplicate send/receive over a second socket, corrupting the stream.
+     * Reset in [prepareForResume] so a reconnect can begin a fresh attempt.
+     */
+    @Volatile private var transferBegun = false
+
     @P2pIoApi
     private fun beginTransfer() {
+        if (transferBegun) return
+        transferBegun = true
         viewmodel.navigateTo(Screen.TransferScreen, noWayToReturn = true)
         p2pScope.launch {
             when (viewmodel.currentOperation.value) {
@@ -213,6 +228,7 @@ abstract class P2PManager {
         transferStatus.value = ""
         isHandshaking.value = false
         anyBytesMoved = false
+        transferBegun = false
     }
 
     /**
@@ -816,33 +832,43 @@ abstract class P2PManager {
 
     fun finalizeReceivedFilesAt(destDir: PlatformFile) {
         p2pScope.launch {
-            val fileItems = itemsRECEIVED.filter { it.entryType == EntryType.FILE }
-            for (item in fileItems) {
-                if (item.relativePath.isNotEmpty()) {
-                    val parentPath = item.relativePath.substringBeforeLast('/', "")
-                    if (parentPath.isNotEmpty()) {
-                        val dirs = parentPath.split('/')
-                        var currentPath = destDir.path
-                        for (dir in dirs) {
-                            currentPath = "$currentPath/$dir"
-                            val dirPath = Path(currentPath)
-                            if (!SystemFileSystem.exists(dirPath)) {
-                                SystemFileSystem.createDirectories(dirPath)
+            isSaving.value = true
+            try {
+                val fileItems = itemsRECEIVED.filter { it.entryType == EntryType.FILE }
+                for (item in fileItems) {
+                    if (item.relativePath.isNotEmpty()) {
+                        val parentPath = item.relativePath.substringBeforeLast('/', "")
+                        if (parentPath.isNotEmpty()) {
+                            val dirs = parentPath.split('/')
+                            var currentPath = destDir.path
+                            for (dir in dirs) {
+                                currentPath = "$currentPath/$dir"
+                                val dirPath = Path(currentPath)
+                                if (!SystemFileSystem.exists(dirPath)) {
+                                    SystemFileSystem.createDirectories(dirPath)
+                                }
                             }
+                            val destPath = Path("$currentPath/${item.name}")
+                            val sourcePath = item.path
+                            SystemFileSystem.atomicMove(sourcePath, destPath)
+                            continue
                         }
-                        val destPath = Path("$currentPath/${item.name}")
-                        val sourcePath = item.path
-                        SystemFileSystem.atomicMove(sourcePath, destPath)
-                        continue
                     }
+                    val platformFile = PlatformFile(item.path)
+                    platformFile.atomicMove(destDir)
                 }
-                val platformFile = PlatformFile(item.path)
-                platformFile.atomicMove(destDir)
-            }
 
-            saveComplete.value = true
-            canResume.value = false
-            viewmodel.snacky("Files saved successfully!")
+                saveComplete.value = true
+                canResume.value = false
+                viewmodel.snacky("Files saved successfully!")
+            } catch (e: Exception) {
+                // Don't flip saveComplete — leaving it false keeps the Save button visible and,
+                // with isSaving reset below, re-enabled so the user can retry to another folder.
+                diag("save failed: ${e.message ?: e::class.simpleName}")
+                viewmodel.snacky("Couldn't save files: ${e.message ?: "unknown error"}. Tap Save to try again.")
+            } finally {
+                isSaving.value = false
+            }
         }
     }
 

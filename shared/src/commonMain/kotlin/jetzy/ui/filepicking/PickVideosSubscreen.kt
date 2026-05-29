@@ -51,8 +51,9 @@ fun PickVideosSubscreen() {
     val videoPicker = rememberFilePickerLauncher(
         type = FileKitType.Video, mode = FileKitMode.Multiple(),
     ) { files ->
-        files?.map { JetzyElement.Video(it) }?.forEach {
-            viewmodel.elementsToSend.add(it)
+        files?.let {
+            it.forEach { v -> viewmodel.elementsToSend.add(JetzyElement.Video(v)) }
+            viewmodel.snacky("Added ${it.size} video(s)")
         }
     }
 
@@ -105,7 +106,7 @@ fun PickVideosSubscreen() {
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 IconButton(onClick = {
-                                    viewmodel.elementsToSend.remove(video)
+                                    viewmodel.elementsToSend.removeAll { it === video }
                                 }) {
                                     Icon(
                                         imageVector = Icons.Filled.Close,
