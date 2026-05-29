@@ -42,9 +42,20 @@ class LanMdnsP2PM(private val context: Context) : PeerDiscoveryP2PM() {
     private var registrationListener: NsdManager.RegistrationListener? = null
     private var discoveryListener: NsdManager.DiscoveryListener? = null
     private var serverSocket: ServerSocket? = null
+    private var selectorManager: SelectorManager? = null
 
     private val foundPeers = mutableMapOf<String, NsdServiceInfo>()
     private var connectionReady: CompletableDeferred<Boolean>? = null
+
+    /** Our own advertised service name (post-registration — NSD may rename it on a collision). */
+    private var registeredServiceName: String? = null
+
+    /** NsdManager allows only one outstanding resolve pre-API-34, so we serialize them. */
+    private val resolveQueue = ArrayDeque<NsdServiceInfo>()
+    private var resolving = false
+
+    private fun selector(): SelectorManager =
+        selectorManager ?: SelectorManager(PreferablyIO).also { selectorManager = it }
 
     override val permissionRequirements: List<PermissionRequirement>
         get() {
@@ -61,7 +72,7 @@ class LanMdnsP2PM(private val context: Context) : PeerDiscoveryP2PM() {
         isAdvertising.value = true
 
         // Bind a TCP server first so we know which port to advertise.
-        val bound = aSocket(SelectorManager(PreferablyIO)).tcp().bind("0.0.0.0", 0)
+        val bound = aSocket(selector()).tcp().bind("0.0.0.0", 0)
         serverSocket = bound
         diag("mDNS server bound on port ${bound.port}")
 
@@ -99,6 +110,7 @@ class LanMdnsP2PM(private val context: Context) : PeerDiscoveryP2PM() {
         }
         registrationListener = object : NsdManager.RegistrationListener {
             override fun onServiceRegistered(info: NsdServiceInfo) {
+                registeredServiceName = info.serviceName
                 diag("mDNS registered as '${info.serviceName}'")
             }
             override fun onRegistrationFailed(info: NsdServiceInfo, errorCode: Int) {
@@ -122,10 +134,11 @@ class LanMdnsP2PM(private val context: Context) : PeerDiscoveryP2PM() {
             }
             override fun onDiscoveryStopped(serviceType: String) {}
             override fun onServiceFound(info: NsdServiceInfo) {
-                // Filter out our own advertisement — equality by serviceName usually suffices
-                // since we used the user-visible device name as our service name.
                 if (info.serviceName.isBlank()) return
-                resolveService(info)
+                // Skip our own advertisement. Compare against the *registered* name (NSD may have
+                // renamed it on a clash) so we don't discover and then dial ourselves.
+                if (info.serviceName == registeredServiceName) return
+                enqueueResolve(info)
             }
             override fun onServiceLost(info: NsdServiceInfo) {
                 val gone = foundPeers.remove(info.serviceName) ?: return
@@ -138,10 +151,25 @@ class LanMdnsP2PM(private val context: Context) : PeerDiscoveryP2PM() {
         nsdManager.discoverServices(JETZY_MDNS_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
     }
 
-    private fun resolveService(info: NsdServiceInfo) {
+    private fun enqueueResolve(info: NsdServiceInfo) {
+        synchronized(resolveQueue) { resolveQueue.addLast(info) }
+        pumpResolveQueue()
+    }
+
+    /** Resolves one service at a time — concurrent resolveService() calls fail with
+     *  FAILURE_ALREADY_ACTIVE on API < 34, which is why only the first peer used to appear. */
+    private fun pumpResolveQueue() {
+        val next = synchronized(resolveQueue) {
+            if (resolving) return
+            val n = resolveQueue.removeFirstOrNull() ?: return
+            resolving = true
+            n
+        }
         val resolveListener = object : NsdManager.ResolveListener {
             override fun onResolveFailed(info: NsdServiceInfo, errorCode: Int) {
                 diag("mDNS resolve failed for ${info.serviceName}: $errorCode")
+                synchronized(resolveQueue) { resolving = false }
+                pumpResolveQueue()
             }
             override fun onServiceResolved(resolved: NsdServiceInfo) {
                 foundPeers[resolved.serviceName] = resolved
@@ -149,10 +177,12 @@ class LanMdnsP2PM(private val context: Context) : PeerDiscoveryP2PM() {
                     P2pPeer(id = it.serviceName, name = it.serviceName, signalStrength = 3)
                 }
                 diag("mDNS resolved ${resolved.serviceName} @ ${resolved.host}:${resolved.port}")
+                synchronized(resolveQueue) { resolving = false }
+                pumpResolveQueue()
             }
         }
         @Suppress("DEPRECATION")
-        nsdManager.resolveService(info, resolveListener)
+        nsdManager.resolveService(next, resolveListener)
     }
 
     // ── Connect ────────────────────────────────────────────────────────────────
@@ -169,7 +199,7 @@ class LanMdnsP2PM(private val context: Context) : PeerDiscoveryP2PM() {
         p2pScope.launch(PreferablyIO) {
             try {
                 diag("dialing ${host.hostAddress}:${info.port}…")
-                val ktor = aSocket(SelectorManager(PreferablyIO))
+                val ktor = aSocket(selector())
                     .tcp()
                     .connect(host.hostAddress!!, info.port)
                 isHandshaking.value = true
@@ -193,9 +223,13 @@ class LanMdnsP2PM(private val context: Context) : PeerDiscoveryP2PM() {
         stopDiscoveryAndAdvertising()
         runCatching { serverSocket?.close() }
         serverSocket = null
+        runCatching { selectorManager?.close() }
+        selectorManager = null
         connectionReady?.complete(false)
         connectionReady = null
         foundPeers.clear()
+        synchronized(resolveQueue) { resolveQueue.clear(); resolving = false }
+        registeredServiceName = null
     }
 
     companion object {

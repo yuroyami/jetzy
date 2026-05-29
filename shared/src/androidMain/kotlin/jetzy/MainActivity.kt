@@ -41,6 +41,11 @@ class MainActivity: ComponentActivity(), P2pPlatformCallback {
         installSplashScreen()
         super.onCreate(savedInstanceState)
 
+        // Capture the Application context (a process-lifetime singleton) for the static getter
+        // instead of leaking this Activity for the life of the process.
+        val appCtx = applicationContext
+        contextGetter = { appCtx }
+
         /* Tweaking some window UI elements */
         window.attributes = window.attributes.apply {
             flags = flags and WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS.inv()
@@ -173,10 +178,7 @@ class MainActivity: ComponentActivity(), P2pPlatformCallback {
     }
 
     companion object {
+        /** Returns the Application context. Set in [onCreate]; see note there about not leaking the Activity. */
         lateinit var contextGetter: () -> Context
-    }
-
-    init {
-        contextGetter = { this }
     }
 }

@@ -40,6 +40,7 @@ class HotspotP2PM(private val context: Context) : P2PManager() {
     private val locationManager = appContext.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
     private var reservation: WifiManager.LocalOnlyHotspotReservation? = null
     private var serverSocket: ServerSocket? = null
+    private var selectorManager: SelectorManager? = null
 
     override val permissionRequirements: List<PermissionRequirement>
         get() {
@@ -97,7 +98,11 @@ class HotspotP2PM(private val context: Context) : P2PManager() {
             }
             diag("hotspot IP: $localAddress")
 
-            val boundSocket = aSocket(SelectorManager(PreferablyIO))
+            val selector = SelectorManager(PreferablyIO).also {
+                runCatching { selectorManager?.close() }
+                selectorManager = it
+            }
+            val boundSocket = aSocket(selector)
                 .tcp()
                 .bind("0.0.0.0", 0)
             serverSocket = boundSocket
@@ -186,8 +191,13 @@ class HotspotP2PM(private val context: Context) : P2PManager() {
                         Pair(ssid, password)
                     } else {
                         val config = reservation.wifiConfiguration
-                        val ssid = config?.SSID ?: return cont.resumeWithException(Exception("SSID was null"))
-                        val password = config.preSharedKey ?: return cont.resumeWithException(Exception("Password was null"))
+                        // Legacy WifiConfiguration (API 26–29) wraps SSID/PSK in double-quotes. Strip
+                        // them so the values match SoftApConfiguration's unquoted form — iOS feeds the
+                        // SSID straight into NEHotspotConfiguration and the quotes break the join.
+                        val ssid = (config?.SSID ?: return cont.resumeWithException(Exception("SSID was null")))
+                            .removeSurrounding("\"")
+                        val password = (config.preSharedKey ?: return cont.resumeWithException(Exception("Password was null")))
+                            .removeSurrounding("\"")
                         Pair(ssid, password)
                     }
 
@@ -230,6 +240,10 @@ class HotspotP2PM(private val context: Context) : P2PManager() {
         runCatching {
             serverSocket?.close()
             serverSocket = null
+        }
+        runCatching {
+            selectorManager?.close()
+            selectorManager = null
         }
     }
 
