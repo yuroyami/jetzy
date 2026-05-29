@@ -143,7 +143,9 @@ class WifiAwareP2PM(private val context: Context) : PeerDiscoveryP2PM() {
             }
         }, mainHandler)
 
-        val s = attached.await() ?: run {
+        // Bound the wait: some chipsets never fire onAttached/onAttachFailed when Wi-Fi
+        // toggles mid-attach, which would otherwise suspend discovery forever.
+        val s = withTimeoutOrNull(ATTACH_TIMEOUT) { attached.await() } ?: run {
             viewmodel.snacky("Couldn't start Wi-Fi Aware. Try again.")
             isDiscovering.value = false
             isAdvertising.value = false
@@ -466,6 +468,7 @@ class WifiAwareP2PM(private val context: Context) : PeerDiscoveryP2PM() {
     companion object {
         private const val MESSAGE_ID_HELLO = 1
         private const val MESSAGE_ID_READY = 2
+        private val ATTACH_TIMEOUT = 10.seconds
         private val CONNECT_TIMEOUT = 30.seconds
         private val ACCEPT_TIMEOUT = 30.seconds
         private val NETWORK_AWAIT_TIMEOUT = 20.seconds
