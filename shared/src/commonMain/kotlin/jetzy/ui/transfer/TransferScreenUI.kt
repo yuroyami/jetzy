@@ -38,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -163,7 +164,11 @@ fun TransferScreenUI() {
                     }
 
                     // ── Overall progress ──────────────────────────────────
-                    val completedFiles = fileEntries.count { it.status == FileTransferStatus.Done }
+                    // Derived so the O(n) scan only re-runs when the count actually changes,
+                    // not on every recomposition of this card.
+                    val completedFiles by remember {
+                        derivedStateOf { fileEntries.count { it.status == FileTransferStatus.Done } }
+                    }
                     ProgressSection(
                         progress = progress,
                         completedCount = completedFiles,

@@ -53,6 +53,7 @@ import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.files.SystemTemporaryDirectory
 import kotlinx.io.readByteArray
 import kotlin.concurrent.Volatile
+import kotlin.time.TimeSource
 import kotlin.uuid.Uuid
 
 /**
@@ -256,6 +257,13 @@ abstract class P2PManager {
 
     // ── Buffer sizing & stall detection ──────────────────────────────────────
     val bufferSize = 512 * 1024
+
+    /**
+     * Minimum interval between UI state pushes (fileEntries / transferProgress) during the
+     * transfer hot loop. Per-chunk emission used to drive Compose recomposition at chunk
+     * rate (hundreds/sec on a fast link); ~10 Hz is imperceptible but kills the storm.
+     */
+    private val uiRefreshIntervalMs = 100L
     private var stallWatchdogJob: Job? = null
     private val stallTimeoutMs = 8000L
 
@@ -363,7 +371,9 @@ abstract class P2PManager {
 
             // 4. Stream files (honoring resume point)
             var totalBytesSent = 0L
-            var speedWindowStart = generateTimestampMillis()
+            val clock = TimeSource.Monotonic
+            var speedWindowStart = clock.markNow()
+            var lastUiPush = clock.markNow()
             var speedWindowBytes = 0L
             startSenderStallWatchdog()
 
@@ -419,15 +429,20 @@ abstract class P2PManager {
                         anyBytesMoved = true
                         bytesMovedTotal = totalBytesSent
 
-                        fileEntries.updateAt(index) { it.copy(bytesTransferred = bytesTransferred) }
-                        transferProgress.value = totalBytesSent.toFloat() / totalBytes.coerceAtLeast(1L)
+                        // Coalesce UI pushes to ~10 Hz. Per-chunk emission used to fire
+                        // fileEntries (a full O(n) list copy) + transferProgress on every
+                        // 512 KB read, driving Compose recomposition at chunk rate.
+                        if (lastUiPush.elapsedNow().inWholeMilliseconds >= uiRefreshIntervalMs) {
+                            fileEntries.updateAt(index) { it.copy(bytesTransferred = bytesTransferred) }
+                            transferProgress.value = totalBytesSent.toFloat() / totalBytes.coerceAtLeast(1L)
+                            lastUiPush = clock.markNow()
+                        }
 
-                        val now = generateTimestampMillis()
-                        val elapsed = now - speedWindowStart
+                        val elapsed = speedWindowStart.elapsedNow().inWholeMilliseconds
                         if (elapsed >= 1000L) {
                             transferSpeed.value = (speedWindowBytes * 1000L) / elapsed
                             speedWindowBytes = 0L
-                            speedWindowStart = now
+                            speedWindowStart = clock.markNow()
                         }
                     }
                 } finally {
@@ -457,6 +472,9 @@ abstract class P2PManager {
                     }
                 }
             }
+
+            // The 10 Hz throttle may have skipped the final fraction; pin it to 100%.
+            transferProgress.value = 1f
 
             // 5. Clean close
             JetzyProtocol.writeDone(output)
@@ -547,7 +565,9 @@ abstract class P2PManager {
 
             // 4. Receive files (starting from resume point)
             var totalBytesRead = (0 until ack.resumeFileIndex).sumOf { mf.entries[it].sizeBytes }
-            var speedWindowStart = generateTimestampMillis()
+            val clock = TimeSource.Monotonic
+            var speedWindowStart = clock.markNow()
+            var lastUiPush = clock.markNow()
             var speedWindowBytes = 0L
             startReceiverStallWatchdog()
 
@@ -612,22 +632,30 @@ abstract class P2PManager {
                         anyBytesMoved = true
                         bytesMovedTotal = totalBytesRead
 
-                        receiverLedger[index] = ReceiverFileState(tempPath, fileRead, entry.sizeBytes)
+                        // Coalesce UI pushes to ~10 Hz (see sender loop). The receiver
+                        // ledger is no longer rewritten per chunk — it's recorded once in
+                        // the finally below, which still runs on a mid-file disconnect.
+                        if (lastUiPush.elapsedNow().inWholeMilliseconds >= uiRefreshIntervalMs) {
+                            fileEntries.updateAt(index) { it.copy(bytesTransferred = fileRead) }
+                            transferProgress.value = totalBytesRead.toFloat() / mf.totalBytes.coerceAtLeast(1L)
+                            lastUiPush = clock.markNow()
+                        }
 
-                        fileEntries.updateAt(index) { it.copy(bytesTransferred = fileRead) }
-                        transferProgress.value = totalBytesRead.toFloat() / mf.totalBytes.coerceAtLeast(1L)
-
-                        val now = generateTimestampMillis()
-                        val elapsed = now - speedWindowStart
+                        val elapsed = speedWindowStart.elapsedNow().inWholeMilliseconds
                         if (elapsed >= 1000L) {
                             transferSpeed.value = (speedWindowBytes * 1000L) / elapsed
                             speedWindowBytes = 0L
-                            speedWindowStart = now
+                            speedWindowStart = clock.markNow()
                         }
                     }
                 } finally {
                     sink.flush()
                     sink.close()
+                    // Record resume progress once per file, after the buffered sink has been
+                    // flushed to disk. This finally runs on clean completion and on a mid-file
+                    // disconnect alike, so the in-memory ledger stays accurate without a
+                    // per-chunk allocation + map write.
+                    receiverLedger[index] = ReceiverFileState(tempPath, fileRead, entry.sizeBytes)
                 }
 
                 val expectedCrc = input.readInt()
@@ -675,6 +703,9 @@ abstract class P2PManager {
                 transferStatus.value = "Received: ${entry.name}"
                 diag("[ok] ${index + 1}/${mf.entries.size} '${entry.name}' received & verified")
             }
+
+            // The 10 Hz throttle may have skipped the final fraction; pin it to 100%.
+            transferProgress.value = 1f
 
             // 5. Expect DONE
             JetzyProtocol.readDone(input)
