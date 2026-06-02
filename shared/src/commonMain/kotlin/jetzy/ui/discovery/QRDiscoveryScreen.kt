@@ -18,6 +18,8 @@ import androidx.compose.ui.graphics.Color
 import jetzy.managers.P2PManager
 import jetzy.ui.LocalViewmodel
 
+private val OVERLAY_COLOR = Color.Black.copy(alpha = 0.8f)
+
 @Composable
 fun QRDiscoveryScreenUI() {
     val viewmodel = LocalViewmodel.current
@@ -37,13 +39,12 @@ fun QRDiscoveryScreenUI() {
     val isHandshaking by manager.isHandshaking.collectAsState()
 
     if (isHandshaking) {
-        val loadingOverlayColor = Color.Black.copy(alpha = 0.8f)
         Box(
-            modifier = Modifier.fillMaxSize().background(loadingOverlayColor).clickable(onClick={}),
+            modifier = Modifier.fillMaxSize().background(OVERLAY_COLOR).clickable(onClick={}),
             contentAlignment = Alignment.Center,
         ) {
             CircularProgressIndicator(
-                color = contentColorFor(loadingOverlayColor)
+                color = contentColorFor(OVERLAY_COLOR)
             )
         }
     }

@@ -25,6 +25,7 @@ import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -85,6 +86,7 @@ fun PickPhotosSubscreen() {
 
     val photosForSending by viewmodel.photos2Send.collectAsState()
     val listIsEmpty = photosForSending.isEmpty()
+    val highlightFilter = remember { ColorFilter.tint(jetzyYellow.copy(alpha = 0.75f), BlendMode.DstOut) }
 
     Box(modifier = Modifier.fillMaxSize()) {
 
@@ -118,7 +120,7 @@ fun PickPhotosSubscreen() {
                         state = gridState
                     ) {
                         itemsIndexed(photosForSending) { i, photo ->
-                            val isHighlighted = longclickedPhotos.contains(i)
+                            val isHighlighted by remember(i) { derivedStateOf { longclickedPhotos.contains(i) } }
                             Box(Modifier.size(cellWidth)) {
                                 Icon(Icons.Filled.Check, null, Modifier.align(TopEnd).padding(8.sdp))
 
@@ -131,12 +133,12 @@ fun PickPhotosSubscreen() {
                                     recomposePlease += 1
                                 }
 
-                                key("$i $recomposePlease") {
+                                key(i, recomposePlease) {
                                     AsyncImage(
                                         model = photo.image,
                                         contentDescription = null,
                                         contentScale = ContentScale.Crop,
-                                        colorFilter = if (isHighlighted) ColorFilter.tint(jetzyYellow.copy(alpha = 0.75f), blendMode = BlendMode.DstOut) else null,
+                                        colorFilter = if (isHighlighted) highlightFilter else null,
                                         modifier = Modifier.size(cellWidth).border(
                                             width = onePx,
                                             color = scheme.onSurface,

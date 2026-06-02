@@ -94,10 +94,15 @@ class QRScannerController(
         didOutputMetadataObjects: List<*>,
         fromConnection: AVCaptureConnection
     ) {
-        captureSession?.stopRunning()
-
+        // Only stop the session once we actually have a valid QR payload to hand
+        // off. Stopping before these guards tore the camera down on spurious empty
+        // metadata callbacks (returning without firing onQrDetected), needlessly
+        // killing the live preview. stopRunning() still precedes onQrDetected, so
+        // the stop-before-handoff ordering is unchanged for the real-QR path.
         val metadataObject = didOutputMetadataObjects.firstOrNull() as? AVMetadataMachineReadableCodeObject ?: return
         val stringValue = metadataObject.stringValue ?: return
+
+        captureSession?.stopRunning()
 
         loggy("QR CODE DETECTED: $stringValue")
 

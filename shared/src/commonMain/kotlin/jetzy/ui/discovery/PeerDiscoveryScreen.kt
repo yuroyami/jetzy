@@ -33,6 +33,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -81,10 +82,12 @@ private data class PeerColors(val bg: Color, val fg: Color, val accent: Color)
 @Composable
 private fun peerColors(index: Int): PeerColors {
     val colorScheme = MaterialTheme.colorScheme
-    return when (index % 3) {
-        0    -> PeerColors(colorScheme.primaryContainer, colorScheme.onPrimaryContainer, colorScheme.primary)
-        1    -> PeerColors(colorScheme.tertiaryContainer, colorScheme.onTertiaryContainer, colorScheme.tertiary)
-        else -> PeerColors(colorScheme.errorContainer, colorScheme.onErrorContainer, colorScheme.error)
+    return remember(index, colorScheme) {
+        when (index % 3) {
+            0    -> PeerColors(colorScheme.primaryContainer, colorScheme.onPrimaryContainer, colorScheme.primary)
+            1    -> PeerColors(colorScheme.tertiaryContainer, colorScheme.onTertiaryContainer, colorScheme.tertiary)
+            else -> PeerColors(colorScheme.errorContainer, colorScheme.onErrorContainer, colorScheme.error)
+        }
     }
 }
 
@@ -324,6 +327,15 @@ private fun RadarView(
         List(peers.size) { i -> 0.35f + (i % 3) * 0.18f }
     }
 
+    // Pre-compute static Color.copy() values once per primary color change — avoids
+    // repeated copy() calls inside the drawBehind lambda that runs at ~60 fps.
+    val ringColor     = remember(colorScheme.primary) { colorScheme.primary.copy(alpha = .15f) }
+    val sweepColor    = remember(colorScheme.primary) { colorScheme.primary.copy(alpha = .2f) }
+    val sweepLineColor = remember(colorScheme.primary) { colorScheme.primary.copy(alpha = .5f) }
+
+    // Hoisted constant ring-fraction list — never reallocate inside drawBehind.
+    val ringFractions = remember { listOf(0.35f, 0.65f, 1f) }
+
     Box(
         modifier = modifier.drawBehind {
             val cx = size.width / 2f
@@ -331,9 +343,9 @@ private fun RadarView(
             val maxR = size.minDimension / 2f
 
             // rings
-            listOf(0.35f, 0.65f, 1f).forEach { f ->
+            ringFractions.forEach { f ->
                 drawCircle(
-                    color = colorScheme.primary.copy(alpha = .15f),
+                    color = ringColor,
                     radius = maxR * f,
                     center = Offset(cx, cy),
                     style = Stroke(0.5.dp.toPx())
@@ -342,7 +354,7 @@ private fun RadarView(
 
             // sweep
             drawArc(
-                color = colorScheme.primary.copy(alpha = .2f),
+                color = sweepColor,
                 startAngle = sweepAngle - 60f,
                 sweepAngle = 60f,
                 useCenter = true,
@@ -353,7 +365,7 @@ private fun RadarView(
             // sweep leading edge line
             val sweepRad = sweepAngle.toDouble() * (PI / 180.0)
             drawLine(
-                color = colorScheme.primary.copy(alpha = .5f),
+                color = sweepLineColor,
                 start = Offset(cx, cy),
                 end = Offset(
                     cx + (maxR * cos(sweepRad)).toFloat(),
@@ -363,7 +375,7 @@ private fun RadarView(
                 cap = StrokeCap.Round,
             )
 
-            // center dot
+            // center dot — alpha is animated so copy() must stay here
             drawCircle(
                 color = colorScheme.primary.copy(alpha = centerPulse),
                 radius = 5.dp.toPx(),
@@ -372,62 +384,64 @@ private fun RadarView(
         },
         contentAlignment = Alignment.Center
     ) {
-        // peer dots
+        // peer dots — each keyed by stable peer.id so animation state survives list mutations
         Box(modifier = Modifier.fillMaxSize()) {
             peers.forEachIndexed { index, peer ->
-                val angle = peerAngles.getOrElse(index) { 0f }
-                val radius = peerRadii.getOrElse(index) { 0.5f }
-                val colors = peerColors(index)
+                key(peer.id) {
+                    val angle = peerAngles.getOrElse(index) { 0f }
+                    val radius = peerRadii.getOrElse(index) { 0.5f }
+                    val colors = peerColors(index)
 
-                val infiniteRipple = rememberInfiniteTransition(label = "ripple_$index")
-                val rippleScale by infiniteRipple.animateFloat(
-                    initialValue = 1f,
-                    targetValue = 2.4f,
-                    animationSpec = infiniteRepeatable(
-                        tween(2000, delayMillis = index * 600, easing = LinearEasing),
-                        RepeatMode.Restart
-                    ),
-                    label = "scale_$index"
-                )
-                val rippleAlpha by infiniteRipple.animateFloat(
-                    initialValue = 0.4f,
-                    targetValue = 0f,
-                    animationSpec = infiniteRepeatable(
-                        tween(2000, delayMillis = index * 600),
-                        RepeatMode.Restart
-                    ),
-                    label = "alpha_$index"
-                )
+                    val infiniteRipple = rememberInfiniteTransition(label = "ripple_${peer.id}")
+                    val rippleScale by infiniteRipple.animateFloat(
+                        initialValue = 1f,
+                        targetValue = 2.4f,
+                        animationSpec = infiniteRepeatable(
+                            tween(2000, delayMillis = index * 600, easing = LinearEasing),
+                            RepeatMode.Restart
+                        ),
+                        label = "scale_${peer.id}"
+                    )
+                    val rippleAlpha by infiniteRipple.animateFloat(
+                        initialValue = 0.4f,
+                        targetValue = 0f,
+                        animationSpec = infiniteRepeatable(
+                            tween(2000, delayMillis = index * 600),
+                            RepeatMode.Restart
+                        ),
+                        label = "alpha_${peer.id}"
+                    )
 
-                val angleRad = angle.toDouble() * (PI / 180.0)
-                val dotSize = 10.dp
+                    val angleRad = angle.toDouble() * (PI / 180.0)
+                    val dotSize = 10.dp
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .drawBehind {
-                            val cx = size.width / 2f
-                            val cy = size.height / 2f
-                            val maxR = size.minDimension / 2f
-                            val dx = (maxR * radius * cos(angleRad)).toFloat()
-                            val dy = (maxR * radius * sin(angleRad)).toFloat()
-                            val dotR = dotSize.toPx() / 2f
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .drawBehind {
+                                val cx = size.width / 2f
+                                val cy = size.height / 2f
+                                val maxR = size.minDimension / 2f
+                                val dx = (maxR * radius * cos(angleRad)).toFloat()
+                                val dy = (maxR * radius * sin(angleRad)).toFloat()
+                                val dotR = dotSize.toPx() / 2f
 
-                            // ripple
-                            drawCircle(
-                                color = colors.accent.copy(alpha = rippleAlpha),
-                                radius = dotR * rippleScale,
-                                center = Offset(cx + dx, cy + dy),
-                            )
-                            // dot
-                            drawCircle(
-                                color = if (peer == peers.firstOrNull { it.id == peer.id }) colors.accent else colors.accent.copy(.7f),
-                                radius = dotR,
-                                center = Offset(cx + dx, cy + dy),
-                            )
-                        }
-                        .clickable { onPeerSelected(peer) }
-                )
+                                // ripple — alpha is animated so copy() must stay here
+                                drawCircle(
+                                    color = colors.accent.copy(alpha = rippleAlpha),
+                                    radius = dotR * rippleScale,
+                                    center = Offset(cx + dx, cy + dy),
+                                )
+                                // dot — the O(n) firstOrNull scan was always true; use accent directly
+                                drawCircle(
+                                    color = colors.accent,
+                                    radius = dotR,
+                                    center = Offset(cx + dx, cy + dy),
+                                )
+                            }
+                            .clickable { onPeerSelected(peer) }
+                    )
+                }
             }
         }
     }
@@ -473,8 +487,9 @@ private fun PeerRow(
                 .clip(RoundedCornerShape(8.sdp))
                 .background(colors.bg)
         ) {
+            val initials = remember(peer.name) { peer.name.take(2).uppercase() }
             Text(
-                text = peer.name.take(2).uppercase(),
+                text = initials,
                 fontSize = 9.ssp,
                 fontWeight = FontWeight.W500,
                 color = colors.fg,

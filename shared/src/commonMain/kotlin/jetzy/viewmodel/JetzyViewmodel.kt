@@ -19,9 +19,11 @@ import jetzy.utils.Platform
 import jetzy.utils.PreferablyIO
 import jetzy.utils.platform
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -284,13 +286,18 @@ class JetzyViewmodel : ViewModel() {
     inline fun <reified T : JetzyElement> SnapshotStateList<JetzyElement>.filterAsStateFlow(): StateFlow<List<T>> {
         return snapshotFlow {
             filterIsInstance<T>()
-        }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+        }.distinctUntilChanged()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     }
 
     var snack = SnackbarHostState()
+    private var snackbarJob: Job? = null
     fun snacky(string: String, queue: Boolean = false) {
-        if (!queue) snack.currentSnackbarData?.dismiss()
-        viewModelScope.launch(Dispatchers.Main) {
+        if (!queue) {
+            snack.currentSnackbarData?.dismiss()
+            snackbarJob?.cancel()
+        }
+        snackbarJob = viewModelScope.launch(Dispatchers.Main) {
             snack.showSnackbar(
                 message = string,
                 duration = SnackbarDuration.Short

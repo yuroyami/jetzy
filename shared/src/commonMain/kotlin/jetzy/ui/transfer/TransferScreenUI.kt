@@ -40,10 +40,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +53,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -100,6 +99,7 @@ fun TransferScreenUI() {
     val transferComplete by manager.transferComplete.collectAsState()
     val saveComplete by manager.saveComplete.collectAsState()
     val canResume by manager.canResume.collectAsState()
+    val isSaving by manager.isSaving.collectAsState()
 
     val colorScheme = MaterialTheme.colorScheme
 
@@ -169,17 +169,23 @@ fun TransferScreenUI() {
                     val completedFiles by remember {
                         derivedStateOf { fileEntries.count { it.status == FileTransferStatus.Done } }
                     }
+                    val speedLabel = remember(speed) {
+                        if (speed > 0) speed.toHumanSize() + "/s" else "—"
+                    }
+                    val remainingStr = remember(progress, speed, manifest?.totalBytes) {
+                        remainingLabel(
+                            totalBytes = manifest?.totalBytes ?: 0L,
+                            progressFrac = progress,
+                            speedBytesPerS = speed
+                        )
+                    }
                     ProgressSection(
                         progress = progress,
                         completedCount = completedFiles,
                         totalCount = manifest?.totalFiles ?: 0,
                         totalBytes = manifest?.totalBytes,
-                        speedLabel = if (speed > 0) speed.toHumanSize() + "/s" else "—",
-                        remainingLabel = remainingLabel(
-                            totalBytes = manifest?.totalBytes ?: 0L,
-                            progressFrac = progress,
-                            speedBytesPerS = speed
-                        ),
+                        speedLabel = speedLabel,
+                        remainingLabel = remainingStr,
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -208,10 +214,8 @@ fun TransferScreenUI() {
                 val hasFiles = manifest?.hasFiles == true
 
                 if (transferComplete && !viewmodel.isSender && !saveComplete && hasFiles) {
-                    // Driven by the manager so a failed save (which leaves saveComplete=false)
-                    // re-enables the button for a retry instead of disabling it forever.
-                    val isSaving by manager.isSaving.collectAsState()
-
+                    // isSaving is hoisted to TransferScreenUI so this branch never violates
+                    // Compose's no-conditional-composable-call rule.
                     val destDir = rememberDirectoryPickerLauncher { dir ->
                         dir?.let { destinationDir ->
                             manager.finalizeReceivedFilesAt(destinationDir)
@@ -355,7 +359,9 @@ private fun PeerAvatar(
     floatDelay: Int,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val infiniteTransition = rememberInfiniteTransition(label = "float_$name")
+    val transLabel = remember(name) { "float_$name" }
+    val animLabel  = remember(name) { "float_y_$name" }
+    val infiniteTransition = rememberInfiniteTransition(label = transLabel)
     val offsetY by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = -6f,
@@ -364,7 +370,7 @@ private fun PeerAvatar(
             repeatMode = RepeatMode.Reverse,
             initialStartOffset = StartOffset(floatDelay)
         ),
-        label = "float_y_$name"
+        label = animLabel
     )
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
@@ -403,45 +409,66 @@ private fun PeerAvatar(
 private fun PacketAnimation(modifier: Modifier = Modifier) {
     val colorScheme = MaterialTheme.colorScheme
     val infiniteTransition = rememberInfiniteTransition(label = "packets")
-    val offsets = listOf(0, 400, 800).map { delay ->
-        infiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(1200, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart,
-                initialStartOffset = StartOffset(delay)
-            ),
-            label = "packet_$delay"
-        )
-    }
+    // Use individual vals so each animateFloat call has a stable composition slot (no list allocation).
+    val offset0 by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+            initialStartOffset = StartOffset(0)
+        ), label = "packet_0"
+    )
+    val offset1 by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+            initialStartOffset = StartOffset(400)
+        ), label = "packet_400"
+    )
+    val offset2 by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+            initialStartOffset = StartOffset(800)
+        ), label = "packet_800"
+    )
+    // Hoist Path allocation out of the per-frame draw lambda; reset+rebuild each frame.
+    val cachedPath = remember { Path() }
     Box(modifier = modifier.drawBehind {
         val w = size.width
         val h = size.height
         val cy = h / 2f
-        val p0 = Offset(0f, cy)
-        val cp1 = Offset(w * 0.3f, cy - h * 0.5f)
-        val cp2 = Offset(w * 0.7f, cy + h * 0.5f)
-        val p3 = Offset(w, cy)
+        val p0x = 0f;        val p0y = cy
+        val cp1x = w * 0.3f; val cp1y = cy - h * 0.5f
+        val cp2x = w * 0.7f; val cp2y = cy + h * 0.5f
+        val p3x = w;         val p3y = cy
 
-        val pathDash = Path().apply { moveTo(p0.x, p0.y); cubicTo(cp1.x, cp1.y, cp2.x, cp2.y, p3.x, p3.y) }
-        drawPath(path = pathDash, color = colorScheme.outlineVariant, style = Stroke(width = 1.dp.toPx(), cap = StrokeCap.Round))
+        cachedPath.reset()
+        cachedPath.moveTo(p0x, p0y)
+        cachedPath.cubicTo(cp1x, cp1y, cp2x, cp2y, p3x, p3y)
+        drawPath(path = cachedPath, color = colorScheme.outlineVariant, style = Stroke(width = 1.dp.toPx(), cap = StrokeCap.Round))
 
-        offsets.forEach { offset ->
-            val t = offset.value
+        // Pre-compute constant pixel sizes once per frame (density-stable).
+        val halfDot = 4.dp.toPx()
+        val dotSizePx = 8.dp.toPx()
+        val dotRadiusPx = 2.dp.toPx()
+
+        listOf(offset0, offset1, offset2).forEach { t ->
             val alpha = when {
                 t < 0.08f -> t / 0.08f
                 t > 0.92f -> (1f - t) / 0.08f
                 else -> 1f
             }
             if (alpha <= 0f) return@forEach
-            val x = cubicBezier(p0.x, cp1.x, cp2.x, p3.x, t)
-            val y = cubicBezier(p0.y, cp1.y, cp2.y, p3.y, t)
+            val x = cubicBezier(p0x, cp1x, cp2x, p3x, t)
+            val y = cubicBezier(p0y, cp1y, cp2y, p3y, t)
             drawRoundRect(
                 color = colorScheme.primary.copy(alpha = alpha),
-                topLeft = Offset(x - 4.dp.toPx(), y - 4.dp.toPx()),
-                size = androidx.compose.ui.geometry.Size(8.dp.toPx(), 8.dp.toPx()),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()),
+                topLeft = Offset(x - halfDot, y - halfDot),
+                size = androidx.compose.ui.geometry.Size(dotSizePx, dotSizePx),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(dotRadiusPx),
             )
         }
     })
@@ -476,11 +503,14 @@ private fun ProgressSection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = buildString {
+            val fileCountLabel = remember(completedCount, totalCount, totalBytes) {
+                buildString {
                     append("$completedCount of $totalCount files")
                     if (totalBytes != null) append("  ·  ${totalBytes.toHumanSize()} total")
-                },
+                }
+            }
+            Text(
+                text = fileCountLabel,
                 fontSize = 10.ssp,
                 color = colorScheme.onSurfaceVariant,
             )
@@ -544,8 +574,9 @@ private fun SpeedBadge(speedLabel: String) {
         Box(
             modifier = Modifier
                 .size(5.sdp)
+                .graphicsLayer { alpha = dotAlpha }
                 .clip(CircleShape)
-                .background(colorScheme.tertiary.copy(alpha = dotAlpha))
+                .background(colorScheme.tertiary)
         )
         Text(text = speedLabel, fontSize = 9.ssp, color = colorScheme.onSurfaceVariant)
     }
@@ -650,10 +681,11 @@ private fun FileRow(
     val rowAlpha = if (entry.status == FileTransferStatus.Pending) 0.45f else 1f
 
     // animate per-file secondary progress bar
+    val fileProgressLabel = remember(entry.name) { "file_progress_${entry.name}" }
     val animatedFileProgress by animateFloatAsState(
         targetValue = entry.progress.coerceIn(0f, 1f),
         animationSpec = tween(300, easing = FastOutSlowInEasing),
-        label = "file_progress_${entry.name}"
+        label = fileProgressLabel
     )
 
     Column(
@@ -721,14 +753,18 @@ private fun FileRow(
 @Composable
 private fun FileTypeIcon(typeLabel: String) {
     val colorScheme = MaterialTheme.colorScheme
-    val (bg, fg) = when (typeLabel.uppercase()) {
-        "VID" -> colorScheme.errorContainer to colorScheme.onErrorContainer
-        "DOC" -> colorScheme.tertiaryContainer to colorScheme.onTertiaryContainer
-        "PDF" -> colorScheme.errorContainer to colorScheme.onErrorContainer
-        "TXT" -> colorScheme.secondaryContainer to colorScheme.onSecondaryContainer
-        "ZIP" -> colorScheme.primaryContainer to colorScheme.onPrimaryContainer
-        "AUD" -> colorScheme.tertiaryContainer to colorScheme.onTertiaryContainer
-        else  -> colorScheme.primaryContainer to colorScheme.onPrimaryContainer
+    // Cache the uppercased label and the color pair — typeLabel is stable for any given file.
+    val upper = remember(typeLabel) { typeLabel.take(3).uppercase() }
+    val (bg, fg) = remember(typeLabel, colorScheme) {
+        when (typeLabel.uppercase()) {
+            "VID" -> colorScheme.errorContainer to colorScheme.onErrorContainer
+            "DOC" -> colorScheme.tertiaryContainer to colorScheme.onTertiaryContainer
+            "PDF" -> colorScheme.errorContainer to colorScheme.onErrorContainer
+            "TXT" -> colorScheme.secondaryContainer to colorScheme.onSecondaryContainer
+            "ZIP" -> colorScheme.primaryContainer to colorScheme.onPrimaryContainer
+            "AUD" -> colorScheme.tertiaryContainer to colorScheme.onTertiaryContainer
+            else  -> colorScheme.primaryContainer to colorScheme.onPrimaryContainer
+        }
     }
     Box(
         contentAlignment = Alignment.Center,
@@ -738,7 +774,7 @@ private fun FileTypeIcon(typeLabel: String) {
             .background(bg)
     ) {
         Text(
-            text = typeLabel.take(3).uppercase(),
+            text = upper,
             fontSize = 7.ssp,
             fontWeight = FontWeight.W500,
             color = fg,
@@ -771,20 +807,25 @@ private fun FileStatusIndicator(status: FileTransferStatus) {
                 animationSpec = infiniteRepeatable(animation = tween(700, easing = LinearEasing)),
                 label = "spin"
             )
+            // Hoist Stroke allocations out of the per-frame draw lambda.
+            // density is stable for the lifetime of the composable on a fixed-size screen.
+            val density = LocalDensity.current
+            val spinnerStrokeRing = remember(density) { Stroke(width = with(density) { 1.5.dp.toPx() }) }
+            val spinnerStrokeArc  = remember(density) { Stroke(width = with(density) { 1.5.dp.toPx() }, cap = StrokeCap.Round) }
             Box(
                 modifier = Modifier
                     .size(13.sdp)
                     .graphicsLayer { rotationZ = rotation }
                     .drawBehind {
-                        val stroke = 1.5.dp.toPx()
-                        val r = (size.minDimension - stroke) / 2f
-                        drawCircle(color = colorScheme.primaryContainer, radius = r, style = Stroke(width = stroke))
+                        val s = 1.5.dp.toPx()
+                        val r = (size.minDimension - s) / 2f
+                        drawCircle(color = colorScheme.primaryContainer, radius = r, style = spinnerStrokeRing)
                         drawArc(
                             color = colorScheme.primary,
                             startAngle = 0f,
                             sweepAngle = 270f,
                             useCenter = false,
-                            style = Stroke(width = stroke, cap = StrokeCap.Round)
+                            style = spinnerStrokeArc
                         )
                     }
             )

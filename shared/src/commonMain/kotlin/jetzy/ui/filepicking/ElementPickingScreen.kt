@@ -12,8 +12,6 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -21,20 +19,17 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import jetzy.ui.Screen
 import kotlinx.coroutines.launch
 
+private val sendScreens = listOf(
+    Screen.PickFilesSubscreen,
+    Screen.PickPhotosSubscreen,
+    Screen.PickVideosSubscreen,
+    Screen.PickTextSubscreen,
+)
 
 @Composable
 fun ElementPickingScreen() {
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
-
-    val sendScreens by derivedStateOf {
-        buildList {
-            add(Screen.PickFilesSubscreen)
-            add(Screen.PickPhotosSubscreen)
-            add(Screen.PickVideosSubscreen)
-            add(Screen.PickTextSubscreen)
-        }
-    }
 
     val pagerState = rememberPagerState { sendScreens.size }
 

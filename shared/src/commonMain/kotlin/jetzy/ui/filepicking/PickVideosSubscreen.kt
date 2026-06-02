@@ -85,7 +85,7 @@ fun PickVideosSubscreen() {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        itemsIndexed(videosForSending) { index, video ->
+                        itemsIndexed(videosForSending, key = { _, v -> v.video.name }) { index, video ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()

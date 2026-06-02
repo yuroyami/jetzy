@@ -16,6 +16,9 @@ import kotlin.math.sqrt
  * Based on a 320dp baseline width (similar to Android SDP)
  */
 
+// Baseline diagonal for a 320x480dp reference screen — constant, computed once.
+private val BASE_DIAGONAL = sqrt(320f.pow(2) + 480f.pow(2))
+
 @Composable
 fun getScaleFactor(): Float {
     val density = LocalDensity.current
@@ -27,9 +30,8 @@ fun getScaleFactor(): Float {
 
         // Use diagonal as scaling reference (like Android SDP)
         val screenDiagonal = sqrt(screenWDP.value.pow(2) + screenHDP.value.pow(2))
-        val baseDiagonal = sqrt(320f.pow(2) + 480f.pow(2)) // 320x480 baseline
 
-        screenDiagonal / baseDiagonal
+        screenDiagonal / BASE_DIAGONAL
     }
 }
 

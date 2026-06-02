@@ -15,8 +15,8 @@ data class TransferManifest(
     val senderName: String,
     val senderPlatform: Platform
 ) {
-    val hasFiles: Boolean get() = entries.any { it.entryType == EntryType.FILE }
-    val hasTexts: Boolean get() = entries.any { it.entryType == EntryType.TEXT }
+    val hasFiles: Boolean = entries.any { it.entryType == EntryType.FILE }
+    val hasTexts: Boolean = entries.any { it.entryType == EntryType.TEXT }
 }
 
 data class PeerInfo(
@@ -50,16 +50,16 @@ data class FileTransferEntry(
     /** 0f–1f progress for just this file */
     val progress: Float get() = if (sizeBytes == 0L) 1f else bytesTransferred.toFloat() / sizeBytes
 
-    val sizeLabel: String get() = sizeBytes.toHumanSize()
+    val sizeLabel: String = sizeBytes.toHumanSize()
 
-    val isText: Boolean get() = entryType == EntryType.TEXT
+    val isText: Boolean = entryType == EntryType.TEXT
 
-    val displayName: String get() = when {
+    val displayName: String = when {
         relativePath.isNotEmpty() -> relativePath
         else -> name
     }
 
-    val typeLabel: String get() = when {
+    val typeLabel: String = when {
         entryType == EntryType.TEXT -> "TXT"
         mimeType != null -> when {
             mimeType.startsWith("video/") -> "VID"

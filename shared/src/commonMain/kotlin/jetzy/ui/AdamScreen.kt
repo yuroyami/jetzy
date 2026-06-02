@@ -96,6 +96,8 @@ fun AdamScreen(onViewmodel: (JetzyViewmodel) -> Unit) {
             }
 
             val currentScreen by viewmodel.currentScreen.collectAsState()
+            val op by viewmodel.currentOperation.collectAsState()
+            val prp by viewmodel.currentPeerPlatform.collectAsState()
 
             CompositionLocalProvider(
                 LocalViewmodel provides viewmodel,
@@ -126,8 +128,6 @@ fun AdamScreen(onViewmodel: (JetzyViewmodel) -> Unit) {
                                     },
                                     title = {
                                         if (currentScreen !is Screen.MainScreen) {
-                                            val op by viewmodel.currentOperation.collectAsState()
-                                            val prp by viewmodel.currentPeerPlatform.collectAsState()
                                             if (op != null && prp != null) {
                                                 val s1 = when (op) {
                                                     P2pOperation.SEND -> stringResource(Res.string.sending_to_label)
@@ -136,7 +136,7 @@ fun AdamScreen(onViewmodel: (JetzyViewmodel) -> Unit) {
                                                 }
 
                                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Text("$s1 ", modifier = Modifier.padding(horizontal = 4.sdp), fontSize = 10.ssp)
+                                                    Text(s1.toString(), modifier = Modifier.padding(horizontal = 4.sdp), fontSize = 10.ssp)
 
                                                     Icon(imageVector = prp!!.peerIcon, tint = prp!!.peerBrandColor, contentDescription = null, modifier = Modifier.size(16.sdp))
                                                 }

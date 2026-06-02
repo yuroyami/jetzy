@@ -27,8 +27,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -73,20 +75,23 @@ fun PermissionGateDialog(
     // Stable key based on requirement ids — `requirements` itself is a fresh list
     // on every parent recomposition (the manager rebuilds it from a `get()`), so
     // keying on the list reference would restart the producer constantly.
-    val structuralKey = requirements.joinToString("|") { it.id }
+    val structuralKey = remember(requirements) { requirements.joinToString("|") { it.id } }
     val grantedFlags by produceState(
         initialValue = requirements.map { it.isGrantedNow() },
         key1 = structuralKey,
     ) {
         // Snapshot once immediately in case the user granted everything before opening,
-        // then poll while the dialog stays open.
+        // then poll while the dialog stays open. Only write to `value` when the result
+        // actually changes to avoid spurious recompositions every poll tick.
         value = requirements.map { it.isGrantedNow() }
         while (true) {
             delay(400L)
-            value = requirements.map { it.isGrantedNow() }
+            val next = BooleanArray(requirements.size) { requirements[it].isGrantedNow() }
+            val nextList = next.asList()
+            if (nextList != value) value = nextList
         }
     }
-    val allGranted = grantedFlags.size == requirements.size && grantedFlags.all { it }
+    val allGranted by remember { derivedStateOf { grantedFlags.size == requirements.size && grantedFlags.all { it } } }
 
     // Auto-progress: as soon as everything is green, give the user a brief beat to
     // register the final check landing, then close the dialog without a tap.
@@ -136,6 +141,10 @@ fun PermissionGateDialog(
                 )
 
                 val listScrollState = rememberScrollState()
+                val surfaceColor = MaterialTheme.colorScheme.surface
+                val fadeBrush = remember(surfaceColor) {
+                    Brush.verticalGradient(listOf(Color.Transparent, surfaceColor))
+                }
                 Box(modifier = Modifier.heightIn(max = 380.sdp)) {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(6.sdp),
@@ -159,14 +168,7 @@ fun PermissionGateDialog(
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth()
                                 .height(28.sdp)
-                                .background(
-                                    Brush.verticalGradient(
-                                        colors = listOf(
-                                            Color.Transparent,
-                                            MaterialTheme.colorScheme.surface,
-                                        )
-                                    )
-                                ),
+                                .background(fadeBrush),
                             contentAlignment = Alignment.BottomCenter,
                         ) {
                             Icon(
@@ -214,6 +216,7 @@ private fun RequirementRow(req: PermissionRequirement, isGranted: Boolean) {
     val scheme = MaterialTheme.colorScheme
     val grantedColor = scheme.tertiary
     val pendingColor = scheme.primary
+    val actionPadding = PaddingValues(horizontal = 10.sdp, vertical = 3.sdp)
 
     // Top-aligned so the indicator dot and trailing action anchor to the title's
     // baseline rather than floating in the vertical middle of a wrapped description.
@@ -298,7 +301,7 @@ private fun RequirementRow(req: PermissionRequirement, isGranted: Boolean) {
                     FilledTonalButton(
                         onClick = req.request,
                         shape = RoundedCornerShape(7.sdp),
-                        contentPadding = PaddingValues(horizontal = 10.sdp, vertical = 3.sdp),
+                        contentPadding = actionPadding,
                     ) {
                         Text(
                             text = when (req.kind) {

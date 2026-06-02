@@ -123,8 +123,10 @@ private fun HostQrPanel(modifier: Modifier, manager: LanHostP2PM) {
             ) {
                 val data = qrData
                 if (data != null) {
+                    val qrString = remember(data) { data.toString() }
+                    val address = remember(data) { "${data.ipAddress}:${data.port}" }
                     val qrPainter = rememberQrCodePainter(
-                        data = data.toString(),
+                        data = qrString,
                         shapes = QrShapes(darkPixel = QrPixelShape.roundCorners()),
                         colors = QrColors(dark = QrBrush.solid(colorScheme.primary)),
                     )
@@ -137,7 +139,7 @@ private fun HostQrPanel(modifier: Modifier, manager: LanHostP2PM) {
                     ) {
                         Image(painter = qrPainter, contentDescription = "QR code")
                     }
-                    QrTextRow(label = "Address", value = "${data.ipAddress}:${data.port}")
+                    QrTextRow(label = "Address", value = address)
                     QrTextRow(label = "Device", value = data.deviceName)
                 } else {
                     Column(

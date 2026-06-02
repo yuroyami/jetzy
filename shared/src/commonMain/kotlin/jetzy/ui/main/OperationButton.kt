@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -41,7 +42,7 @@ fun OperationButton(
     val haptic = LocalHapticFeedback.current
     val viewmodel = LocalViewmodel.current
     val currentOperation by viewmodel.currentOperation.collectAsState()
-    val isSelected by derivedStateOf { currentOperation == operation }
+    val isSelected by remember { derivedStateOf { currentOperation == operation } }
 
     OutlinedToggleButton(
         modifier = modifier.height(64.sdp).padding(vertical = 8.sdp, horizontal = 3.sdp),

@@ -213,6 +213,7 @@ fun FileFolderGridView(
     highlightedItems: SnapshotStateList<Int>
 ) {
     val density = LocalDensity.current
+    val borderColor = scheme.onSurface.copy(alpha = 0.05f)
 
     var cellWidth by remember { mutableStateOf(1.dp) }
     val listIsEmpty by derivedStateOf { allItems.isEmpty() }
@@ -254,7 +255,7 @@ fun FileFolderGridView(
                                 indication = ripple(color = jetzyYellow),
                                 interactionSource = null
                             )
-                            .border((0.1).dp, color = scheme.onSurface.copy(alpha = 0.05f), shape = RectangleShape)
+                            .border((0.1).dp, color = borderColor, shape = RectangleShape)
 
                     ) {
                         Icon(
@@ -266,7 +267,10 @@ fun FileFolderGridView(
                         )
 
                         Text(
-                            text = (f as? JetzyElement.File)?.file?.name ?: (f as? JetzyElement.Folder)?.folder?.name ?: "",
+                            text = when (viewMode) {
+                                FileFolderViewMode.Files -> (f as? JetzyElement.File)?.file?.name ?: ""
+                                FileFolderViewMode.Folders -> (f as? JetzyElement.Folder)?.folder?.name ?: ""
+                            },
                             fontSize = 7.ssp,
                             modifier = Modifier.width(cellWidth - 12.sdp).basicMarquee(iterations = 3)
                         )

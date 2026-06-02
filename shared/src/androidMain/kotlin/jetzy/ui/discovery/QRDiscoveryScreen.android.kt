@@ -40,6 +40,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -133,10 +134,11 @@ actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
                     .padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                if (qrData != null) {
-                    QrCodeBlock(qrData = qrData!!)
-                    LivePill(ssid = qrData!!.hotspotSSID)
-                    CredentialsRow(qrData = qrData!!)
+                val data = qrData
+                if (data != null) {
+                    QrCodeBlock(qrData = data)
+                    LivePill(ssid = data.hotspotSSID)
+                    CredentialsRow(qrData = data)
                 } else {
                     QrLoadingBlock()
                 }
@@ -182,13 +184,16 @@ private fun QrCodeBlock(qrData: QRData) {
         label = "corner_alpha"
     )
 
+    val qrString = remember(qrData) { qrData.toString() }
+    val qrShapes = remember { QrShapes(darkPixel = QrPixelShape.roundCorners()) }
+    val qrColors = remember(colorScheme.primary) { QrColors(dark = QrBrush.solid(colorScheme.primary)) }
     val qrPainter = rememberQrCodePainter(
-        data = qrData.toString(),
-        shapes = QrShapes(darkPixel = QrPixelShape.roundCorners()),
-        colors = QrColors(
-            dark = QrBrush.solid(colorScheme.primary),
-        )
+        data = qrString,
+        shapes = qrShapes,
+        colors = qrColors,
     )
+    val scanLineColor = remember(colorScheme.primary) { colorScheme.primary.copy(alpha = .7f) }
+    val primaryColor = colorScheme.primary
 
     Box(
         modifier = Modifier
@@ -202,7 +207,7 @@ private fun QrCodeBlock(qrData: QRData) {
 
                 // scan line
                 drawLine(
-                    color = colorScheme.primary.copy(alpha = .7f),
+                    color = scanLineColor,
                     start = Offset(w * 0.07f, scanPx),
                     end = Offset(w * 0.93f, scanPx),
                     strokeWidth = 1.5.dp.toPx(),
@@ -213,7 +218,7 @@ private fun QrCodeBlock(qrData: QRData) {
                 val cSize = 18.dp.toPx()
                 val cStroke = 2.5.dp.toPx()
                 val margin = 4.dp.toPx()
-                val color = colorScheme.primary.copy(alpha = cornerAlpha)
+                val color = primaryColor.copy(alpha = cornerAlpha)
 
                 // top-left
                 drawLine(color, Offset(margin, margin + cSize), Offset(margin, margin), cStroke.dp.toPx().let { margin })
@@ -284,19 +289,22 @@ private fun SpinnerCircle() {
         animationSpec = infiniteRepeatable(tween(700, easing = LinearEasing)),
         label = "rotation"
     )
+    val density = LocalDensity.current
+    val strokePx = remember(density) { with(density) { 2.dp.toPx() } }
+    val fillStroke = remember(strokePx) { Stroke(strokePx) }
+    val arcStroke = remember(strokePx) { Stroke(strokePx, cap = StrokeCap.Round) }
     Box(
         modifier = Modifier
             .size(24.dp)
             .drawBehind {
-                val stroke = 2.dp.toPx()
-                val r = (size.minDimension - stroke) / 2f
-                drawCircle(colorScheme.primaryContainer, radius = r, style = Stroke(stroke))
+                val r = (size.minDimension - strokePx) / 2f
+                drawCircle(colorScheme.primaryContainer, radius = r, style = fillStroke)
                 drawArc(
                     color = colorScheme.primary,
                     startAngle = rotation,
                     sweepAngle = 270f,
                     useCenter = false,
-                    style = Stroke(stroke, cap = StrokeCap.Round)
+                    style = arcStroke
                 )
             }
     )
@@ -343,6 +351,7 @@ private fun LivePill(ssid: String) {
 
 @Composable
 private fun CredentialsRow(qrData: QRData) {
+    val maskedPw = remember(qrData.hotspotPassword) { qrData.hotspotPassword.take(8) + "••••" }
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxWidth()
@@ -354,7 +363,7 @@ private fun CredentialsRow(qrData: QRData) {
         )
         CredCard(
             label = stringResource(Res.string.password),
-            value = qrData.hotspotPassword.take(8) + "••••",
+            value = maskedPw,
             modifier = Modifier.weight(1f)
         )
     }

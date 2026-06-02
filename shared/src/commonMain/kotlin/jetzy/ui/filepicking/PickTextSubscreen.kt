@@ -118,8 +118,9 @@ fun PickTextSubscreen() {
                                 expanded = !expanded
                             }
                         ) {
+                            val label = remember(i, text.text) { "${i+1}  ${text.text}" }
                             Text(
-                                text = "${i+1}       ${text.text}",
+                                text = label,
                                 maxLines = if (expanded) 25 else 1,
                                 modifier = Modifier.weight(1f).padding(horizontal = 3.sdp),
                                 overflow = TextOverflow.MiddleEllipsis,

@@ -190,14 +190,16 @@ fun MainScreenUI() {
                             // "Another platform" to satisfy App Store guidelines, so
                             // PC + Android would render as two indistinguishable
                             // buttons. On Android (and other hosts), PC stays visible.
-                            val platforms = buildList {
-                                add(Platform.Android)
-                                add(Platform.IOS)
-                                if (platform != Platform.IOS) add(Platform.PC)
-                                // add(Platform.Web)
+                            val platforms = remember {
+                                buildList {
+                                    add(Platform.Android)
+                                    add(Platform.IOS)
+                                    if (platform != Platform.IOS) add(Platform.PC)
+                                    // add(Platform.Web)
+                                }
                             }
                             platforms.forEach { platform ->
-                                val isSelected by derivedStateOf { platform == peerPlatform }
+                                val isSelected by remember(platform) { derivedStateOf { platform == peerPlatform } }
                                 VerticalCardButton(
                                     modifier = Modifier.weight(1f).padding(horizontal = 2.sdp),
                                     text = platform.peerLabel,
