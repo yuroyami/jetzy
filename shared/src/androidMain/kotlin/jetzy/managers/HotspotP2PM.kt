@@ -42,21 +42,24 @@ class HotspotP2PM(private val context: Context) : P2PManager() {
     private var serverSocket: ServerSocket? = null
     private var selectorManager: SelectorManager? = null
 
-    override val permissionRequirements: List<PermissionRequirement>
-        get() {
-            val activity = context as? MainActivity ?: return emptyList()
-            return buildList {
-                add(AndroidPermissionRequirements.nearbyDevices(activity))
-                add(AndroidPermissionRequirements.postNotifications(activity))
-                add(AndroidPermissionRequirements.wifiEnabled(activity))
-                // Android 9–12 (P..S_V2) need location services for the SSID to broadcast.
-                if (Build.VERSION.SDK_INT in Build.VERSION_CODES.P..Build.VERSION_CODES.S_V2) {
-                    add(AndroidPermissionRequirements.locationServicesEnabled(activity))
-                }
-                add(AndroidPermissionRequirements.mobileHotspotOff(activity))
-                add(AndroidPermissionRequirements.ignoreBatteryOptimizations(activity))
+    // Computed once and cached: the requirement descriptors are stateless and close
+    // over stable references (the Activity, which never changes for this instance).
+    // The getter was previously re-evaluated on every recomposition that read it,
+    // rebuilding up to 6 PermissionRequirement objects each time.
+    override val permissionRequirements: List<PermissionRequirement> by lazy {
+        val activity = context as? MainActivity ?: return@lazy emptyList()
+        buildList {
+            add(AndroidPermissionRequirements.nearbyDevices(activity))
+            add(AndroidPermissionRequirements.postNotifications(activity))
+            add(AndroidPermissionRequirements.wifiEnabled(activity))
+            // Android 9–12 (P..S_V2) need location services for the SSID to broadcast.
+            if (Build.VERSION.SDK_INT in Build.VERSION_CODES.P..Build.VERSION_CODES.S_V2) {
+                add(AndroidPermissionRequirements.locationServicesEnabled(activity))
             }
+            add(AndroidPermissionRequirements.mobileHotspotOff(activity))
+            add(AndroidPermissionRequirements.ignoreBatteryOptimizations(activity))
         }
+    }
 
     @OptIn(ExperimentalUuidApi::class)
     fun establishTcpServer(): Deferred<QRData?> = p2pScope.async(PreferablyIO) {
@@ -282,8 +285,11 @@ class HotspotP2PM(private val context: Context) : P2PManager() {
                 val addresses: Enumeration<InetAddress> = networkInterface.inetAddresses
                 while (addresses.hasMoreElements()) {
                     val address: InetAddress = addresses.nextElement()
-                    val ip = address.hostAddress ?: continue
-                    if (!address.isLoopbackAddress && address is Inet4Address) {
+                    // Narrow to a non-loopback IPv4 address *before* touching hostAddress,
+                    // which allocates a String for every address (incl. IPv6 ones we'd
+                    // otherwise discard right after).
+                    if (address is Inet4Address && !address.isLoopbackAddress) {
+                        val ip = address.hostAddress ?: continue
                         return ip
                     }
                 }

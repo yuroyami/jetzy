@@ -48,8 +48,13 @@ object JetzyProtocol {
         RESUME(3);
 
         companion object {
-            fun fromCode(c: Byte): AckStatus =
-                entries.firstOrNull { it.code == c } ?: REJECTED
+            private val BY_CODE = arrayOfNulls<AckStatus>(4).also { a ->
+                for (e in entries) a[e.code.toInt()] = e
+            }
+            fun fromCode(c: Byte): AckStatus {
+                val i = c.toInt()
+                return if (i in 0..3) BY_CODE[i] ?: REJECTED else REJECTED
+            }
         }
     }
 
@@ -59,8 +64,13 @@ object JetzyProtocol {
         CANCELLED(2);
 
         companion object {
-            fun fromCode(c: Byte): FileAck =
-                entries.firstOrNull { it.code == c } ?: CANCELLED
+            private val BY_CODE = arrayOfNulls<FileAck>(3).also { a ->
+                for (e in entries) a[e.code.toInt()] = e
+            }
+            fun fromCode(c: Byte): FileAck {
+                val i = c.toInt()
+                return if (i in 0..2) BY_CODE[i] ?: CANCELLED else CANCELLED
+            }
         }
     }
 

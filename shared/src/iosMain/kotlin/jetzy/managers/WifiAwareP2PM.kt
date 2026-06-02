@@ -12,6 +12,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.yield
 import kotlinx.io.asSink
 import kotlinx.io.asSource
 import kotlinx.io.buffered
@@ -155,6 +156,9 @@ class WifiAwareP2PM private constructor(
                     val n = writeChannel.readAvailable(buf)
                     if (n <= 0) {
                         if (writeChannel.isClosedForRead) break
+                        // readAvailable() is non-blocking and returns 0 between chunks;
+                        // yield instead of busy-spinning to avoid pegging the IO thread.
+                        yield()
                         continue
                     }
                     sink.write(buf, 0, n)

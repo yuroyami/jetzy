@@ -209,11 +209,18 @@ class WifiAwareP2PM(private val context: Context) : PeerDiscoveryP2PM() {
             val peerName = serviceSpecificInfo?.toString(StandardCharsets.UTF_8).orEmpty()
                 .ifBlank { "Wi-Fi Aware peer" }
             // PeerHandles re-issue on every match; key by displayName so the UI list is stable.
+            // Always refresh the handle/session (they re-issue per match and are needed to
+            // message the peer), but only rebuild + re-emit the UI list when the peer is new —
+            // NAN re-fires this callback every scan interval for already-known peers, and the
+            // derived P2pPeer (id/name/signalStrength) is identical across those re-fires.
+            val isNewPeer = peerName !in peerHandles
             peerHandles[peerName] = PeerInfo(peerName, peerName, peerHandle, sub)
-            availablePeers.value = peerHandles.values.map {
-                P2pPeer(id = it.id, name = it.displayName, signalStrength = 3)
+            if (isNewPeer) {
+                availablePeers.value = peerHandles.values.map {
+                    P2pPeer(id = it.id, name = it.displayName, signalStrength = 3)
+                }
+                diag("discovered peer '$peerName'")
             }
-            diag("discovered peer '$peerName'")
         }
 
         override fun onMessageReceived(peerHandle: PeerHandle, message: ByteArray) {
@@ -435,6 +442,10 @@ class WifiAwareP2PM(private val context: Context) : PeerDiscoveryP2PM() {
                 if (!gate.isCompleted) gate.complete(null)
             }
         }
+        // Unregister any prior callback before replacing it — a retry/reconnect that calls
+        // requestNanNetwork again without an intervening cleanup() would otherwise leak the
+        // previous NetworkCallback inside ConnectivityManager.
+        activeNetworkCallback?.let { runCatching { connectivityManager.unregisterNetworkCallback(it) } }
         activeNetworkCallback = cb
         connectivityManager.requestNetwork(request, cb, NETWORK_REQUEST_TIMEOUT_MS)
 

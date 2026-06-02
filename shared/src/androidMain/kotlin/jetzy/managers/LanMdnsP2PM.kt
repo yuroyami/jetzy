@@ -45,6 +45,11 @@ class LanMdnsP2PM(private val context: Context) : PeerDiscoveryP2PM() {
     private var selectorManager: SelectorManager? = null
 
     private val foundPeers = mutableMapOf<String, NsdServiceInfo>()
+    // Parallel map of already-mapped peers, kept in sync with [foundPeers] at every
+    // mutation site (resolve / lost / cleanup). Lets us publish the peer list without
+    // re-allocating a P2pPeer for every entry on each discovery event. Insertion order
+    // mirrors foundPeers, so values.toList() yields the same ordering as before.
+    private val foundPeerModels = mutableMapOf<String, P2pPeer>()
     private var connectionReady: CompletableDeferred<Boolean>? = null
 
     /** Our own advertised service name (post-registration — NSD may rename it on a collision). */
@@ -142,10 +147,9 @@ class LanMdnsP2PM(private val context: Context) : PeerDiscoveryP2PM() {
             }
             override fun onServiceLost(info: NsdServiceInfo) {
                 val gone = foundPeers.remove(info.serviceName) ?: return
+                foundPeerModels.remove(info.serviceName)
                 diag("mDNS lost peer ${gone.serviceName}")
-                availablePeers.value = foundPeers.values.map {
-                    P2pPeer(id = it.serviceName, name = it.serviceName, signalStrength = 3)
-                }
+                availablePeers.value = foundPeerModels.values.toList()
             }
         }
         nsdManager.discoverServices(JETZY_MDNS_SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
@@ -173,9 +177,9 @@ class LanMdnsP2PM(private val context: Context) : PeerDiscoveryP2PM() {
             }
             override fun onServiceResolved(resolved: NsdServiceInfo) {
                 foundPeers[resolved.serviceName] = resolved
-                availablePeers.value = foundPeers.values.map {
-                    P2pPeer(id = it.serviceName, name = it.serviceName, signalStrength = 3)
-                }
+                foundPeerModels[resolved.serviceName] =
+                    P2pPeer(id = resolved.serviceName, name = resolved.serviceName, signalStrength = 3)
+                availablePeers.value = foundPeerModels.values.toList()
                 diag("mDNS resolved ${resolved.serviceName} @ ${resolved.host}:${resolved.port}")
                 synchronized(resolveQueue) { resolving = false }
                 pumpResolveQueue()
@@ -228,6 +232,7 @@ class LanMdnsP2PM(private val context: Context) : PeerDiscoveryP2PM() {
         connectionReady?.complete(false)
         connectionReady = null
         foundPeers.clear()
+        foundPeerModels.clear()
         synchronized(resolveQueue) { resolveQueue.clear(); resolving = false }
         registeredServiceName = null
     }

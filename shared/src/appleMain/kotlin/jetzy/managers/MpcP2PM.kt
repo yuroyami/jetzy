@@ -300,6 +300,17 @@ class MpcP2PM : PeerDiscoveryP2PM() {
         connectionReady = null
         teardownStreams()
         connectedPeer = null
+        // Break the MCSession → delegate → MpcP2PM (closure capture) → session retain cycle
+        // before disconnecting, so the session and its captured state can be released.
+        session.delegate = null
+        sessionDelegate.onPeerStateChanged = null
+        sessionDelegate.onDataReceived = null
+        sessionDelegate.onStreamReceived = null
+        advertiserDelegate.onInvitationReceived = null
+        advertiserDelegate.onAdvertiseFailed = null
+        browserDelegate.onPeerFound = null
+        browserDelegate.onPeerLost = null
+        browserDelegate.onBrowseFailed = null
         runCatching { session.disconnect() }
     }
 }

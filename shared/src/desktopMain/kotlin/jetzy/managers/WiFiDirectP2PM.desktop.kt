@@ -8,7 +8,9 @@ import io.ktor.network.sockets.port
 import jetzy.p2p.P2pPeer
 import jetzy.utils.PreferablyIO
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.net.Inet4Address
@@ -119,8 +121,14 @@ class WiFiDirectP2PM : PeerDiscoveryP2PM() {
                     foundPeers[addr] = name
                     diag("Wi-Fi Direct peer: $name @ $addr")
                 }
-                availablePeers.value = foundPeers.map { (addr, name) ->
-                    P2pPeer(id = addr, name = name, signalStrength = 3)
+                // Only rebuild the peer list + reassign the StateFlow when the set
+                // actually changed. Peers are only ever added within a session and
+                // cleared on cleanup(), so a size mismatch faithfully signals either
+                // a new peer or stale state that needs clearing after a restart.
+                if (availablePeers.value.size != foundPeers.size) {
+                    availablePeers.value = foundPeers.map { (addr, name) ->
+                        P2pPeer(id = addr, name = name, signalStrength = 3)
+                    }
                 }
                 delay(2.seconds)
             }
@@ -162,8 +170,13 @@ class WiFiDirectP2PM : PeerDiscoveryP2PM() {
                     foundPeers[id] = name
                     diag("Wi-Fi Direct (Win) peer: $name @ $id")
                 }
-                availablePeers.value = foundPeers.map { (id, name) ->
-                    P2pPeer(id = id, name = name, signalStrength = 3)
+                // Only rebuild + reassign when the peer set actually changed (see
+                // startLinuxPeerPolling): avoids a fresh ArrayList + N P2pPeer objects
+                // every poll on a stable network.
+                if (availablePeers.value.size != foundPeers.size) {
+                    availablePeers.value = foundPeers.map { (id, name) ->
+                        P2pPeer(id = id, name = name, signalStrength = 3)
+                    }
                 }
                 delay(3.seconds)
             }
@@ -275,7 +288,7 @@ class WiFiDirectP2PM : PeerDiscoveryP2PM() {
      */
     private suspend fun waitForGroupOwnerAddress(): String? {
         val deadline = System.currentTimeMillis() + 10_000
-        while (System.currentTimeMillis() < deadline) {
+        while (currentCoroutineContext().isActive && System.currentTimeMillis() < deadline) {
             for (iface in NetworkInterface.getNetworkInterfaces()) {
                 if (!iface.name.startsWith("p2p-")) continue
                 if (!iface.isUp) continue

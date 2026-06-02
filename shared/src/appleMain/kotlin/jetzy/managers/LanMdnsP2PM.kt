@@ -51,7 +51,10 @@ class LanMdnsP2PM : PeerDiscoveryP2PM() {
 
     // Discovered services awaiting resolution → resolved peers.
     private val pendingResolve = mutableListOf<NSNetService>()
-    private val resolvedPeers = mutableMapOf<String, NSNetService>()
+    // We cache the parsed host string alongside the service at resolve time so the
+    // NSData→ByteArray address parse doesn't have to run a second time on connect.
+    private class ResolvedPeer(val service: NSNetService, val host: String)
+    private val resolvedPeers = mutableMapOf<String, ResolvedPeer>()
 
     private var connectionReady: CompletableDeferred<Boolean>? = null
 
@@ -59,15 +62,22 @@ class LanMdnsP2PM : PeerDiscoveryP2PM() {
         browsingDelegate.onServiceFound = { service ->
             // Filter own advertisement by name.
             if (service.name != advertiser?.name) {
-                val resolveDelegate = ResolvingDelegate { resolved ->
+                lateinit var resolveDelegate: ResolvingDelegate
+                resolveDelegate = ResolvingDelegate { resolved ->
                     val addr = resolved.firstResolvableAddress()
                     if (addr != null) {
-                        resolvedPeers[resolved.name] = resolved
+                        resolvedPeers[resolved.name] = ResolvedPeer(resolved, addr)
                         availablePeers.value = resolvedPeers.values.map {
-                            P2pPeer(id = it.name, name = it.name, signalStrength = 3)
+                            P2pPeer(id = it.service.name, name = it.service.name, signalStrength = 3)
                         }
                         diag("mDNS resolved ${resolved.name} @ $addr:${resolved.port}")
                     }
+                    // Resolution is done; release the held delegate and drop the
+                    // service from the awaiting-resolution list so neither grows
+                    // unbounded across peer churn. (The resolved NSNetService stays
+                    // in resolvedPeers — it's still needed to dial the peer.)
+                    resolvingDelegates.remove(resolveDelegate)
+                    pendingResolve.remove(service)
                 }
                 resolvingDelegates += resolveDelegate
                 service.delegate = resolveDelegate
@@ -78,7 +88,7 @@ class LanMdnsP2PM : PeerDiscoveryP2PM() {
         browsingDelegate.onServiceLost = { service ->
             resolvedPeers.remove(service.name)
             availablePeers.value = resolvedPeers.values.map {
-                P2pPeer(id = it.name, name = it.name, signalStrength = 3)
+                P2pPeer(id = it.service.name, name = it.service.name, signalStrength = 3)
             }
             diag("mDNS lost ${service.name}")
         }
@@ -141,10 +151,12 @@ class LanMdnsP2PM : PeerDiscoveryP2PM() {
 
     @OptIn(ExperimentalForeignApi::class)
     override suspend fun connectToPeer(peer: P2pPeer): Result<Unit> {
-        val service = resolvedPeers[peer.id]
+        val resolved = resolvedPeers[peer.id]
             ?: return Result.failure(Exception("peer not resolved: ${peer.id}"))
-        val host = service.firstResolvableAddress()
-            ?: return Result.failure(Exception("peer has no resolvable address"))
+        val service = resolved.service
+        // Host string was parsed once at resolve time; reuse it instead of
+        // re-running the NSData→ByteArray address parse here.
+        val host = resolved.host
 
         val ready = CompletableDeferred<Boolean>()
         connectionReady = ready
@@ -270,12 +282,16 @@ private fun platform.Foundation.NSData.toHostString(): String? {
         }
         platform.posix.AF_INET6 -> {
             // sockaddr_in6: bytes 8..23 are sin6_addr (IPv6).
-            val parts = (0 until 8).map { i ->
+            // Build the colon-separated hex form in one pass — avoids the
+            // intermediate 8-element list and its short-lived String parts.
+            val sb = StringBuilder()
+            for (i in 0 until 8) {
+                if (i > 0) sb.append(':')
                 val hi = buf[8 + i * 2].toInt() and 0xFF
                 val lo = buf[9 + i * 2].toInt() and 0xFF
-                ((hi shl 8) or lo).toString(16)
+                sb.append(((hi shl 8) or lo).toString(16))
             }
-            parts.joinToString(":")
+            sb.toString()
         }
         else -> null
     }

@@ -59,10 +59,17 @@ sealed class P2pTechnology(
          * or client) given its platform + runtime support (e.g. [WiFiAware] also needs the
          * Wi-Fi Aware chip). Shipped in QR codes and HELLO frames so the peer can negotiate
          * the best mutual transport with zero round-trips.
+         *
+         * Result is computed once and cached: [WiFiAware.isLocallyCapable] triggers an OS
+         * capability query (Binder IPC on Android, NSProcessInfo on iOS) that is invariant
+         * for the process lifetime. Caching eliminates repeated IPC calls on every handshake.
          */
-        fun localCapabilitiesMask(): Long =
+        private val _localCapabilitiesMask: Long by lazy {
             allMethods.filter { it.isLocallyCapable(platform) }
                 .fold(0L) { acc, t -> acc or (1L shl t.capabilityBit) }
+        }
+
+        fun localCapabilitiesMask(): Long = _localCapabilitiesMask
 
         /** Inverse of the bitmask — the set of technologies a mask encodes. */
         fun Long.toCapabilities(): Set<P2pTechnology> =
@@ -223,9 +230,12 @@ sealed class P2pTechnology(
         capabilityBit = 6,
         quality = 62,
     ) {
-        // Android hosts; iOS and PC can join. (Anyone but a host-less pair can take part.)
+        // Android hosts; iOS and PC can join (PC is capable but not in supportedPlatforms).
+        // Extracted to a val to avoid allocating a new Set on every isLocallyCapable() call.
+        private val capablePlatforms = setOf(Platform.Android, Platform.IOS, Platform.PC)
+
         override fun isLocallyCapable(currentPlatform: Platform): Boolean =
-            currentPlatform in setOf(Platform.Android, Platform.IOS, Platform.PC)
+            currentPlatform in capablePlatforms
 
         override fun hostAffinity(localPlatform: Platform, remotePlatform: Platform): HostAffinity {
             val localCanHost = localPlatform == Platform.Android

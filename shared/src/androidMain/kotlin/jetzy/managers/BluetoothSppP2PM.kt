@@ -59,6 +59,11 @@ class BluetoothSppP2PM(private val context: Context) : PeerDiscoveryP2PM() {
     private var discoveryReceiver: BroadcastReceiver? = null
 
     private val foundDevices = mutableMapOf<String, BluetoothDevice>()
+    // Cache the P2pPeer (incl. the resolved name) per device address so we resolve
+    // each device's name exactly once. BluetoothDevice.name is a Binder IPC, not a
+    // local field read; rebuilding the peer list from BluetoothDevice on every
+    // discovery event was O(N²) IPC at startup.
+    private val peerCache = mutableMapOf<String, P2pPeer>()
     private var connectionReady: CompletableDeferred<Boolean>? = null
     private val bridgeJobs = mutableListOf<Job>()
 
@@ -166,12 +171,12 @@ class BluetoothSppP2PM(private val context: Context) : PeerDiscoveryP2PM() {
     private fun registerDevice(device: BluetoothDevice) {
         val id = device.address ?: return
         foundDevices[id] = device
+        // Resolve this device's name once (Binder IPC) and cache the built peer;
+        // re-publish from the cache so we never re-query names for known devices.
         val nameSafe = try { device.name } catch (_: SecurityException) { null }
             ?: "Bluetooth device"
-        availablePeers.value = foundDevices.values.map {
-            val n = try { it.name } catch (_: SecurityException) { null } ?: "Bluetooth device"
-            P2pPeer(id = it.address ?: "?", name = n, signalStrength = 2)
-        }
+        peerCache[id] = P2pPeer(id = id, name = nameSafe, signalStrength = 2)
+        availablePeers.value = peerCache.values.toList()
         diag("BT peer: $nameSafe @ $id")
     }
 
@@ -241,7 +246,7 @@ class BluetoothSppP2PM(private val context: Context) : PeerDiscoveryP2PM() {
 
         bridgeJobs += p2pScope.launch(PreferablyIO) {
             val input = socket.inputStream
-            val buf = ByteArray(bufferSize)
+            val buf = ByteArray(PUMP_BUFFER_SIZE)
             try {
                 while (true) {
                     val n = input.read(buf)
@@ -258,7 +263,7 @@ class BluetoothSppP2PM(private val context: Context) : PeerDiscoveryP2PM() {
 
         bridgeJobs += p2pScope.launch(PreferablyIO) {
             val output = socket.outputStream
-            val buf = ByteArray(bufferSize)
+            val buf = ByteArray(PUMP_BUFFER_SIZE)
             try {
                 while (!write.isClosedForRead) {
                     val n = write.readAvailable(buf)
@@ -288,10 +293,17 @@ class BluetoothSppP2PM(private val context: Context) : PeerDiscoveryP2PM() {
         connectionReady?.complete(false)
         connectionReady = null
         foundDevices.clear()
+        peerCache.clear()
     }
 
     companion object {
         private const val SDP_SERVICE_NAME = "Jetzy"
         private val CONNECT_TIMEOUT = 30.seconds
+
+        // Staging buffer for the socket<->ByteChannel pumps. RFCOMM/SPP delivers
+        // data in small (~4 KB MTU) packets at ~250 KB/s, so the 512 KB transfer
+        // buffer (P2PManager.bufferSize) is never filled here and just wastes heap
+        // (1 MB per connection). 64 KB is ample and byte-count/ordering preserving.
+        private const val PUMP_BUFFER_SIZE = 64 * 1024
     }
 }

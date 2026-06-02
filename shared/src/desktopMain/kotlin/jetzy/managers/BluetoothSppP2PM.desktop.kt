@@ -5,9 +5,11 @@ import io.ktor.utils.io.readAvailable
 import io.ktor.utils.io.writeFully
 import jetzy.p2p.P2pPeer
 import jetzy.utils.PreferablyIO
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
@@ -111,7 +113,7 @@ class BluetoothSppP2PM : PeerDiscoveryP2PM() {
             // The rfcomm listen process blocks until a connection arrives. Poll for
             // the device node to settle, then bridge.
             val deadline = System.currentTimeMillis() + 300_000  // 5 min wait
-            while (System.currentTimeMillis() < deadline) {
+            while (coroutineContext.isActive && System.currentTimeMillis() < deadline) {
                 if (rfcommDev.exists()) {
                     diag("RFCOMM listener: incoming connection on $rfcommDev")
                     isHandshaking.value = true
@@ -148,6 +150,11 @@ class BluetoothSppP2PM : PeerDiscoveryP2PM() {
                     // [NEW] Device AA:BB:CC:DD:EE:FF Some Phone
                     val match = NEW_DEVICE_REGEX.find(line) ?: continue
                     val addr = match.groupValues[1]
+                    // Skip re-publishing a device we already know: bluetoothctl can
+                    // re-emit [NEW] lines, and re-inserting an identical addr→name
+                    // pair produces an identical peer list, so the extra List/P2pPeer
+                    // allocation in publishPeers() is wasted.
+                    if (addr in foundDevices) continue
                     val name = match.groupValues[2].ifBlank { "Bluetooth device" }
                     foundDevices[addr] = name
                     publishPeers()
@@ -255,6 +262,11 @@ class BluetoothSppP2PM : PeerDiscoveryP2PM() {
                     val n = write.readAvailable(buf)
                     if (n <= 0) {
                         if (write.isClosedForRead) break
+                        // readAvailable can return 0 without suspending when the
+                        // channel is momentarily empty; yield the IO thread briefly
+                        // instead of busy-spinning at 100% CPU. Outbound bytes are
+                        // written unchanged once available, so framing is preserved.
+                        delay(5)
                         continue
                     }
                     raf.write(buf, 0, n)

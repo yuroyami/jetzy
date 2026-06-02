@@ -37,6 +37,14 @@ class LanMdnsP2PM : PeerDiscoveryP2PM() {
     private var registeredInfo: ServiceInfo? = null
     private var serverSocket: ServerSocket? = null
 
+    // Single shared SelectorManager for both the inbound server socket and outbound
+    // dials. Created lazily and closed in cleanup() so we don't leak an NIO selector
+    // (and its thread) per discovery restart / dial attempt. Mirrors LanP2PM.
+    private var selectorManager: SelectorManager? = null
+
+    private fun selector(): SelectorManager =
+        selectorManager ?: SelectorManager(PreferablyIO).also { selectorManager = it }
+
     private val foundPeers = mutableMapOf<String, ServiceInfo>()
     private var connectionReady: CompletableDeferred<Boolean>? = null
 
@@ -55,7 +63,7 @@ class LanMdnsP2PM : PeerDiscoveryP2PM() {
         }
 
         // Bind TCP server before advertising so the port is known.
-        val bound = aSocket(SelectorManager(PreferablyIO)).tcp().bind("0.0.0.0", 0)
+        val bound = aSocket(selector()).tcp().bind("0.0.0.0", 0)
         serverSocket = bound
         diag("mDNS server bound on ${localAddr.hostAddress}:${bound.port}")
 
@@ -113,8 +121,16 @@ class LanMdnsP2PM : PeerDiscoveryP2PM() {
     private val serviceListener = object : ServiceListener {
         override fun serviceAdded(event: ServiceEvent) {
             // jmdns sends `serviceAdded` with only the name; we need `requestServiceInfo`
-            // to actually resolve host/port.
-            event.dns.requestServiceInfo(event.type, event.name, 1000)
+            // to actually resolve host/port. That call is a blocking mDNS round-trip
+            // (up to 1000 ms), so run it off the jmdns internal thread to avoid
+            // serialising resolution when several peers appear at once. Resolution
+            // still arrives via serviceResolved exactly as before.
+            val dns = event.dns
+            val type = event.type
+            val name = event.name
+            p2pScope.launch(PreferablyIO) {
+                dns.requestServiceInfo(type, name, 1000)
+            }
         }
 
         override fun serviceRemoved(event: ServiceEvent) {
@@ -151,7 +167,7 @@ class LanMdnsP2PM : PeerDiscoveryP2PM() {
         p2pScope.launch(PreferablyIO) {
             try {
                 diag("dialing $host:${info.port}…")
-                val ktor = aSocket(SelectorManager(PreferablyIO))
+                val ktor = aSocket(selector())
                     .tcp()
                     .connect(host, info.port)
                 isHandshaking.value = true
@@ -183,6 +199,10 @@ class LanMdnsP2PM : PeerDiscoveryP2PM() {
         stopDiscoveryAndAdvertising()
         runCatching { serverSocket?.close() }
         serverSocket = null
+        // Close the shared selector after its sockets (server socket above, and the
+        // active connection closed by super.cleanup()) are already torn down.
+        runCatching { selectorManager?.close() }
+        selectorManager = null
         connectionReady?.complete(false)
         connectionReady = null
         foundPeers.clear()

@@ -39,6 +39,9 @@ class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
 
     private var channel: WifiP2pManager.Channel? = null
     private var receiver: BroadcastReceiver? = null
+    /** Selector backing the Wi-Fi Direct TCP socket. Owned at class scope so it is
+     *  closed in cleanup() rather than leaked per group-formation broadcast. */
+    private var selectorManager: SelectorManager? = null
 
     /** Whether WiFi P2P is currently enabled on the device */
     val isWifiP2pEnabled = MutableStateFlow(false)
@@ -175,7 +178,16 @@ class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
                                     signalStrength = signalFromStatus(device.status)
                                 )
                             }
-                            availablePeers.value = peers
+                            // P2pPeer has no value-based equals(), so compare by the displayed
+                            // fields and skip the emission (and Compose recomposition) when an
+                            // otherwise-identical scan arrives — discovery fires these every few sec.
+                            val current = availablePeers.value
+                            val changed = peers.size != current.size ||
+                                peers.indices.any { i ->
+                                    val a = peers[i]; val b = current[i]
+                                    a.id != b.id || a.name != b.name || a.signalStrength != b.signalStrength
+                                }
+                            if (changed) availablePeers.value = peers
                         }
                     }
                     WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
@@ -273,7 +285,10 @@ class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
     // ── Socket setup after connection ─────────────────────────────────────────
     private suspend fun handleP2pConnection(groupOwnerIp: String, isGroupOwner: Boolean) {
         try {
-            val selectorManager = SelectorManager(PreferablyIO)
+            val selectorManager = SelectorManager(PreferablyIO).also {
+                runCatching { this.selectorManager?.close() }
+                this.selectorManager = it
+            }
             if (isGroupOwner) {
                 val serverSocket = aSocket(selectorManager).tcp().bind("0.0.0.0", PORT)
                 diag("Wi-Fi Direct server listening on $PORT")
@@ -313,6 +328,10 @@ class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
         stopDiscoveryAndAdvertising()
         channel?.let { wifiP2pManager.removeGroup(it, null) }
         channel = null
+        runCatching {
+            selectorManager?.close()
+            selectorManager = null
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
