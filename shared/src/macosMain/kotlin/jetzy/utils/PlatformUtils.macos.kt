@@ -26,8 +26,9 @@ actual fun generateTimestampMillis(): Long {
 
 actual fun getDeviceName(): String {
     // Order: user-set localized host name → bare host name → user login name → "Mac"
-    return NSHost.currentHost().localizedName?.takeIf { it.isNotBlank() }
-        ?: NSHost.currentHost().name?.takeIf { it.isNotBlank() }
+    val host = NSHost.currentHost()
+    return host.localizedName?.takeIf { it.isNotBlank() }
+        ?: host.name?.takeIf { it.isNotBlank() }
         ?: NSUserName().takeIf { it.isNotBlank() }
         ?: "Mac"
 }

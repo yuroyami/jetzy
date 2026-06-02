@@ -28,11 +28,14 @@ actual fun getAvailableStorageBytes(): Long = runCatching {
 
 actual fun getPersistentStoragePath(): String = MainActivity.contextGetter().filesDir.absolutePath
 
-actual fun isWifiAwareSupported(): Boolean {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
-    val ctx = runCatching { MainActivity.contextGetter() }.getOrNull() ?: return false
-    return ctx.packageManager.hasSystemFeature(PackageManager.FEATURE_WIFI_AWARE)
+private val wifiAwareSupportedCache: Boolean by lazy {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) false
+    else runCatching {
+        MainActivity.contextGetter().packageManager.hasSystemFeature(PackageManager.FEATURE_WIFI_AWARE)
+    }.getOrDefault(false)
 }
+
+actual fun isWifiAwareSupported(): Boolean = wifiAwareSupportedCache
 
 fun getLocalIpAddress(): String? {
     try {

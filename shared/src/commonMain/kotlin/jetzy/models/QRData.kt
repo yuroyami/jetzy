@@ -48,7 +48,7 @@ data class QRData(
 
     companion object {
         fun String.toQRData(): QRData {
-            val data = split(":")
+            val data = split(":", limit = 7)
             return QRData(
                 hotspotSSID = data.getOrNull(0).orEmpty().qrUnescape(),
                 hotspotPassword = data.getOrNull(1).orEmpty().qrUnescape(),
@@ -69,12 +69,15 @@ data class QRData(
  * unambiguous. Numeric fields (port, caps) never contain these characters, so they are joined
  * raw and need no escaping.
  */
-private fun String.qrEscape(): String = buildString {
-    for (c in this@qrEscape) {
-        when (c) {
-            '%' -> append("%25")
-            ':' -> append("%3A")
-            else -> append(c)
+private fun String.qrEscape(): String {
+    if ('%' !in this && ':' !in this) return this
+    return buildString {
+        for (c in this@qrEscape) {
+            when (c) {
+                '%' -> append("%25")
+                ':' -> append("%3A")
+                else -> append(c)
+            }
         }
     }
 }
@@ -92,9 +95,10 @@ private fun String.qrUnescape(): String {
         while (i < s.length) {
             val c = s[i]
             if (c == '%' && i + 2 < s.length) {
-                val code = s.substring(i + 1, i + 3).toIntOrNull(16)
-                if (code != null) {
-                    append(code.toChar())
+                val hi = s[i + 1].digitToIntOrNull(16)
+                val lo = s[i + 2].digitToIntOrNull(16)
+                if (hi != null && lo != null) {
+                    append(((hi shl 4) or lo).toChar())
                     i += 3
                     continue
                 }

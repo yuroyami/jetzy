@@ -53,8 +53,6 @@ class MainActivity: ComponentActivity(), P2pPlatformCallback {
         window.statusBarColor = Color.Transparent.toArgb()
         window.navigationBarColor = Color.Transparent.toArgb()
 
-        /** Telling Android that it should keep the screen on */
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {
@@ -171,10 +169,14 @@ class MainActivity: ComponentActivity(), P2pPlatformCallback {
 
     override fun startBackgroundService() {
         JetzyForegroundService.start(applicationContext)
+        // Keep the screen on only while a transfer is actively running.
+        // The foreground service's PARTIAL_WAKE_LOCK keeps the CPU alive when backgrounded.
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     override fun stopBackgroundService() {
         JetzyForegroundService.stop(applicationContext)
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     companion object {

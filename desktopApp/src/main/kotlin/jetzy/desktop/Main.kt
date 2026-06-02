@@ -1,5 +1,6 @@
 package jetzy.desktop
 
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowState
@@ -25,7 +26,7 @@ fun main() = application {
         state = rememberWindowState(width = 480.dp, height = 760.dp),
         onCloseRequest = ::exitApplication,
     ) {
-        window.minimumSize = Dimension(380, 600)
+        SideEffect { window.minimumSize = Dimension(380, 600) }
         AdamScreen(
             onViewmodel = { vm ->
                 viewmodel = vm

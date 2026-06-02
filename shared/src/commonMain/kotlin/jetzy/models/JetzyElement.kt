@@ -7,7 +7,6 @@ import io.github.vinceglb.filekit.source
 import jetzy.ui.transfer.EntryType
 import kotlinx.io.Buffer
 import kotlinx.io.RawSource
-import kotlinx.io.writeString
 
 sealed interface JetzyElement {
     val name: String
@@ -36,8 +35,9 @@ sealed interface JetzyElement {
     }
 
     data class Text(val text: String, override val name: String = "text.txt") : JetzyElement {
-        override val source get() = Buffer().also { it.writeString(text) }
-        override suspend fun size(): Long = text.encodeToByteArray().size.toLong()
+        private val encoded by lazy { text.encodeToByteArray() }
+        override val source get() = Buffer().also { it.write(encoded) }
+        override suspend fun size(): Long = encoded.size.toLong()
         override val entryType: EntryType get() = EntryType.TEXT
     }
 

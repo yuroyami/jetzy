@@ -5,11 +5,13 @@ import androidx.documentfile.provider.DocumentFile
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.path
 import jetzy.MainActivity
+import jetzy.utils.PreferablyIO
+import kotlinx.coroutines.withContext
 
-actual suspend fun flattenFolder(folder: PlatformFile): List<FlatFile> {
+actual suspend fun flattenFolder(folder: PlatformFile): List<FlatFile> = withContext(PreferablyIO) {
     val context = MainActivity.contextGetter()
     val rootDoc = DocumentFile.fromTreeUri(context, folder.path.toUri())
-        ?: return emptyList()
+        ?: return@withContext emptyList()
 
     val rootName = rootDoc.name ?: "folder"
     val result = mutableListOf<FlatFile>()
@@ -33,5 +35,5 @@ actual suspend fun flattenFolder(folder: PlatformFile): List<FlatFile> {
     }
 
     traverse(rootDoc, rootName)
-    return result
+    result
 }

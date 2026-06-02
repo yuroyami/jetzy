@@ -15,11 +15,18 @@ actual fun generateTimestampMillis(): Long = System.currentTimeMillis()
  * "MacBook of Macbook" on macOS, "MACBOOK-PC" on Windows, host name on Linux.
  * We prefer the OS-assigned host name over Java's `user.name` because that's
  * what an Android peer's discovery UI would naturally display.
+ *
+ * Cached on first access to avoid a blocking DNS lookup (InetAddress.getLocalHost())
+ * on every handshake call-site.
  */
-actual fun getDeviceName(): String = runCatching {
-    InetAddress.getLocalHost().hostName.takeIf { !it.isNullOrBlank() }
-}.getOrNull() ?: System.getProperty("user.name")?.takeIf { it.isNotBlank() }
-    ?: osLabel()
+private val cachedDeviceName: String by lazy {
+    runCatching {
+        InetAddress.getLocalHost().hostName.takeIf { !it.isNullOrBlank() }
+    }.getOrNull() ?: System.getProperty("user.name")?.takeIf { it.isNotBlank() }
+        ?: osLabel()
+}
+
+actual fun getDeviceName(): String = cachedDeviceName
 
 private fun osLabel(): String {
     val os = System.getProperty("os.name").orEmpty().lowercase(Locale.ROOT)
@@ -43,10 +50,13 @@ actual fun getAvailableStorageBytes(): Long = runCatching {
  *  - Linux: $XDG_DATA_HOME/Jetzy (defaults to ~/.local/share/Jetzy)
  *
  * Falls back to `~/Jetzy` if none of the above is resolvable.
+ *
+ * Cached on first access so system-property reads, path construction, and the
+ * mkdirs() filesystem call only happen once per JVM lifetime.
  */
 actual fun isWifiAwareSupported(): Boolean = false  // Apple hasn't shipped on macOS, Microsoft has no roadmap.
 
-actual fun getPersistentStoragePath(): String {
+private val cachedPersistentStoragePath: String by lazy {
     val home = System.getProperty("user.home") ?: "."
     val os = System.getProperty("os.name").orEmpty().lowercase(Locale.ROOT)
     val dir = when {
@@ -61,5 +71,7 @@ actual fun getPersistentStoragePath(): String {
         }
     }
     if (!dir.exists()) dir.mkdirs()
-    return dir.absolutePath
+    dir.absolutePath
 }
+
+actual fun getPersistentStoragePath(): String = cachedPersistentStoragePath

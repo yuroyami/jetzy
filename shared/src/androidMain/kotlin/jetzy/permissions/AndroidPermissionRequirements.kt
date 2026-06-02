@@ -216,12 +216,21 @@ object AndroidPermissionRequirements {
      * not guaranteed to exist on every OEM build. On reflection failure we
      * return `false` (i.e. "AP is off") to avoid blocking the user on a false
      * positive — a real conflict will show up later as a hotspot-start failure.
+     *
+     * The Method object is cached lazily so the expensive getDeclaredMethod +
+     * setAccessible path runs only once per process lifetime instead of every
+     * 400 ms polling tick.
      */
+    private val wifiApEnabledMethod by lazy {
+        runCatching {
+            WifiManager::class.java.getDeclaredMethod("isWifiApEnabled")
+                .also { it.isAccessible = true }
+        }.getOrNull()
+    }
+
     private fun isWifiApEnabled(wifi: WifiManager): Boolean {
         return runCatching {
-            val method = wifi.javaClass.getDeclaredMethod("isWifiApEnabled")
-            method.isAccessible = true
-            method.invoke(wifi) as? Boolean ?: false
+            wifiApEnabledMethod?.invoke(wifi) as? Boolean ?: false
         }.getOrDefault(false)
     }
 }

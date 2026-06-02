@@ -30,16 +30,18 @@ import jetzy.MainActivity
 class JetzyForegroundService : Service() {
 
     private var wakeLock: PowerManager.WakeLock? = null
+    private var cachedNotification: Notification? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         ensureChannel()
+        cachedNotification = buildNotification()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val notification = buildNotification()
+        val notification = cachedNotification ?: buildNotification().also { cachedNotification = it }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             // API 34+ requires a service type when calling startForeground.
             // dataSync best matches a P2P file transfer; connectedDevice would also

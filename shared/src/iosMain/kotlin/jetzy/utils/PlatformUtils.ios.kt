@@ -5,10 +5,10 @@ import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.toKString
+import kotlinx.cinterop.convert
 import kotlinx.cinterop.useContents
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import platform.Foundation.NSDate
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSFileSystemFreeSize
@@ -17,18 +17,25 @@ import platform.Foundation.NSProcessInfo
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSUserDomainMask
-import platform.Foundation.timeIntervalSince1970
 import platform.UIKit.UIDevice
+import platform.posix.CLOCK_REALTIME
+import platform.posix.clock_gettime
+import platform.posix.timespec
 import platform.posix.uname
 import platform.posix.utsname
-import kotlin.math.roundToLong
 
 actual val PreferablyIO = Dispatchers.IO
 
 actual val platform = Platform.IOS
 
+@OptIn(ExperimentalForeignApi::class)
 actual fun generateTimestampMillis(): Long {
-    return (NSDate().timeIntervalSince1970 * 1000).roundToLong()
+    // clock_gettime(CLOCK_REALTIME) is an allocation-free POSIX syscall — no ObjC/ARC overhead.
+    return memScoped {
+        val ts = alloc<timespec>()
+        clock_gettime(CLOCK_REALTIME.convert(), ts.ptr)
+        ts.tv_sec * 1_000L + ts.tv_nsec / 1_000_000L
+    }
 }
 
 actual fun getAvailableStorageBytes(): Long {
@@ -40,10 +47,13 @@ actual fun getAvailableStorageBytes(): Long {
     }.getOrDefault(Long.MAX_VALUE)
 }
 
-actual fun getPersistentStoragePath(): String {
+// Cached once — the Documents directory path never changes within an app lifecycle.
+private val cachedPersistentStoragePath: String by lazy {
     val paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true)
-    return paths.firstOrNull() as? String ?: NSTemporaryDirectory()
+    paths.firstOrNull() as? String ?: NSTemporaryDirectory()
 }
+
+actual fun getPersistentStoragePath(): String = cachedPersistentStoragePath
 
 /**
  * iOS 26.0+ runtime check. We compile against iOS 26 SDK (Xcode 26) but the deployment
@@ -58,8 +68,9 @@ actual fun isWifiAwareSupported(): Boolean {
     return v.useContents { majorVersion >= 26L }
 }
 
+// Cached once — hardware model and UIDevice.name are invariant for an app session.
 @OptIn(ExperimentalForeignApi::class)
-actual fun getDeviceName(): String {
+private val cachedDeviceName: String by lazy {
     // Get the hardware model identifier (e.g. "iPhone11,2" for iPhone XS)
     val machine = memScoped {
         val systemInfo = alloc<utsname>()
@@ -72,12 +83,14 @@ actual fun getDeviceName(): String {
 
     // If user hasn't customized their name (it matches the generic model),
     // return the detailed model name. Otherwise return the user-set name.
-    return if (userName == "iPhone" || userName == "iPad" || userName == "iPod touch") {
+    if (userName == "iPhone" || userName == "iPad" || userName == "iPod touch") {
         modelName
     } else {
         userName
     }
 }
+
+actual fun getDeviceName(): String = cachedDeviceName
 
 private fun iosModelName(machine: String): String = when {
     // iPhone
