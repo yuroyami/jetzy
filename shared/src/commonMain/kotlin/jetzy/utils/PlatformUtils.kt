@@ -45,6 +45,14 @@ expect fun generateTimestampMillis(): Long
 
 expect fun getDeviceName(): String
 
+/**
+ * Memoized device name. [getDeviceName] hits the OS on every call — and on desktop does a
+ * blocking InetAddress lookup — yet the value is stable for the process lifetime. Callers on
+ * hot paths (the handshake, Compose recomposition) should read this instead of re-invoking
+ * [getDeviceName]. `by lazy` defaults to thread-safe (SYNCHRONIZED) initialization.
+ */
+val deviceName: String by lazy { getDeviceName() }
+
 expect val PreferablyIO: CoroutineDispatcher
 
 /**

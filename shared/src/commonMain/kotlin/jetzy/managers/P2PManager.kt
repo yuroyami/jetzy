@@ -35,7 +35,7 @@ import jetzy.utils.P2pIoApi
 import jetzy.utils.PreferablyIO
 import jetzy.utils.generateTimestampMillis
 import jetzy.utils.getAvailableStorageBytes
-import jetzy.utils.getDeviceName
+import jetzy.utils.deviceName
 import jetzy.utils.loggy
 import jetzy.utils.platform
 import jetzy.viewmodel.JetzyViewmodel
@@ -328,7 +328,7 @@ abstract class P2PManager {
             totalFiles = files.size,
             totalBytes = totalBytes,
             entries = entries,
-            senderName = getDeviceName(),
+            senderName = deviceName,
             senderPlatform = platform
         )
         manifest.value = mf
@@ -529,7 +529,7 @@ abstract class P2PManager {
                 freeBytes != Long.MAX_VALUE && needed > freeBytes - SPACE_SAFETY_MARGIN -> {
                     ManifestAckFrame(
                         status = AckStatus.INSUFFICIENT_SPACE,
-                        receiver = PeerInfo(getDeviceName(), platform),
+                        receiver = PeerInfo(deviceName, platform),
                         reason = "need ${needed} bytes, free ${freeBytes}",
                     )
                 }
@@ -537,7 +537,7 @@ abstract class P2PManager {
                     val resumePoint = computeResumePoint(mf)
                     ManifestAckFrame(
                         status = AckStatus.RESUME,
-                        receiver = PeerInfo(getDeviceName(), platform),
+                        receiver = PeerInfo(deviceName, platform),
                         resumeFileIndex = resumePoint.first,
                         resumeByteOffset = resumePoint.second,
                     )
@@ -547,7 +547,7 @@ abstract class P2PManager {
                     receiverLedger.clear()
                     ManifestAckFrame(
                         status = AckStatus.OK,
-                        receiver = PeerInfo(getDeviceName(), platform),
+                        receiver = PeerInfo(deviceName, platform),
                     )
                 }
             }
@@ -729,7 +729,7 @@ abstract class P2PManager {
     private suspend fun performHandshakeAsSender(input: ByteReadChannel, output: ByteWriteChannel) {
         JetzyProtocol.writeHandshake(output)
         JetzyProtocol.readHandshake(input)
-        JetzyProtocol.writeHello(output, HelloFrame(getDeviceName(), platform, P2pTechnology.localCapabilitiesMask()))
+        JetzyProtocol.writeHello(output, HelloFrame(deviceName, platform, P2pTechnology.localCapabilitiesMask()))
         val peer = JetzyProtocol.readHello(input)
         remotePeerInfo.value = PeerInfo(peer.name, peer.platform)
         logPeerCapabilities(peer.capabilities)
@@ -739,7 +739,7 @@ abstract class P2PManager {
         JetzyProtocol.readHandshake(input)
         JetzyProtocol.writeHandshake(output)
         val peer = JetzyProtocol.readHello(input)
-        JetzyProtocol.writeHello(output, HelloFrame(getDeviceName(), platform, P2pTechnology.localCapabilitiesMask()))
+        JetzyProtocol.writeHello(output, HelloFrame(deviceName, platform, P2pTechnology.localCapabilitiesMask()))
         remotePeerInfo.value = PeerInfo(peer.name, peer.platform)
         logPeerCapabilities(peer.capabilities)
     }
@@ -844,6 +844,9 @@ abstract class P2PManager {
 
     // ── Misc helpers ─────────────────────────────────────────────────────────
     private fun markAllNonDoneAsFailed() {
+        // Cold error/stall path. Skip the full-list copy when nothing is in flight
+        // (the common case when a clean-close hits a late protocol error).
+        if (fileEntries.value.none { it.status == FileTransferStatus.Active || it.status == FileTransferStatus.Pending }) return
         fileEntries.value = fileEntries.value.map {
             if (it.status == FileTransferStatus.Active || it.status == FileTransferStatus.Pending) {
                 it.copy(status = FileTransferStatus.Failed)
