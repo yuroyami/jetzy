@@ -17,17 +17,18 @@ import jetzy.ui.transfer.TransferManifest
 import jetzy.utils.Platform
 
 /**
- * Jetzy wire protocol v2.
+ * Jetzy wire protocol v3.
  *
  * All control messages are length-prefixed; file payloads are raw bytes whose
  * length is known from the manifest. Both ends perform a magic/version
  * handshake before anything else so we can evolve the format safely.
  *
- * Handshake:
- *   sender → receiver: MAGIC | VERSION | HelloFrame
- *   receiver → sender: MAGIC | VERSION | HelloFrame
+ * Handshake (v3 is **symmetric** — both ends do the identical thing, so neither
+ * has to know in advance whether it's the sender; direction falls out of the
+ * `offeringFiles` intent each side advertises in its [HelloFrame]):
+ *   each end → peer: MAGIC | VERSION | HelloFrame(name, platform, capabilities, offeringFiles)
  *
- * After handshake:
+ * After handshake, the side resolved as sender (see [jetzy.p2p.DirectionResolver]):
  *   sender → receiver: ManifestFrame
  *   receiver → sender: ManifestAckFrame
  *   for each file in manifest (starting at ack.resumeFileIndex):
@@ -39,7 +40,9 @@ import jetzy.utils.Platform
 object JetzyProtocol {
     /** "JETZ" in ASCII — all four bytes sent on connection before anything else. */
     const val MAGIC: Int = 0x4A45545A
-    const val VERSION: Int = 2
+    // v3: symmetric handshake + HelloFrame.offeringFiles (intent), so transfer direction is
+    // derived, not user-declared. Bumped from v2; mixed v2/v3 peers fail fast at the version gate.
+    const val VERSION: Int = 3
 
     enum class AckStatus(val code: Byte) {
         OK(0),
@@ -78,6 +81,12 @@ object JetzyProtocol {
         val name: String,
         val platform: Platform,
         val capabilities: Long = 0L,
+        /**
+         * Intent: true if this device has files staged to send. The peer that is offering becomes
+         * the sender; if both/neither offer, [jetzy.p2p.DirectionResolver] breaks it deterministically.
+         * This is what lets us drop the manual "Send vs Receive" mode — direction is derived in-band.
+         */
+        val offeringFiles: Boolean = false,
     )
 
     data class ManifestFrame(
@@ -114,6 +123,7 @@ object JetzyProtocol {
         writeString(out, hello.name)
         writeString(out, hello.platform.name)
         out.writeLong(hello.capabilities)
+        out.writeByte(if (hello.offeringFiles) 1 else 0)
         out.flush()
     }
 
@@ -121,8 +131,9 @@ object JetzyProtocol {
         val name = readString(input)
         val platformName = readString(input)
         val caps = input.readLong()
+        val offering = input.readByte() == 1.toByte()
         val plat = runCatching { Platform.valueOf(platformName) }.getOrDefault(Platform.Android)
-        return HelloFrame(name = name, platform = plat, capabilities = caps)
+        return HelloFrame(name = name, platform = plat, capabilities = caps, offeringFiles = offering)
     }
 
     suspend fun writeManifest(out: ByteWriteChannel, frame: ManifestFrame) {

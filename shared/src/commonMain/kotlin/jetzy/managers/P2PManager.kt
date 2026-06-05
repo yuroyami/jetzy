@@ -758,7 +758,7 @@ abstract class P2PManager {
     private suspend fun performHandshakeAsSender(input: ByteReadChannel, output: ByteWriteChannel) {
         JetzyProtocol.writeHandshake(output)
         JetzyProtocol.readHandshake(input)
-        JetzyProtocol.writeHello(output, HelloFrame(deviceName, platform, P2pTechnology.localCapabilitiesMask()))
+        JetzyProtocol.writeHello(output, HelloFrame(deviceName, platform, P2pTechnology.localCapabilitiesMask(), offeringFiles = viewmodel.elementsToSend.isNotEmpty()))
         val peer = JetzyProtocol.readHello(input)
         remotePeerInfo.value = PeerInfo(peer.name, peer.platform)
         negotiatePeerCapabilities(peer)
@@ -768,7 +768,7 @@ abstract class P2PManager {
         JetzyProtocol.readHandshake(input)
         JetzyProtocol.writeHandshake(output)
         val peer = JetzyProtocol.readHello(input)
-        JetzyProtocol.writeHello(output, HelloFrame(deviceName, platform, P2pTechnology.localCapabilitiesMask()))
+        JetzyProtocol.writeHello(output, HelloFrame(deviceName, platform, P2pTechnology.localCapabilitiesMask(), offeringFiles = viewmodel.elementsToSend.isNotEmpty()))
         remotePeerInfo.value = PeerInfo(peer.name, peer.platform)
         negotiatePeerCapabilities(peer)
     }
