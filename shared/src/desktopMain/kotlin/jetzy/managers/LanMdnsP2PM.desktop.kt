@@ -33,6 +33,8 @@ import kotlin.time.Duration.Companion.seconds
  */
 class LanMdnsP2PM : PeerDiscoveryP2PM() {
 
+    override val technology = jetzy.p2p.P2pTechnology.LocalNetworkMdns
+
     private var jmdns: JmDNS? = null
     private var registeredInfo: ServiceInfo? = null
     private var serverSocket: ServerSocket? = null

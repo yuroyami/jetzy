@@ -20,8 +20,11 @@ import jetzy.managers.JetzyProtocol.ManifestAckFrame
 import jetzy.managers.JetzyProtocol.ManifestFrame
 import jetzy.models.JetzyElement
 import jetzy.models.flattenFolder
+import jetzy.p2p.CapabilityProfile
 import jetzy.p2p.P2pOperation
 import jetzy.p2p.P2pTechnology
+import jetzy.p2p.TransportMatch
+import jetzy.p2p.TransportNegotiator
 import jetzy.permissions.PermissionRequirement
 import jetzy.ui.Screen
 import jetzy.ui.transfer.EntryType
@@ -70,6 +73,14 @@ abstract class P2PManager {
 
     open val usesPeerDiscovery: Boolean = false
 
+    /**
+     * Which [P2pTechnology] this manager's data plane actually runs over. Lets the live handshake
+     * negotiation tell whether a *faster* mutual transport exists than the one we bootstrapped on
+     * (see [recommendedUpgrade]). Null = "unknown / not yet declared" → no upgrade is ever suggested
+     * (we never blindly recommend switching off a transport we can't rank ourselves against).
+     */
+    open val technology: P2pTechnology? = null
+
     // ── Ktor Connection ────────────────────────────────────────────────────────────
     var connection: Connection? = null
         set(value) {
@@ -100,6 +111,24 @@ abstract class P2PManager {
         field = MutableStateFlow(null)
 
     val remotePeerInfo: StateFlow<PeerInfo?>
+        field = MutableStateFlow(null)
+
+    /**
+     * Every transport this pair *mutually* supports, best-first, computed by [TransportNegotiator]
+     * the instant the HELLO capability masks are exchanged — the live result of the negotiation
+     * brain that until now was dead code. Empty until handshake, or when the peer is a legacy
+     * (caps == 0) build.
+     */
+    val negotiatedTransports: StateFlow<List<TransportMatch>>
+        field = MutableStateFlow(emptyList())
+
+    /**
+     * A mutually-supported transport strictly faster than the one we're connected over, if any —
+     * the opportunistic "gear-shift" target. Null when we're already on the best mutual link (or
+     * can't rank ourselves, i.e. [technology] is null). Surfaced so the UI can show "⚡ faster link
+     * available" and, once the in-band UPGRADE frame lands, so the session can climb to it live.
+     */
+    val recommendedUpgrade: StateFlow<TransportMatch?>
         field = MutableStateFlow(null)
 
     val fileEntries: StateFlow<List<FileTransferEntry>>
@@ -732,7 +761,7 @@ abstract class P2PManager {
         JetzyProtocol.writeHello(output, HelloFrame(deviceName, platform, P2pTechnology.localCapabilitiesMask()))
         val peer = JetzyProtocol.readHello(input)
         remotePeerInfo.value = PeerInfo(peer.name, peer.platform)
-        logPeerCapabilities(peer.capabilities)
+        negotiatePeerCapabilities(peer)
     }
 
     private suspend fun performHandshakeAsReceiver(input: ByteReadChannel, output: ByteWriteChannel) {
@@ -741,22 +770,34 @@ abstract class P2PManager {
         val peer = JetzyProtocol.readHello(input)
         JetzyProtocol.writeHello(output, HelloFrame(deviceName, platform, P2pTechnology.localCapabilitiesMask()))
         remotePeerInfo.value = PeerInfo(peer.name, peer.platform)
-        logPeerCapabilities(peer.capabilities)
+        negotiatePeerCapabilities(peer)
     }
 
     /**
-     * Diagnostic-only for now: surface the mutual capability set so we can see
-     * what an opportunistic-upgrade negotiator would have to work with. When
-     * the upgrade logic lands it'll consume the same intersection.
+     * Runs the [TransportNegotiator] against the peer's just-exchanged capability mask. This is the
+     * moment the negotiation brain — previously dead code wired to nothing — goes live on the real
+     * path: from the two [CapabilityProfile]s (ours + the peer's HELLO) it derives every mutual
+     * transport best-first and the single faster [recommendedUpgrade] target, with zero extra
+     * round-trips (both peers compute the identical result from the identical two profiles). The
+     * results are pushed to state + the diagnostic stream; *acting* on an upgrade (the in-band
+     * UPGRADE frame) is the next step — this commit makes the decision observable and correct.
      */
-    private fun logPeerCapabilities(peerMask: Long) {
-        if (peerMask == 0L) {
-            diag("peer caps: (none advertised — pre-v3 build)")
+    private fun negotiatePeerCapabilities(peer: HelloFrame) {
+        if (peer.capabilities == 0L) {
+            diag("peer caps: (none advertised — legacy build); staying on ${technology?.id ?: "current transport"}")
+            negotiatedTransports.value = emptyList()
+            recommendedUpgrade.value = null
             return
         }
-        with(P2pTechnology) {
-            val mutual = (peerMask and localCapabilitiesMask()).toCapabilities()
-            diag("peer caps mask=0x${peerMask.toString(16)}; mutual=${mutual.joinToString { it.id }.ifEmpty { "(none)" }}")
+        val local = CapabilityProfile.local(deviceName)
+        val remote = CapabilityProfile(peer.platform, peer.capabilities, peer.name)
+        val ranked = TransportNegotiator.negotiate(local, remote)
+        negotiatedTransports.value = ranked
+        recommendedUpgrade.value = TransportNegotiator.upgradeTarget(ranked, technology)
+
+        diag("negotiated mutual transports (best-first): ${ranked.joinToString { it.technology.id }.ifEmpty { "(none)" }}")
+        recommendedUpgrade.value?.let {
+            diag("⚡ faster link available: ${it.technology.id} (q=${it.technology.quality}) — we'd be ${it.localRole}")
         }
     }
 

@@ -35,6 +35,8 @@ import kotlin.uuid.Uuid
 
 class HotspotP2PM(private val context: Context) : P2PManager() {
 
+    override val technology = jetzy.p2p.P2pTechnology.HotspotLAN
+
     private val appContext = context.applicationContext
     private val wifiManager = appContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
     private val locationManager = appContext.getSystemService(Context.LOCATION_SERVICE) as? LocationManager

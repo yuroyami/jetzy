@@ -92,6 +92,20 @@ sealed class P2pTechnology(
      */
     abstract fun hostAffinity(localPlatform: Platform, remotePlatform: Platform): HostAffinity
 
+    /** Short, human-facing name for UI surfaces (badges, pickers). */
+    val displayName: String
+        get() = when (this) {
+            WiFiAware -> "Wi-Fi Aware"
+            WiFiDirect -> "Wi-Fi Direct"
+            NearbyConnections -> "Nearby Connections"
+            MultipeerConnectivity -> "AirDrop-style"
+            LocalNetworkMdns -> "Local Wi-Fi"
+            LocalNetwork -> "Local network"
+            HotspotLAN -> "Hotspot"
+            BluetoothSpp -> "Bluetooth"
+            Bluetooth -> "Bluetooth LE"
+        }
+
     // ── Transport instances ───────────────────────────────────────────────────
 
     /**

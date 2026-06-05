@@ -34,6 +34,8 @@ import kotlin.uuid.Uuid
  */
 class LanHostP2PM : P2PManager() {
 
+    override val technology = jetzy.p2p.P2pTechnology.LocalNetwork
+
     override val usesPeerDiscovery: Boolean = false
 
     private var serverSocket: ServerSocket? = null

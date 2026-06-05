@@ -120,4 +120,48 @@ class TransportNegotiatorTest {
         assertEquals(qualities.sortedDescending(), qualities)
         assertEquals(P2pTechnology.WiFiAware, matches.first().technology)
     }
+
+    // ── upgradeTarget: the "gear-shift" decision ──────────────────────────────
+
+    @Test
+    fun upgradeTarget_fromBootstrapHotspot_climbsToWifiAware() {
+        // A modern Android↔iOS pair bootstraps on a hotspot (q=62) but both have Wi-Fi Aware (q=92).
+        val ranked = TransportNegotiator.negotiate(modernAndroid(), modernIos())
+        val target = TransportNegotiator.upgradeTarget(ranked, P2pTechnology.HotspotLAN)
+        assertEquals(P2pTechnology.WiFiAware, target?.technology)
+    }
+
+    @Test
+    fun upgradeTarget_whenAlreadyOnBest_isNull() {
+        val ranked = TransportNegotiator.negotiate(modernAndroid(), modernIos())
+        // WiFiAware is the top mutual transport here — nothing better to climb to.
+        assertNull(TransportNegotiator.upgradeTarget(ranked, P2pTechnology.WiFiAware))
+    }
+
+    @Test
+    fun upgradeTarget_unknownCurrentTransport_neverSuggests() {
+        val ranked = TransportNegotiator.negotiate(modernAndroid(), modernIos())
+        // technology == null → we can't rank ourselves, so we never blindly recommend a switch.
+        assertNull(TransportNegotiator.upgradeTarget(ranked, null))
+    }
+
+    @Test
+    fun upgradeTarget_picksBestStrictlyBetter_notJustNextRung() {
+        // Bootstrapped on mDNS (q=80); the only thing strictly better mutual is WiFiAware (q=92).
+        val ranked = TransportNegotiator.negotiate(modernAndroid(), modernIos())
+        val target = TransportNegotiator.upgradeTarget(ranked, P2pTechnology.LocalNetworkMdns)
+        assertEquals(P2pTechnology.WiFiAware, target?.technology)
+    }
+
+    @Test
+    fun upgradeTarget_carriesTheRoleBothSidesAgreeOn() {
+        // The upgrade target must come with this device's role, identical-but-mirrored on each peer.
+        val a = modernAndroid(); val i = modernIos()
+        val fromA = TransportNegotiator.upgradeTarget(TransportNegotiator.negotiate(a, i), P2pTechnology.HotspotLAN)
+        val fromI = TransportNegotiator.upgradeTarget(TransportNegotiator.negotiate(i, a), P2pTechnology.HotspotLAN)
+        assertEquals(P2pTechnology.WiFiAware, fromA?.technology)
+        assertEquals(P2pTechnology.WiFiAware, fromI?.technology)
+        // Wi-Fi Aware is symmetric (EITHER) → the tiebreak makes exactly one side HOST.
+        assertTrue((fromA?.localRole == Role.HOST) != (fromI?.localRole == Role.HOST), "both/neither host the upgrade")
+    }
 }

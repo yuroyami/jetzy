@@ -36,6 +36,8 @@ import kotlin.time.Duration.Companion.seconds
  */
 class LanMdnsP2PM(private val context: Context) : PeerDiscoveryP2PM() {
 
+    override val technology = jetzy.p2p.P2pTechnology.LocalNetworkMdns
+
     private val appContext = context.applicationContext
     private val nsdManager = appContext.getSystemService(Context.NSD_SERVICE) as NsdManager
 

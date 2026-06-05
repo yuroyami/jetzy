@@ -50,6 +50,8 @@ import kotlin.time.Duration.Companion.seconds
  */
 class BluetoothSppP2PM(private val context: Context) : PeerDiscoveryP2PM() {
 
+    override val technology = jetzy.p2p.P2pTechnology.BluetoothSpp
+
     private val appContext = context.applicationContext
     private val bluetoothManager = appContext.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
     private val adapter = bluetoothManager?.adapter

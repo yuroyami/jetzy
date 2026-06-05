@@ -78,6 +78,7 @@ import jetzy.shared.generated.resources.save_files_to_folder
 import jetzy.shared.generated.resources.sender
 import jetzy.shared.generated.resources.sender_you
 import jetzy.shared.generated.resources.text_snippet
+import jetzy.p2p.TransportMatch
 import jetzy.ui.LocalViewmodel
 import jetzy.utils.Platform
 import jetzy.utils.getDeviceName
@@ -100,6 +101,9 @@ fun TransferScreenUI() {
     val saveComplete by manager.saveComplete.collectAsState()
     val canResume by manager.canResume.collectAsState()
     val isSaving by manager.isSaving.collectAsState()
+    // The live result of the on-handshake transport negotiation: a mutually-supported link
+    // faster than the one we bootstrapped on, if any. Non-null ⇒ we can show the gear-shift hint.
+    val upgrade by manager.recommendedUpgrade.collectAsState()
 
     val colorScheme = MaterialTheme.colorScheme
 
@@ -188,6 +192,15 @@ fun TransferScreenUI() {
                         remainingLabel = remainingStr,
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    // The negotiation brain ran live on the handshake (see P2PManager
+                    // .negotiatePeerCapabilities). When a faster mutual transport than the one we
+                    // bootstrapped on exists, hint it here. Acting on it (the in-band UPGRADE that
+                    // gear-shifts the live stream onto this link) is the next milestone.
+                    upgrade?.let {
+                        Spacer(Modifier.height(10.sdp))
+                        UpgradeAvailableBadge(it, Modifier.align(Alignment.CenterHorizontally))
+                    }
 
                     Spacer(Modifier.height(12.sdp))
 
@@ -330,7 +343,33 @@ private fun remainingLabel(totalBytes: Long, progressFrac: Float, speedBytesPerS
     }
 }
 
-// ─── Glass card ──────────────────────────────────────────────────────────────
+// ─── Upgrade badge ───────────────────────────────────────────────────────────
+
+/**
+ * "⚡ Faster link available" pill. Surfaces the result of the live transport negotiation — proof
+ * that the once-dead negotiator now runs on the real handshake — and the visible anchor the in-band
+ * UPGRADE (gear-shift) will hang off of next.
+ */
+@Composable
+private fun UpgradeAvailableBadge(match: TransportMatch, modifier: Modifier = Modifier) {
+    val cs = MaterialTheme.colorScheme
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(50))
+            .background(cs.primary.copy(alpha = 0.12f))
+            .padding(horizontal = 12.sdp, vertical = 6.sdp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.sdp),
+    ) {
+        Text("⚡", fontSize = 12.ssp)
+        Text(
+            text = "Faster link available: ${match.technology.displayName}",
+            color = cs.primary,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 12.ssp,
+        )
+    }
+}
 
 @Composable
 private fun GlassCard(

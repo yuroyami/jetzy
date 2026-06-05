@@ -39,6 +39,8 @@ private val STREAM_READY_TIMEOUT = 15.seconds
 
 class MpcP2PM : PeerDiscoveryP2PM() {
 
+    override val technology = jetzy.p2p.P2pTechnology.MultipeerConnectivity
+
     private val localPeerID = MCPeerID(displayName = getDeviceName())
     private val session = MCSession(peer = localPeerID, securityIdentity = null, encryptionPreference = MCEncryptionOptional)
 

@@ -30,6 +30,8 @@ import kotlin.time.Duration.Companion.seconds
 
 class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
 
+    override val technology = jetzy.p2p.P2pTechnology.WiFiDirect
+
     private val wifiP2pManager by lazy {
         context.getSystemService(Context.WIFI_P2P_SERVICE) as WifiP2pManager
     }

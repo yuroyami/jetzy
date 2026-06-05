@@ -26,6 +26,8 @@ import kotlin.time.Duration.Companion.seconds
  */
 class LanP2PM : P2PManager() {
 
+    override val technology = jetzy.p2p.P2pTechnology.LocalNetwork
+
     override val usesPeerDiscovery: Boolean = false
 
     private var activeJob: Job? = null

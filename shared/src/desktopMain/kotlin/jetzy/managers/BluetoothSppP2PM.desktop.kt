@@ -39,6 +39,8 @@ import kotlin.time.Duration.Companion.seconds
  */
 class BluetoothSppP2PM : PeerDiscoveryP2PM() {
 
+    override val technology = jetzy.p2p.P2pTechnology.BluetoothSpp
+
     private val osName = System.getProperty("os.name").orEmpty().lowercase(Locale.ROOT)
     private val isLinux = "linux" in osName || "nix" in osName || "nux" in osName
     private val isWindows = "win" in osName

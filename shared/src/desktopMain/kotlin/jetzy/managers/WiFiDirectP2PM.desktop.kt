@@ -41,6 +41,8 @@ import kotlin.time.Duration.Companion.seconds
  */
 class WiFiDirectP2PM : PeerDiscoveryP2PM() {
 
+    override val technology = jetzy.p2p.P2pTechnology.WiFiDirect
+
     private val osName = System.getProperty("os.name").orEmpty().lowercase(Locale.ROOT)
     private val isLinux = "linux" in osName || "nix" in osName || "nux" in osName
     private val isWindows = "win" in osName

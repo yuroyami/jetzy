@@ -71,6 +71,8 @@ import kotlin.time.Duration.Companion.seconds
  */
 class WifiAwareP2PM(private val context: Context) : PeerDiscoveryP2PM() {
 
+    override val technology = jetzy.p2p.P2pTechnology.WiFiAware
+
     private val appContext = context.applicationContext
     private val awareManager = appContext.getSystemService(Context.WIFI_AWARE_SERVICE) as? WifiAwareManager
     private val connectivityManager = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager

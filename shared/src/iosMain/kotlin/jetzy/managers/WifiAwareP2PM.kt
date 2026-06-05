@@ -39,6 +39,8 @@ class WifiAwareP2PM private constructor(
     private val bridge: WifiAwareBridge,
 ) : PeerDiscoveryP2PM() {
 
+    override val technology = jetzy.p2p.P2pTechnology.WiFiAware
+
     private val foundPeers = mutableMapOf<String, P2pPeer>()
 
     private var connectionReady: CompletableDeferred<Boolean>? = null
