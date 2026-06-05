@@ -21,8 +21,11 @@ import jetzy.managers.JetzyProtocol.ManifestFrame
 import jetzy.models.JetzyElement
 import jetzy.models.flattenFolder
 import jetzy.p2p.CapabilityProfile
+import jetzy.p2p.DirectionResolver
 import jetzy.p2p.P2pOperation
 import jetzy.p2p.P2pTechnology
+import jetzy.p2p.TransferDirection
+import jetzy.p2p.TransferParty
 import jetzy.p2p.TransportMatch
 import jetzy.p2p.TransportNegotiator
 import jetzy.permissions.PermissionRequirement
@@ -204,10 +207,42 @@ abstract class P2PManager {
         transferBegun = true
         viewmodel.navigateTo(Screen.TransferScreen, noWayToReturn = true)
         p2pScope.launch {
-            when (viewmodel.currentOperation.value) {
-                P2pOperation.SEND    -> sendFiles(viewmodel.elementsToSend)
-                P2pOperation.RECEIVE -> receiveFiles()
-                else -> throw Exception("Unknown P2P operation")
+            val input = activeInput
+            val output = activeOutput
+            if (input == null || output == null) { diag("beginTransfer: no active channels"); return@launch }
+
+            // v3: handshake FIRST, then *derive* who sends from the exchanged intents — replacing
+            // the old "the user already picked Send/Receive, just run it" branch. The manual pick
+            // becomes advisory; the wire is authoritative.
+            val direction = try {
+                val peer = performHandshake(input, output)
+                DirectionResolver.resolve(
+                    local = TransferParty(viewmodel.elementsToSend.isNotEmpty(), platform, deviceName),
+                    remote = TransferParty(peer.offeringFiles, peer.platform, peer.name),
+                )
+            } catch (e: Exception) {
+                diag("handshake failed: ${e.message ?: e::class.simpleName}")
+                transferComplete.value = true // release the Connecting… screen instead of hanging
+                viewmodel.snacky(friendlyFailure(e))
+                return@launch
+            }
+            diag("direction resolved: $direction (peer=${remotePeerInfo.value?.name})")
+
+            // Keep currentOperation in sync so every isSender-driven UI surface stays correct.
+            when (direction) {
+                TransferDirection.SEND -> {
+                    viewmodel.currentOperation.value = P2pOperation.SEND
+                    sendFiles(viewmodel.elementsToSend)
+                }
+                TransferDirection.RECEIVE -> {
+                    viewmodel.currentOperation.value = P2pOperation.RECEIVE
+                    receiveFiles()
+                }
+                TransferDirection.NONE -> {
+                    diag("neither device staged files — nothing to transfer")
+                    transferComplete.value = true
+                    viewmodel.snacky("Neither device has files to send — add some and reconnect.")
+                }
             }
         }
     }
@@ -372,11 +407,7 @@ abstract class P2PManager {
         }
 
         try {
-            // 1. Handshake & Hello exchange
-            performHandshakeAsSender(input, output)
-            diag("sender handshake complete; peer=${remotePeerInfo.value?.name}")
-
-            // 2. Send manifest
+            // Handshake + direction resolution already happened in beginTransfer; send the manifest.
             JetzyProtocol.writeManifest(output, ManifestFrame(session, mf))
 
             // 3. Read manifest ack
@@ -529,11 +560,7 @@ abstract class P2PManager {
         val output = activeOutput ?: run { diag("receiveFiles: no output channel"); return }
 
         try {
-            // 1. Handshake & Hello exchange
-            performHandshakeAsReceiver(input, output)
-            diag("receiver handshake complete; peer=${remotePeerInfo.value?.name}")
-
-            // 2. Read manifest
+            // Handshake + direction resolution already happened in beginTransfer; read the manifest.
             val frame = JetzyProtocol.readManifest(input)
             val mf = frame.manifest
             val session = frame.sessionId
@@ -754,23 +781,27 @@ abstract class P2PManager {
         }
     }
 
-    // ── Handshake helpers ────────────────────────────────────────────────────
-    private suspend fun performHandshakeAsSender(input: ByteReadChannel, output: ByteWriteChannel) {
+    // ── Handshake ────────────────────────────────────────────────────────────
+    /**
+     * Symmetric v3 handshake: **both ends do the identical thing** — write magic+version+HELLO
+     * (advertising this device's intent via [HelloFrame.offeringFiles]) and then read the peer's.
+     * Because neither side's order is tied to send-vs-receive, transfer direction can be resolved
+     * from the exchanged intents *afterward* ([DirectionResolver]) instead of being declared up
+     * front. The frames are tiny (~tens of bytes) and each writer flushes, so they land in the
+     * socket/channel buffer and the simultaneous write→read cannot deadlock. Sets [remotePeerInfo]
+     * and runs the live transport negotiation; returns the peer's HELLO.
+     */
+    private suspend fun performHandshake(input: ByteReadChannel, output: ByteWriteChannel): HelloFrame {
         JetzyProtocol.writeHandshake(output)
+        JetzyProtocol.writeHello(
+            output,
+            HelloFrame(deviceName, platform, P2pTechnology.localCapabilitiesMask(), offeringFiles = viewmodel.elementsToSend.isNotEmpty()),
+        )
         JetzyProtocol.readHandshake(input)
-        JetzyProtocol.writeHello(output, HelloFrame(deviceName, platform, P2pTechnology.localCapabilitiesMask(), offeringFiles = viewmodel.elementsToSend.isNotEmpty()))
         val peer = JetzyProtocol.readHello(input)
         remotePeerInfo.value = PeerInfo(peer.name, peer.platform)
         negotiatePeerCapabilities(peer)
-    }
-
-    private suspend fun performHandshakeAsReceiver(input: ByteReadChannel, output: ByteWriteChannel) {
-        JetzyProtocol.readHandshake(input)
-        JetzyProtocol.writeHandshake(output)
-        val peer = JetzyProtocol.readHello(input)
-        JetzyProtocol.writeHello(output, HelloFrame(deviceName, platform, P2pTechnology.localCapabilitiesMask(), offeringFiles = viewmodel.elementsToSend.isNotEmpty()))
-        remotePeerInfo.value = PeerInfo(peer.name, peer.platform)
-        negotiatePeerCapabilities(peer)
+        return peer
     }
 
     /**
