@@ -47,6 +47,7 @@ import jetzy.utils.platform
 import jetzy.viewmodel.JetzyViewmodel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -270,6 +271,12 @@ abstract class P2PManager {
         _directOutput?.let { runCatching { it.flushAndClose() } }
         _directInput = null
         _directOutput = null
+        // Cancel every coroutine this manager started — medium read/write pumps, discovery polls,
+        // stall watchdogs, bridge jobs — which otherwise outlived the discarded manager forever
+        // (PERFORMANCE_AUDIT #8: "p2pScope never cancelled — leaks all coroutines"). cancelChildren
+        // (not cancel) leaves the scope itself valid, since subclass cleanup() overrides run their
+        // teardown after super.cleanup(); none relaunch on p2pScope, so nothing is stranded.
+        coroutineSupervisor.cancelChildren()
         purgeUnsavedReceivedFiles()
         runCatching { viewmodel.platformCallback.stopBackgroundService() }
     }
