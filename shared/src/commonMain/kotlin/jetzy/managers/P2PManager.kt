@@ -861,10 +861,12 @@ abstract class P2PManager {
         ResumePlanner.resumePoint(mf.entries, receiverLedgerSlots())
 
     private fun allocateTempPath(name: String): Path {
-        var p = Path(SystemTemporaryDirectory, name)
+        // `name` is from the peer's manifest — untrusted. Sanitize so it can't escape the temp dir.
+        val safe = SafePath.safeName(name)
+        var p = Path(SystemTemporaryDirectory, safe)
         if (!SystemFileSystem.exists(p)) return p
-        val baseName = name.substringBeforeLast('.', name)
-        val ext = name.substringAfterLast('.', "").let { if (it == name) "" else ".$it" }
+        val baseName = safe.substringBeforeLast('.', safe)
+        val ext = safe.substringAfterLast('.', "").let { if (it == safe) "" else ".$it" }
         var counter = 1
         while (true) {
             val candidate = Path(SystemTemporaryDirectory, "${baseName}_${counter}${ext}")
@@ -948,26 +950,25 @@ abstract class P2PManager {
             try {
                 val fileItems = itemsRECEIVED.filter { it.entryType == EntryType.FILE }
                 for (item in fileItems) {
-                    if (item.relativePath.isNotEmpty()) {
-                        val parentPath = item.relativePath.substringBeforeLast('/', "")
-                        if (parentPath.isNotEmpty()) {
-                            val dirs = parentPath.split('/')
-                            var currentPath = destDir.path
-                            for (dir in dirs) {
-                                currentPath = "$currentPath/$dir"
-                                val dirPath = Path(currentPath)
-                                if (!SystemFileSystem.exists(dirPath)) {
-                                    SystemFileSystem.createDirectories(dirPath)
-                                }
+                    // relativePath + name are sender-controlled; sanitize so a crafted path like
+                    // "../../" can't write outside the folder the user chose (zip-slip).
+                    val safeName = SafePath.safeName(item.name)
+                    val parentSegments = SafePath.safeSegments(item.relativePath.substringBeforeLast('/', ""))
+                    if (parentSegments.isNotEmpty()) {
+                        var currentPath = destDir.path
+                        for (dir in parentSegments) {
+                            currentPath = "$currentPath/$dir"
+                            val dirPath = Path(currentPath)
+                            if (!SystemFileSystem.exists(dirPath)) {
+                                SystemFileSystem.createDirectories(dirPath)
                             }
-                            val destPath = Path("$currentPath/${item.name}")
-                            val sourcePath = item.path
-                            SystemFileSystem.atomicMove(sourcePath, destPath)
-                            continue
                         }
+                        SystemFileSystem.atomicMove(item.path, Path("$currentPath/$safeName"))
+                    } else {
+                        // No subfolder: keep the existing FileKit move (the temp file's basename is
+                        // already sanitized by allocateTempPath, so the destination name is safe).
+                        PlatformFile(item.path).atomicMove(destDir)
                     }
-                    val platformFile = PlatformFile(item.path)
-                    platformFile.atomicMove(destDir)
                 }
 
                 saveComplete.value = true
