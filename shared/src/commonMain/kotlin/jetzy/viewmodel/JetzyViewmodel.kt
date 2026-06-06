@@ -242,6 +242,18 @@ class JetzyViewmodel : ViewModel() {
         )
     }
 
+    /**
+     * Abort a session that can't proceed past the handshake (protocol error, dropped connection,
+     * or a resolved direction of NONE — neither side staged files). Returns to Main with a message
+     * and *keeps* any staged files so the user can immediately retry. Used by [jetzy.managers
+     * .P2PManager.beginTransfer]'s terminal branches, which otherwise would strand the user on the
+     * "Connecting…" screen (it gates on the manifest, which never arrives in these cases).
+     */
+    fun abortSession(message: String) {
+        snacky(message, queue = true) // queued so the imminent navigate-to-Main doesn't dismiss it
+        cancelDiscovery()
+    }
+
     /** Cancel discovery/QR screen without clearing selected files */
     fun cancelDiscovery() {
         tearDownManager()

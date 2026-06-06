@@ -87,6 +87,12 @@ object JetzyProtocol {
          * This is what lets us drop the manual "Send vs Receive" mode — direction is derived in-band.
          */
         val offeringFiles: Boolean = false,
+        /**
+         * Random per-session nonce. Last-resort antisymmetric tiebreak so two devices with the
+         * *same name and platform* that both staged files still agree on who sends — without it
+         * their direction keys would be equal and both would pick SEND and hang.
+         */
+        val tiebreaker: Int = 0,
     )
 
     data class ManifestFrame(
@@ -124,6 +130,7 @@ object JetzyProtocol {
         writeString(out, hello.platform.name)
         out.writeLong(hello.capabilities)
         out.writeByte(if (hello.offeringFiles) 1 else 0)
+        out.writeInt(hello.tiebreaker)
         out.flush()
     }
 
@@ -132,8 +139,9 @@ object JetzyProtocol {
         val platformName = readString(input)
         val caps = input.readLong()
         val offering = input.readByte() == 1.toByte()
+        val tiebreaker = input.readInt()
         val plat = runCatching { Platform.valueOf(platformName) }.getOrDefault(Platform.Android)
-        return HelloFrame(name = name, platform = plat, capabilities = caps, offeringFiles = offering)
+        return HelloFrame(name = name, platform = plat, capabilities = caps, offeringFiles = offering, tiebreaker = tiebreaker)
     }
 
     suspend fun writeManifest(out: ByteWriteChannel, frame: ManifestFrame) {

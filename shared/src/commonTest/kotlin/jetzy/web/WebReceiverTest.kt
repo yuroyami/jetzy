@@ -70,6 +70,14 @@ class WebReceiverTest {
     }
 
     @Test
+    fun sanitizeFilename_stripsCrlfAndQuotes_preventingHeaderInjection() {
+        val evil = "a\"b\r\nX-Injected: 1\r\n.png"
+        val safe = WebReceiver.sanitizeFilename(evil)
+        assertTrue('\r' !in safe && '\n' !in safe && '"' !in safe)
+        assertEquals("abX-Injected: 1.png", safe)
+    }
+
+    @Test
     fun humanSize_isReadable() {
         assertEquals("512 B", WebReceiver.humanSize(512))
         assertEquals("1.0 KB", WebReceiver.humanSize(1024))

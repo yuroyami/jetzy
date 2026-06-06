@@ -107,6 +107,14 @@ object WebReceiver {
         append("</div></body></html>")
     }
 
+    /**
+     * Strip the characters that could break out of a header value — the quote that delimits the
+     * filename and, critically, CR/LF, which would otherwise let a crafted filename inject
+     * arbitrary response headers (HTTP response splitting).
+     */
+    fun sanitizeFilename(name: String): String =
+        name.replace("\"", "").replace("\r", "").replace("\n", "")
+
     fun humanSize(bytes: Long): String {
         if (bytes < 1024) return "$bytes B"
         val units = listOf("KB", "MB", "GB", "TB")
@@ -156,7 +164,7 @@ object WebReceiver {
                         "200 OK",
                         item.mimeType ?: "application/octet-stream",
                         item.sizeBytes,
-                        mapOf("Content-Disposition" to "attachment; filename=\"${item.name.replace("\"", "")}\""),
+                        mapOf("Content-Disposition" to "attachment; filename=\"${sanitizeFilename(item.name)}\""),
                     ).encodeToByteArray(),
                 )
                 if (req.method == "GET") {

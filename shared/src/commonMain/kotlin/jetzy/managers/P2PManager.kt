@@ -201,6 +201,14 @@ abstract class P2PManager {
      */
     @Volatile private var transferBegun = false
 
+    /**
+     * Random per-manager nonce, exchanged in HELLO and used as [DirectionResolver]'s last-resort
+     * antisymmetric tiebreak. Per-instance (not per-handshake) so a resume on the same manager
+     * re-resolves to the *same* direction. Without it, two identically-named devices that both
+     * staged files would compute equal direction keys and both pick SEND → deadlock.
+     */
+    private val handshakeTiebreaker: Int = kotlin.random.Random.nextInt()
+
     @P2pIoApi
     private fun beginTransfer() {
         if (transferBegun) return
@@ -217,13 +225,14 @@ abstract class P2PManager {
             val direction = try {
                 val peer = performHandshake(input, output)
                 DirectionResolver.resolve(
-                    local = TransferParty(viewmodel.elementsToSend.isNotEmpty(), platform, deviceName),
-                    remote = TransferParty(peer.offeringFiles, peer.platform, peer.name),
+                    local = TransferParty(viewmodel.elementsToSend.isNotEmpty(), platform, deviceName, handshakeTiebreaker),
+                    remote = TransferParty(peer.offeringFiles, peer.platform, peer.name, peer.tiebreaker),
                 )
             } catch (e: Exception) {
                 diag("handshake failed: ${e.message ?: e::class.simpleName}")
-                transferComplete.value = true // release the Connecting… screen instead of hanging
-                viewmodel.snacky(friendlyFailure(e))
+                // Return to Main with the reason — beginTransfer already navigated to the transfer
+                // screen, whose ConnectingState gates on the manifest and would otherwise hang here.
+                viewmodel.abortSession(friendlyFailure(e))
                 return@launch
             }
             diag("direction resolved: $direction (peer=${remotePeerInfo.value?.name})")
@@ -240,8 +249,7 @@ abstract class P2PManager {
                 }
                 TransferDirection.NONE -> {
                     diag("neither device staged files — nothing to transfer")
-                    transferComplete.value = true
-                    viewmodel.snacky("Neither device has files to send — add some and reconnect.")
+                    viewmodel.abortSession("Neither device has files to send — add some and reconnect.")
                 }
             }
         }
@@ -795,7 +803,13 @@ abstract class P2PManager {
         JetzyProtocol.writeHandshake(output)
         JetzyProtocol.writeHello(
             output,
-            HelloFrame(deviceName, platform, P2pTechnology.localCapabilitiesMask(), offeringFiles = viewmodel.elementsToSend.isNotEmpty()),
+            HelloFrame(
+                deviceName,
+                platform,
+                P2pTechnology.localCapabilitiesMask(),
+                offeringFiles = viewmodel.elementsToSend.isNotEmpty(),
+                tiebreaker = handshakeTiebreaker,
+            ),
         )
         JetzyProtocol.readHandshake(input)
         val peer = JetzyProtocol.readHello(input)

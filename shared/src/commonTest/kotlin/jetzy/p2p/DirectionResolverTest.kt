@@ -42,6 +42,17 @@ class DirectionResolverTest {
     }
 
     @Test
+    fun bothOffering_sameNameAndPlatform_tiebreakerBreaksTheTie() {
+        // The dangerous case the nonce exists for: two "Pixel"s, both with files. Without the
+        // tiebreaker their keys would be equal and both would pick SEND → deadlock.
+        val a = TransferParty(true, Platform.Android, "Pixel", tiebreaker = 100)
+        val b = TransferParty(true, Platform.Android, "Pixel", tiebreaker = 7)
+        val fromA = DirectionResolver.resolve(a, b)
+        val fromB = DirectionResolver.resolve(b, a)
+        assertTrue((fromA == TransferDirection.SEND) != (fromB == TransferDirection.SEND), "both/neither send")
+    }
+
+    @Test
     fun bothOffering_isStableAcrossCalls() {
         val a = party(true, Platform.PC, "Laptop")
         val b = party(true, Platform.Android, "Tablet")

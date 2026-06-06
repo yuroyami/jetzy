@@ -13,6 +13,8 @@ data class TransferParty(
     val offeringFiles: Boolean,
     val platform: Platform,
     val deviceName: String,
+    /** Random per-session nonce from the HELLO; breaks the both-offering tie for same-name devices. */
+    val tiebreaker: Int = 0,
 )
 
 /**
@@ -42,5 +44,7 @@ object DirectionResolver {
         else -> if (key(local) >= key(remote)) TransferDirection.SEND else TransferDirection.RECEIVE
     }
 
-    private fun key(p: TransferParty): String = "${p.platform.ordinal} ${p.deviceName}"
+    // Nonce first so it dominates: two same-name, same-platform devices still get distinct keys
+    // (collision ≈ 2^-32, at which point the residual both-SEND mirrors the negotiator's accepted tie).
+    private fun key(p: TransferParty): String = "${p.tiebreaker} ${p.platform.ordinal} ${p.deviceName}"
 }
