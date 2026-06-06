@@ -163,8 +163,11 @@ sealed class P2pTechnology(
         capabilityBit = 2,
         quality = 86,
     ) {
-        override fun isLocallyCapable(currentPlatform: Platform): Boolean =
-            currentPlatform == Platform.Android
+        // Reserved: no NearbyConnectionsP2PM is wired yet (mirrors the Bluetooth/BLE slot below), so
+        // we must NOT advertise it — otherwise the negotiator could select a transport we can't
+        // actually stand up, stranding the connection. Flip back to `== Platform.Android` the moment
+        // a manager lands. The capabilityBit stays reserved so the wire mask never re-numbers.
+        override fun isLocallyCapable(currentPlatform: Platform): Boolean = false
 
         override fun hostAffinity(localPlatform: Platform, remotePlatform: Platform): HostAffinity =
             if (localPlatform == Platform.Android && remotePlatform == Platform.Android)

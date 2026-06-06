@@ -3,6 +3,7 @@ package jetzy.p2p
 import jetzy.utils.Platform
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -53,6 +54,16 @@ class P2pTechnologyTest {
     @Test
     fun displayNameIsNonBlankForEveryTransport() {
         assertTrue(P2pTechnology.allMethods.all { it.displayName.isNotBlank() })
+    }
+
+    @Test
+    fun reservedTransportsWithNoManagerAreNeverAdvertised() {
+        // No NearbyConnectionsP2PM / BLE manager exists; advertising them would let the negotiator
+        // select a phantom transport. If you wire a manager and flip these true, delete this guard.
+        for (p in Platform.entries) {
+            assertFalse(P2pTechnology.NearbyConnections.isLocallyCapable(p), "NearbyConnections has no manager")
+            assertFalse(P2pTechnology.Bluetooth.isLocallyCapable(p), "Bluetooth/BLE has no manager")
+        }
     }
 
     @Test
