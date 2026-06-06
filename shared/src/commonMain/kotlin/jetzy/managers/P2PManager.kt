@@ -847,32 +847,18 @@ abstract class P2PManager {
     }
 
     // ── Resume helpers ───────────────────────────────────────────────────────
-    /** Bytes still owed to the receiver, accounting for what's already on disk. */
-    private fun computeRemainingBytes(mf: TransferManifest, sessionMatches: Boolean): Long {
-        if (!sessionMatches) return mf.totalBytes
-        var remaining = 0L
-        for ((i, entry) in mf.entries.withIndex()) {
-            val state = receiverLedger[i]
-            remaining += when {
-                state == null -> entry.sizeBytes
-                state.sizeBytes != entry.sizeBytes -> entry.sizeBytes // size mismatch, re-send whole file
-                state.bytesWritten >= entry.sizeBytes -> 0L
-                else -> entry.sizeBytes - state.bytesWritten
-            }
-        }
-        return remaining
-    }
+    // The arithmetic lives in the pure, unit-tested [ResumePlanner]; these adapt the live ledger
+    // (a map of ReceiverFileState) into its minimal Slot view.
+    private fun receiverLedgerSlots(): Map<Int, ResumePlanner.Slot> =
+        receiverLedger.mapValues { ResumePlanner.Slot(it.value.bytesWritten, it.value.sizeBytes) }
 
-    /** Find the first not-yet-complete file, return (index, byteOffsetToResumeAt). */
-    private fun computeResumePoint(mf: TransferManifest): Pair<Int, Long> {
-        for ((i, entry) in mf.entries.withIndex()) {
-            val state = receiverLedger[i]
-            if (state == null || state.sizeBytes != entry.sizeBytes || state.bytesWritten < entry.sizeBytes) {
-                return i to (state?.bytesWritten ?: 0L).coerceAtMost(entry.sizeBytes)
-            }
-        }
-        return 0 to 0L
-    }
+    /** Bytes still owed to the receiver, accounting for what's already on disk. */
+    private fun computeRemainingBytes(mf: TransferManifest, sessionMatches: Boolean): Long =
+        ResumePlanner.remainingBytes(mf.entries, mf.totalBytes, sessionMatches, receiverLedgerSlots())
+
+    /** First not-yet-complete file as (index, byteOffsetToResumeAt); (size, 0) when all complete. */
+    private fun computeResumePoint(mf: TransferManifest): Pair<Int, Long> =
+        ResumePlanner.resumePoint(mf.entries, receiverLedgerSlots())
 
     private fun allocateTempPath(name: String): Path {
         var p = Path(SystemTemporaryDirectory, name)
