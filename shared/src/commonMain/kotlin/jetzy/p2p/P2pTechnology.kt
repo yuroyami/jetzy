@@ -92,6 +92,19 @@ sealed class P2pTechnology(
      */
     abstract fun hostAffinity(localPlatform: Platform, remotePlatform: Platform): HostAffinity
 
+    /**
+     * Does standing this transport up perturb the device's existing connectivity (toggle the Wi-Fi
+     * station, form a P2P group, switch networks)? Such transports must NOT be raced in parallel —
+     * the Happy-Eyeballs scheduler ([TransportCoordinator.schedule]) defers them so a non-disruptive
+     * link can win first and they only fire if nothing cleaner connected.
+     */
+    val disruptsLocalConnectivity: Boolean
+        get() = when (this) {
+            HotspotLAN -> true   // host toggles its Wi-Fi to bring up the AP; peer leaves its network
+            WiFiDirect -> true   // group formation can drop the existing Wi-Fi association
+            else -> false        // Wi-Fi Aware / mDNS / Multipeer / Bluetooth / LAN don't disrupt
+        }
+
     /** Short, human-facing name for UI surfaces (badges, pickers). */
     val displayName: String
         get() = when (this) {
