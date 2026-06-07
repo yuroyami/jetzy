@@ -149,6 +149,16 @@ class MainActivity: ComponentActivity(), P2pPlatformCallback {
         else -> emptyList()
     }
 
+    override fun getManagerForTechnology(technology: jetzy.p2p.P2pTechnology, role: jetzy.p2p.Role): P2PManager? =
+        when (technology) {
+            jetzy.p2p.P2pTechnology.WiFiAware -> if (isWifiAwareSupported()) WifiAwareP2PM(this) else null
+            jetzy.p2p.P2pTechnology.WiFiDirect -> WiFiDirectP2PM(this)
+            jetzy.p2p.P2pTechnology.LocalNetworkMdns -> LanMdnsP2PM(this)
+            jetzy.p2p.P2pTechnology.HotspotLAN -> HotspotP2PM(this) // Android always hosts the AP
+            jetzy.p2p.P2pTechnology.BluetoothSpp -> BluetoothSppP2PM(this)
+            else -> null
+        }
+
     private val p2pPermissioner = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) {

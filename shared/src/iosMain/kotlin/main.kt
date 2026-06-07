@@ -81,6 +81,15 @@ fun MainViewController(): UIViewController = ComposeUIViewController(
                     )
                     else -> emptyList()
                 }
+
+                override fun getManagerForTechnology(technology: jetzy.p2p.P2pTechnology, role: jetzy.p2p.Role): P2PManager? =
+                    when (technology) {
+                        jetzy.p2p.P2pTechnology.MultipeerConnectivity -> MpcP2PM()
+                        jetzy.p2p.P2pTechnology.LocalNetworkMdns -> LanMdnsP2PM()
+                        jetzy.p2p.P2pTechnology.HotspotLAN -> LanWifiP2PM() // iOS joins the AP
+                        jetzy.p2p.P2pTechnology.WiFiAware -> wifiAwareBridge?.let { WifiAwareP2PM.create(it) }
+                        else -> null
+                    }
             }
         }
     )

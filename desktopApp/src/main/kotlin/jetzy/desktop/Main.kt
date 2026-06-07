@@ -78,4 +78,15 @@ private class DesktopP2pCallback(private val vm: JetzyViewmodel) : P2pPlatformCa
         )
         else -> emptyList()
     }
+
+    override fun getManagerForTechnology(technology: jetzy.p2p.P2pTechnology, role: jetzy.p2p.Role): P2PManager? =
+        when (technology) {
+            jetzy.p2p.P2pTechnology.LocalNetworkMdns -> LanMdnsP2PM()
+            // Explicit-IP LAN: HOST binds the server, CLIENT dials/pastes the QR.
+            jetzy.p2p.P2pTechnology.LocalNetwork -> if (role == jetzy.p2p.Role.HOST) LanHostP2PM() else LanP2PM()
+            jetzy.p2p.P2pTechnology.HotspotLAN -> LanP2PM() // a PC can only join an AP, never host one
+            jetzy.p2p.P2pTechnology.BluetoothSpp -> BluetoothSppP2PM()
+            // WiFiDirect is deliberately omitted — no working desktop data path yet.
+            else -> null
+        }
 }
