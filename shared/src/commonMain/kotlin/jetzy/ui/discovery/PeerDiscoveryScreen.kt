@@ -503,35 +503,19 @@ private fun PeerRow(
                 fontWeight = FontWeight.W500,
                 color = if (isSelected) colors.fg else colorScheme.onSurface,
             )
+            // B30: show the transport this session actually runs over, not a hardcoded
+            // "Wi-Fi Direct" (which lied for mDNS / MPC / Bluetooth / Wi-Fi Aware peers).
+            // Falls back to a neutral "Nearby" before the manager has set a technology.
             Text(
-                text = stringResource(Res.string.wifi_direct),
+                text = LocalViewmodel.current.p2pManager?.technology?.displayName ?: "Nearby",
                 fontSize = 9.ssp,
                 color = colorScheme.onSurfaceVariant,
             )
         }
 
-        SignalBars(strength = peer.signalStrength, color = colors.accent)
-    }
-}
-
-// ── Signal bars ────────────────────────────────────────────────────────────────
-
-@Composable
-private fun SignalBars(strength: Int, color: Color) {
-    val colorScheme = MaterialTheme.colorScheme
-    Row(
-        verticalAlignment = Alignment.Bottom,
-        horizontalArrangement = Arrangement.spacedBy(2.sdp)
-    ) {
-        listOf(4.sdp, 7.sdp, 10.sdp, 13.sdp).forEachIndexed { index, h ->
-            Box(
-                modifier = Modifier
-                    .width(3.sdp)
-                    .height(h)
-                    .clip(RoundedCornerShape(2.sdp))
-                    .background(if (index < strength) color else colorScheme.outlineVariant)
-            )
-        }
+        // B31: no signal bars. These transports carry no RSSI — every peer shipped a hardcoded
+        // signalStrength=3, so the bars always read 3/4 and were pure fiction. The transport
+        // label above already says "this is a reachable nearby peer".
     }
 }
 

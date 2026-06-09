@@ -47,37 +47,23 @@ fun main() = application {
  * in place.
  */
 private class DesktopP2pCallback(private val vm: JetzyViewmodel) : P2pPlatformCallback {
-    override fun getSuitableP2pManager(peerPlatform: Platform): P2PManager? = when (peerPlatform) {
-        // PC↔Android: mDNS over the shared Wi-Fi/Ethernet. Desktop Wi-Fi Direct can form a
-        // group but has no implemented data path yet (it would hang the transfer), so it's
-        // kept out of the default and the fallback ladder until that lands.
-        Platform.Android -> LanMdnsP2PM()
-        // PC↔iOS: mDNS is the cleanest path. The legacy LanHostP2PM with empty SSID
-        // is also valid via the fallback ladder.
-        Platform.IOS -> LanMdnsP2PM()
-        // PC↔PC: mDNS handles both sides symmetrically. The PC↔PC QR flow
-        // (LanHostP2PM/LanP2PM) remains as fallback in [fallbackManagersFor].
-        Platform.PC -> LanMdnsP2PM()
-        else -> null
-    }
+    // mDNS is the platform-agnostic bootstrap — zero-config discovery of any Jetzy peer on the
+    // shared Wi-Fi/Ethernet, matching what the Android NsdManager and iOS Bonjour sides advertise.
+    // (Desktop Wi-Fi Direct can form a group but has no implemented data path yet, so it stays out
+    // of the ladder until that lands.)
+    override fun getDefaultP2pManager(): P2PManager? = LanMdnsP2PM()
 
-    override fun getFallbackP2pManagers(peerPlatform: Platform): List<() -> P2PManager?> = when (peerPlatform) {
-        Platform.Android -> listOf(
-            { LanMdnsP2PM() },
-            { LanP2PM() },           // legacy hotspot-join QR-paste flow
-            { BluetoothSppP2PM() },  // Linux-only for now; gracefully no-ops on other OSes
-        )
-        Platform.IOS -> listOf(
-            { LanMdnsP2PM() },
-            { LanHostP2PM() },       // PC hosts same-LAN TCP server (legacy QR path)
-        )
-        Platform.PC -> listOf(
-            { LanMdnsP2PM() },
-            // Operation-aware: receiver hosts, sender dials.
-            { if (vm.currentOperation.value == P2pOperation.RECEIVE) LanHostP2PM() else LanP2PM() },
-        )
-        else -> emptyList()
-    }
+    /**
+     * Per-host fallback ladder (peer-platform-agnostic). Best→worst: same-LAN mDNS, then the
+     * explicit-IP/QR LAN path (receiver hosts the TCP server, sender dials/pastes — derived from
+     * whether we staged files), then Bluetooth SPP (Linux-only for now; no-ops elsewhere).
+     */
+    override fun getDefaultFallbackManagers(): List<() -> P2PManager?> = listOf(
+        { LanMdnsP2PM() },
+        // No files staged ⇒ we're the receiver ⇒ host the server; otherwise dial/paste the QR.
+        { if (vm.elementsToSend.isEmpty()) LanHostP2PM() else LanP2PM() },
+        { BluetoothSppP2PM() },  // Linux-only for now; gracefully no-ops on other OSes
+    )
 
     override fun getManagerForTechnology(technology: jetzy.p2p.P2pTechnology, role: jetzy.p2p.Role): P2PManager? =
         when (technology) {

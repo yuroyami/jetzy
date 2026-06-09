@@ -169,10 +169,19 @@ object JetzyProtocol {
         val senderName = readString(input)
         val senderPlat = readString(input)
         val entryCount = input.readInt()
-        require(entryCount == totalFiles) { "Manifest entryCount=$entryCount totalFiles=$totalFiles" }
+        // B20: the manifest is unauthenticated, attacker-controllable input. Validate every field
+        // before we allocate against it or trust it downstream:
+        //  - an absurd entryCount would drive an unbounded read/allocate loop (remote DoS);
+        //  - a negative size/total corrupts the free-space gate and the resume arithmetic;
+        //  - a totalBytes that disagrees with the entry sum lets a peer advertise totalBytes=0 to
+        //    slip past the storage check and then stream arbitrarily many bytes.
+        if (entryCount != totalFiles) throw ProtocolException("Manifest entryCount=$entryCount != totalFiles=$totalFiles")
+        if (entryCount < 0 || entryCount > MAX_MANIFEST_ENTRIES) throw ProtocolException("Manifest entry count out of range: $entryCount")
+        if (totalBytes < 0L) throw ProtocolException("Manifest totalBytes negative: $totalBytes")
         val entries = (0 until entryCount).map {
             val name = readString(input)
             val size = input.readLong()
+            if (size < 0L) throw ProtocolException("Manifest entry '$name' has negative size: $size")
             val mime = readString(input).takeIf { it.isNotEmpty() }
             val relPath = readString(input)
             val typeStr = readString(input)
@@ -184,6 +193,14 @@ object JetzyProtocol {
                 entryType = runCatching { EntryType.valueOf(typeStr) }.getOrDefault(EntryType.FILE),
             )
         }
+        // Reject a manifest whose declared total doesn't match its parts. All sizes are ≥0, so the
+        // running sum is monotonic — a negative sum means it overflowed Long (also hostile).
+        var sumBytes = 0L
+        for (e in entries) {
+            sumBytes += e.sizeBytes
+            if (sumBytes < 0L) throw ProtocolException("Manifest entry sizes overflow Long")
+        }
+        if (sumBytes != totalBytes) throw ProtocolException("Manifest totalBytes=$totalBytes != sum(entries)=$sumBytes")
         val manifest = TransferManifest(
             totalFiles = totalFiles,
             totalBytes = totalBytes,
@@ -271,6 +288,10 @@ object JetzyProtocol {
     }
 
     private const val MAX_STRING_BYTES = 1 shl 20 // 1 MB cap — protects against corruption
+
+    // Upper bound on files in one manifest (B20). Generous for any real folder share, but bounds
+    // the read/allocate loop so a hostile peer can't declare billions of entries.
+    private const val MAX_MANIFEST_ENTRIES = 1_000_000
 }
 
 class ProtocolException(message: String) : RuntimeException(message)

@@ -38,49 +38,21 @@ fun MainViewController(): UIViewController = ComposeUIViewController(
             viewmodel = it
 
             viewmodel.platformCallback = object: P2pPlatformCallback {
-                override fun getSuitableP2pManager(peerPlatform: jetzy.utils.Platform): P2PManager? {
-                    return when (peerPlatform) {
-                        jetzy.utils.Platform.Android -> {
-                            // Default to the QR/hotspot-join path. Wi-Fi Aware needs
-                            // *both* sides to support it and there's no pre-pairing
-                            // handshake to know that — optimistically picking it
-                            // leaves the iPhone on a NAN cluster while the Android
-                            // side is hosting a hotspot the user is trying to scan
-                            // a QR for. LanWifi works against any Android we
-                            // support. Wi-Fi Aware is available via the manual
-                            // fallback ladder for users who know both sides do.
-                            LanWifiP2PM()
-                        }
-                        Platform.IOS -> MpcP2PM()
-                        Platform.PC -> LanMdnsP2PM()
-                        else -> null
-                    }
-                }
+                // mDNS is the platform-agnostic bootstrap — it finds any Jetzy peer on the shared
+                // LAN regardless of OS, so we no longer ask the user to guess the peer's platform.
+                override fun getDefaultP2pManager(): P2PManager? = LanMdnsP2PM()
 
-                override fun getFallbackP2pManagers(peerPlatform: jetzy.utils.Platform): List<() -> P2PManager?> = when (peerPlatform) {
-                    jetzy.utils.Platform.Android -> listOf(
-                        // First rung mirrors the primary — re-scanning the QR cleanly
-                        // restarts a broken hotspot session before we change strategy.
-                        { LanWifiP2PM() },
-                        // Same-Wi-Fi shortcut: skip the hotspot dance if both sides
-                        // happen to be on the same network already.
-                        { LanMdnsP2PM() },
-                        // Wi-Fi Aware: opportunistic upgrade for users who know both
-                        // sides support it (iOS 26+ on a NAN-capable chip + an
-                        // Android with FEATURE_WIFI_AWARE). Falls back to LanWifi
-                        // when the bridge isn't available.
-                        { wifiAwareBridge?.let { WifiAwareP2PM.create(it) } ?: LanWifiP2PM() },
-                    )
-                    Platform.IOS -> listOf(
-                        { MpcP2PM() },
-                        { LanMdnsP2PM() },
-                    )
-                    Platform.PC -> listOf(
-                        { LanMdnsP2PM() },
-                        { LanWifiP2PM() },
-                    )
-                    else -> emptyList()
-                }
+                /**
+                 * Per-host fallback ladder (peer-platform-agnostic). Best→worst: same-LAN mDNS,
+                 * then MultipeerConnectivity for an iOS↔iOS pair with no infrastructure, then
+                 * joining an Android-hosted hotspot via QR, then Wi-Fi Aware on iOS 26+ NAN chips.
+                 */
+                override fun getDefaultFallbackManagers(): List<() -> P2PManager?> = listOf(
+                    { LanMdnsP2PM() },                                                     // same Wi-Fi, any OS
+                    { MpcP2PM() },                                                          // iOS↔iOS, no infra
+                    { LanWifiP2PM() },                                                      // join Android AP via QR
+                    { wifiAwareBridge?.let { WifiAwareP2PM.create(it) } ?: LanWifiP2PM() }, // iOS 26 NAN
+                )
 
                 override fun getManagerForTechnology(technology: jetzy.p2p.P2pTechnology, role: jetzy.p2p.Role): P2PManager? =
                     when (technology) {

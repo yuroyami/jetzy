@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
@@ -68,8 +69,6 @@ import jetzy.ui.main.PermissionGateDialog
 import jetzy.utils.InitializeCoilSupportForFileKit
 import jetzy.shared.generated.resources.continue_label
 import jetzy.shared.generated.resources.sending_error_nothing
-import jetzy.shared.generated.resources.sending_to_label
-import jetzy.shared.generated.resources.receiving_from_label
 import jetzy.viewmodel.JetzyViewmodel
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
@@ -97,7 +96,6 @@ fun AdamScreen(onViewmodel: (JetzyViewmodel) -> Unit) {
 
             val currentScreen by viewmodel.currentScreen.collectAsState()
             val op by viewmodel.currentOperation.collectAsState()
-            val prp by viewmodel.currentPeerPlatform.collectAsState()
 
             CompositionLocalProvider(
                 LocalViewmodel provides viewmodel,
@@ -117,31 +115,39 @@ fun AdamScreen(onViewmodel: (JetzyViewmodel) -> Unit) {
                                 //CenterAligned
                                 CenterAlignedTopAppBar(
                                     navigationIcon = {
-                                        Image(
-                                            imageVector = vectorResource(Res.drawable.jetzy_vector),
-                                            contentDescription = null,
-                                            modifier = Modifier
-                                                .height(42.sdp)
-                                                .clip(RoundedCornerShape(8.sdp))
-                                                .clickable { showAbout = true }
-                                        )
+                                        if (currentScreen !is Screen.MainScreen) {
+                                            // Explicit back affordance on every leaf screen. Desktop
+                                            // has no hardware back, and screens owning a live
+                                            // P2PManager must tear it down (onSystemBack closes
+                                            // sockets / stops discovery / purges temp), not strand.
+                                            IconButton(onClick = { viewmodel.onSystemBack() }) {
+                                                Icon(
+                                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                                    contentDescription = "Back",
+                                                )
+                                            }
+                                        } else {
+                                            Image(
+                                                imageVector = vectorResource(Res.drawable.jetzy_vector),
+                                                contentDescription = "About Jetzy",
+                                                modifier = Modifier
+                                                    .height(42.sdp)
+                                                    .clip(RoundedCornerShape(8.sdp))
+                                                    .clickable { showAbout = true }
+                                            )
+                                        }
                                     },
                                     title = {
-                                        if (currentScreen !is Screen.MainScreen) {
-                                            if (op != null && prp != null) {
-                                                val s1 = when (op) {
-                                                    P2pOperation.SEND -> stringResource(Res.string.sending_to_label)
-                                                    P2pOperation.RECEIVE -> stringResource(Res.string.receiving_from_label)
-                                                    else -> {}
-                                                }
-
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Text(s1.toString(), modifier = Modifier.padding(horizontal = 4.sdp), fontSize = 10.ssp)
-
-                                                    Icon(imageVector = prp!!.peerIcon, tint = prp!!.peerBrandColor, contentDescription = null, modifier = Modifier.size(16.sdp))
-                                                }
-                                            }
-
+                                        // Direction is derived in-band now (no peer-platform pick),
+                                        // so the bar shows the resolved operation, not a guessed
+                                        // peer icon. `op` is set on proceed() and re-derived from
+                                        // the wire by DirectionResolver.
+                                        if (currentScreen !is Screen.MainScreen && op != null) {
+                                            Text(
+                                                text = if (op == P2pOperation.SEND) "Sending" else "Receiving",
+                                                modifier = Modifier.padding(horizontal = 4.sdp),
+                                                fontSize = 10.ssp,
+                                            )
                                         }
                                     },
                                     actions = {

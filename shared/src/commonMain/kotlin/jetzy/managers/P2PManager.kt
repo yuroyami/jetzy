@@ -44,6 +44,8 @@ import jetzy.utils.getAvailableStorageBytes
 import jetzy.utils.deviceName
 import jetzy.utils.loggy
 import jetzy.utils.platform
+import jetzy.utils.StagedReceivedFile
+import jetzy.utils.saveReceivedFilesToDefault
 import jetzy.viewmodel.JetzyViewmodel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -54,6 +56,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
@@ -154,6 +157,14 @@ abstract class P2PManager {
     val isSaving: StateFlow<Boolean>
         field = MutableStateFlow(false)
 
+    /**
+     * Human-readable destination of the auto-save (e.g. "Downloads/Jetzy"), or null until it
+     * succeeds. Non-null ⇒ the received files are already persisted to a real, user-visible
+     * location, so the UI shows a "Saved to …" confirmation instead of a Save-or-lose-it button.
+     */
+    val savedLocationLabel: StateFlow<String?>
+        field = MutableStateFlow<String?>(null)
+
     val transferSpeed: StateFlow<Long>
         field = MutableStateFlow(0L)
 
@@ -224,7 +235,8 @@ abstract class P2PManager {
             // the old "the user already picked Send/Receive, just run it" branch. The manual pick
             // becomes advisory; the wire is authoritative.
             val direction = try {
-                val peer = performHandshake(input, output)
+                val peer = withTimeoutOrNull(handshakeTimeoutMs) { performHandshake(input, output) }
+                    ?: throw ProtocolException("Handshake timed out after ${handshakeTimeoutMs}ms — peer didn't respond")
                 DirectionResolver.resolve(
                     local = TransferParty(viewmodel.elementsToSend.isNotEmpty(), platform, deviceName, handshakeTiebreaker),
                     remote = TransferParty(peer.offeringFiles, peer.platform, peer.name, peer.tiebreaker),
@@ -303,6 +315,7 @@ abstract class P2PManager {
         _directOutput = null
         // Reset per-attempt UI state so a fresh handshake can run; sessionId + receiverLedger stay.
         transferComplete.value = false
+        savedLocationLabel.value = null
         transferProgress.value = 0f
         transferSpeed.value = 0L
         transferStatus.value = ""
@@ -343,6 +356,11 @@ abstract class P2PManager {
      * rate (hundreds/sec on a fast link); ~10 Hz is imperceptible but kills the storm.
      */
     private val uiRefreshIntervalMs = 100L
+
+    // B29: a hung peer that connects a socket but never completes the handshake or never sends the
+    // manifest used to wedge forever — the byte-counting stall watchdog can't see a phase that
+    // hasn't moved a payload byte yet. Bound those two pre-payload reads explicitly.
+    private val handshakeTimeoutMs = 15_000L
     private var stallWatchdogJob: Job? = null
     private val stallTimeoutMs = 8000L
 
@@ -524,6 +542,18 @@ abstract class P2PManager {
                     src.close()
                 }
 
+                // B5: the source ended before the manifest-declared size (file was truncated or
+                // replaced between staging and read). Writing the CRC now would leave the receiver
+                // blocked in readFully() waiting for bytes that will never arrive — a silent hang
+                // cured only by the 8s watchdog. Fail fast with a clear protocol error instead, so
+                // the sender surfaces the failure and tears down (unblocking the receiver promptly).
+                if (bytesTransferred < fileSize) {
+                    fileEntries.updateAt(index) { it.copy(status = FileTransferStatus.Failed) }
+                    throw ProtocolException(
+                        "'${file.name}' shrank during send (${bytesTransferred}/$fileSize bytes); aborting"
+                    )
+                }
+
                 output.writeInt(crc.finish())
                 output.flush()
 
@@ -576,7 +606,11 @@ abstract class P2PManager {
 
         try {
             // Handshake + direction resolution already happened in beginTransfer; read the manifest.
-            val frame = JetzyProtocol.readManifest(input)
+            // B29: bound the manifest read — a sender that connects then never writes the manifest
+            // would otherwise hang the receiver here indefinitely (no payload byte = invisible to
+            // the byte-counting stall watchdog).
+            val frame = withTimeoutOrNull(handshakeTimeoutMs) { JetzyProtocol.readManifest(input) }
+                ?: throw ProtocolException("Manifest read timed out after ${handshakeTimeoutMs}ms")
             val mf = frame.manifest
             val session = frame.sessionId
             manifest.value = mf
@@ -743,7 +777,11 @@ abstract class P2PManager {
                     throw ProtocolException("File '${entry.name}' failed CRC; transfer aborted")
                 }
 
-                val textContent = if (entry.entryType == EntryType.TEXT) {
+                // B19: only auto-decode TEXT entries up to a small cap. The size is sender-asserted
+                // and unauthenticated; without this bound a peer could declare a multi-GB file as
+                // TEXT and force us to read the whole thing into memory to render it. Oversized
+                // "text" is still saved to disk as a normal file — we just don't inline a preview.
+                val textContent = if (entry.entryType == EntryType.TEXT && entry.sizeBytes in 0..TEXT_PREVIEW_MAX) {
                     runCatching {
                         val source = SystemFileSystem.source(tempPath).buffered()
                         val bytes = source.readByteArray()
@@ -784,6 +822,10 @@ abstract class P2PManager {
             diag("transfer complete — ${itemsRECEIVED.size} file(s) staged")
             transferComplete.value = true
             canResume.value = false
+            // Persist out of the purgeable temp dir immediately (fixes the silent data-loss
+            // footgun where "Done" before "Save" deleted everything). Best-effort: if it can't,
+            // saveComplete stays false and the manual folder picker remains as a fallback.
+            autoSaveReceivedFiles()
         } catch (e: Exception) {
             diag("receive failed: ${e.message ?: e::class.simpleName}")
             transferSpeed.value = 0L
@@ -886,12 +928,18 @@ abstract class P2PManager {
     private fun startSenderStallWatchdog() {
         stallWatchdogJob?.cancel()
         stallWatchdogJob = p2pScope.launch {
-            var lastBytesSeen = 0L
+            // Start at -1 (not 0) so the first tick can't false-fire on a legitimately slow first
+            // byte: tick 1 only records the baseline, tick 2 is the earliest a "no progress" verdict
+            // is reached. A payload phase that genuinely never moves a byte still trips — just one
+            // tick later — so the B29 never-starts coverage holds without the slow-start false-positive.
+            var lastBytesSeen = -1L
             while (isActive && !transferComplete.value) {
                 delay(stallTimeoutMs)
                 if (transferComplete.value) break
                 val current = bytesMovedTotal
-                if (current == lastBytesSeen && current > 0L) {
+                // B29: no `&& current > 0L` guard — a payload phase that never moves its first
+                // byte (e.g. the peer shrank file #0 and aborted) is also a stall, not "idle".
+                if (current == lastBytesSeen) {
                     diag("send stall detected: no bytes for ${stallTimeoutMs}ms")
                     activeOutput?.let { runCatching { it.flushAndClose() } }
                     activeInput?.let { runCatching { it.cancel() } }
@@ -905,12 +953,18 @@ abstract class P2PManager {
     private fun startReceiverStallWatchdog() {
         stallWatchdogJob?.cancel()
         stallWatchdogJob = p2pScope.launch {
-            var lastBytesSeen = 0L
+            // Start at -1 (not 0) so the first tick can't false-fire on a legitimately slow first
+            // byte: tick 1 only records the baseline, tick 2 is the earliest a "no progress" verdict
+            // is reached. A payload phase that genuinely never moves a byte still trips — just one
+            // tick later — so the B29 never-starts coverage holds without the slow-start false-positive.
+            var lastBytesSeen = -1L
             while (isActive && !transferComplete.value) {
                 delay(stallTimeoutMs)
                 if (transferComplete.value) break
                 val current = bytesMovedTotal
-                if (current == lastBytesSeen && current > 0L) {
+                // B29: no `&& current > 0L` guard — a payload phase that never moves its first
+                // byte (e.g. the peer shrank file #0 and aborted) is also a stall, not "idle".
+                if (current == lastBytesSeen) {
                     diag("receive stall detected: no bytes for ${stallTimeoutMs}ms")
                     markAllNonDoneAsFailed()
                     transferSpeed.value = 0L
@@ -949,6 +1003,43 @@ abstract class P2PManager {
         transform: (FileTransferEntry) -> FileTransferEntry
     ) {
         value = value.toMutableList().also { it[index] = transform(it[index]) }
+    }
+
+    /**
+     * Auto-saves received FILE items to the platform's default, permission-free, user-visible
+     * location (Android MediaStore Downloads / iOS Files / desktop ~/Downloads) the instant the
+     * transfer's CRC checks pass. Files leave the purgeable temp dir immediately and [saveComplete]
+     * gates [purgeUnsavedReceivedFiles], so a later teardown can't delete them. The manual
+     * [finalizeReceivedFilesAt] picker remains as a fallback when auto-save isn't possible.
+     * Text-only transfers no-op (nothing to persist; the temp text is purged normally).
+     */
+    private suspend fun autoSaveReceivedFiles() {
+        if (saveComplete.value) return
+        val fileItems = itemsRECEIVED.filter { it.entryType == EntryType.FILE }
+        if (fileItems.isEmpty()) return
+
+        isSaving.value = true
+        try {
+            val staged = fileItems.map {
+                StagedReceivedFile(tempPath = it.path.toString(), name = it.name, relativePath = it.relativePath)
+            }
+            val dest = saveReceivedFilesToDefault(staged)
+            if (dest != null) {
+                savedLocationLabel.value = dest
+                saveComplete.value = true
+                canResume.value = false
+                diag("auto-saved ${fileItems.size} file(s) to $dest")
+                viewmodel.snacky("Saved to $dest")
+            } else {
+                // Auto-save unavailable — leave saveComplete false so the manual "Save to folder"
+                // button stays visible and the staged temp files survive for that retry.
+                diag("auto-save unavailable; manual save still offered")
+            }
+        } catch (e: Exception) {
+            diag("auto-save error: ${e.message ?: e::class.simpleName}")
+        } finally {
+            isSaving.value = false
+        }
     }
 
     fun finalizeReceivedFilesAt(destDir: PlatformFile) {
@@ -995,5 +1086,8 @@ abstract class P2PManager {
     companion object {
         /** Extra headroom we require above the declared transfer size. */
         private const val SPACE_SAFETY_MARGIN = 10L * 1024 * 1024
+
+        /** Largest TEXT entry we'll auto-decode into an inline preview (B19). 1 MB. */
+        private const val TEXT_PREVIEW_MAX = 1L * 1024 * 1024
     }
 }

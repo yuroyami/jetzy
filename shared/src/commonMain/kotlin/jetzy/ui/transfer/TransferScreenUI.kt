@@ -56,6 +56,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -101,6 +102,8 @@ fun TransferScreenUI() {
     val saveComplete by manager.saveComplete.collectAsState()
     val canResume by manager.canResume.collectAsState()
     val isSaving by manager.isSaving.collectAsState()
+    // Non-null once received files have been auto-saved to a default, user-visible folder.
+    val savedLabel by manager.savedLocationLabel.collectAsState()
     // The live result of the on-handshake transport negotiation: a mutually-supported link
     // faster than the one we bootstrapped on, if any. Non-null ⇒ we can show the gear-shift hint.
     val upgrade by manager.recommendedUpgrade.collectAsState()
@@ -223,31 +226,46 @@ fun TransferScreenUI() {
             item {
                 Spacer(Modifier.height(12.sdp))
 
-                // Show "Save files to folder" only when there are actual files (not just texts)
+                // Received files are auto-saved to a default, user-visible folder the instant the
+                // transfer verifies (P2PManager.autoSaveReceivedFiles). Show a confirmation; only
+                // fall back to a manual folder picker if that auto-save didn't happen.
                 val hasFiles = manifest?.hasFiles == true
 
-                if (transferComplete && !viewmodel.isSender && !saveComplete && hasFiles) {
-                    // isSaving is hoisted to TransferScreenUI so this branch never violates
-                    // Compose's no-conditional-composable-call rule.
-                    val destDir = rememberDirectoryPickerLauncher { dir ->
-                        dir?.let { destinationDir ->
-                            manager.finalizeReceivedFilesAt(destinationDir)
+                if (transferComplete && !viewmodel.isSender && hasFiles) {
+                    val savedTo = savedLabel
+                    if (saveComplete && savedTo != null) {
+                        Text(
+                            text = "✓ Saved to $savedTo",
+                            color = colorScheme.primary,
+                            fontSize = 10.ssp,
+                            fontWeight = FontWeight.W500,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.sdp),
+                            textAlign = TextAlign.Center,
+                        )
+                    } else if (!saveComplete) {
+                        // Fallback: auto-save couldn't persist (rare) — let the user pick a folder.
+                        // isSaving is hoisted to TransferScreenUI so this branch never violates
+                        // Compose's no-conditional-composable-call rule.
+                        val destDir = rememberDirectoryPickerLauncher { dir ->
+                            dir?.let { destinationDir ->
+                                manager.finalizeReceivedFilesAt(destinationDir)
+                            }
                         }
-                    }
 
-                    Button(
-                        onClick = {
-                            destDir.launch()
-                        },
-                        enabled = !isSaving,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colorScheme.primary,
-                            contentColor = colorScheme.onPrimary
-                        ),
-                        shape = RoundedCornerShape(8.sdp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(stringResource(Res.string.save_files_to_folder), fontSize = 10.ssp, fontWeight = FontWeight.W500)
+                        Button(
+                            onClick = {
+                                destDir.launch()
+                            },
+                            enabled = !isSaving,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colorScheme.primary,
+                                contentColor = colorScheme.onPrimary
+                            ),
+                            shape = RoundedCornerShape(8.sdp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(stringResource(Res.string.save_files_to_folder), fontSize = 10.ssp, fontWeight = FontWeight.W500)
+                        }
                     }
                 }
 

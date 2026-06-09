@@ -81,73 +81,24 @@ class MainActivity: ComponentActivity(), P2pPlatformCallback {
         }
     }
 
-    override fun getSuitableP2pManager(peerPlatform: Platform): P2PManager? {
-        return when (peerPlatform) {
-            Platform.Android -> {
-                // Android↔Android priority chain:
-                //   1. Wi-Fi Aware (Android 8+, chip-gated) — best discovery, no group dance
-                //   2. Wi-Fi Direct — universal Android fallback
-                //   3. mDNS (same Wi-Fi) — only reached via UI fall-through, see below
-                //   4. Bluetooth SPP — last-resort, slow but reliable
-                // The auto-fallback chain isn't fully wired (would require the UI to
-                // surface "no peers found, try X?"); for now we pick the best supported
-                // and the user can manually retry through cancelDiscovery() + reopen.
-                if (isWifiAwareSupported()) WifiAwareP2PM(this) else WiFiDirectP2PM(this)
-            }
-            Platform.IOS -> {
-                // Default to hotspot+QR. Wi-Fi Aware needs *both* sides to support it
-                // and there's no pre-pairing handshake to find that out — iOS 26+ on
-                // a NAN-capable chip is still rare in the wild, so optimistically
-                // picking Wi-Fi Aware here ends up publishing on an empty NAN cluster
-                // while the iOS side sits on its QR scanner. Hotspot+QR works on
-                // every iOS we support. Users who *know* both sides have Wi-Fi
-                // Aware can opt into it via the "Try a different transport" ladder.
-                HotspotP2PM(this)
-            }
-            // Android↔PC priority:
-            //   1. Wi-Fi Direct (Linux/Windows side speaks the standard)
-            //   2. mDNS (same Wi-Fi)
-            //   3. HotspotP2PM (Android hosts hotspot, PC joins manually)
-            //   4. Bluetooth SPP fallback
-            // We don't have a way to know the peer's OS from here — we pick the
-            // Wi-Fi-cheapest option (LanMdnsP2PM if on a Wi-Fi network) and let
-            // user cancel/retry if no peer shows up.
-            Platform.PC -> LanMdnsP2PM(this)
-            else -> null
-        }
-    }
+    // mDNS is the platform-agnostic bootstrap: it auto-discovers any Jetzy peer on the shared LAN
+    // regardless of the peer's OS, so the app no longer asks the user to guess it.
+    override fun getDefaultP2pManager(): P2PManager? = LanMdnsP2PM(this)
 
     /**
-     * Explicit fallback ladder for the same peer platform, in priority order.
-     * Drives the "Try a different transport" affordance on the peer discovery
-     * screen. The first rung is what [getSuitableP2pManager] would return; later
-     * rungs are progressively less preferred but more likely to work in awkward
-     * network conditions.
+     * Per-host fallback ladder, peer-platform-agnostic (the platform picker is gone). Drives the
+     * "Try a different transport" affordance. Ordered best→worst: same-LAN mDNS first, then the
+     * no-infrastructure radios this Android can stand up (Wi-Fi Aware / Direct), then the hotspot
+     * it can host for a cross-platform peer to join via QR, then Bluetooth SPP as the last resort.
+     * Collectively this covers every path the old per-peer-platform ladders did.
      */
-    override fun getFallbackP2pManagers(peerPlatform: Platform): List<() -> P2PManager?> = when (peerPlatform) {
-        Platform.Android -> listOf(
-            { if (isWifiAwareSupported()) WifiAwareP2PM(this) else WiFiDirectP2PM(this) },
-            { LanMdnsP2PM(this) },
-            { WiFiDirectP2PM(this) },
-            { BluetoothSppP2PM(this) },
-        )
-        Platform.IOS -> listOf(
-            // First rung mirrors the primary so "Try a different transport" cleanly
-            // restarts a broken hotspot session before changing strategy.
-            { HotspotP2PM(this) },
-            // mDNS works when both happen to be on the same Wi-Fi.
-            { LanMdnsP2PM(this) },
-            // Wi-Fi Aware: opportunistic upgrade for users who know both sides
-            // support it (iOS 26+ on a NAN-capable chip).
-            { if (isWifiAwareSupported()) WifiAwareP2PM(this) else HotspotP2PM(this) },
-        )
-        Platform.PC -> listOf(
-            { LanMdnsP2PM(this) },
-            { HotspotP2PM(this) },
-            { BluetoothSppP2PM(this) },
-        )
-        else -> emptyList()
-    }
+    override fun getDefaultFallbackManagers(): List<() -> P2PManager?> = listOf(
+        { LanMdnsP2PM(this) },                                                        // same Wi-Fi, any OS
+        { if (isWifiAwareSupported()) WifiAwareP2PM(this) else WiFiDirectP2PM(this) }, // Android↔Android, no AP
+        { WiFiDirectP2PM(this) },
+        { HotspotP2PM(this) },                                                        // Android hosts AP; peer joins via QR
+        { BluetoothSppP2PM(this) },                                                   // last resort
+    )
 
     override fun getManagerForTechnology(technology: jetzy.p2p.P2pTechnology, role: jetzy.p2p.Role): P2PManager? =
         when (technology) {

@@ -15,8 +15,9 @@
     <uses-permission android:required="true" android:name="android.permission.CHANGE_WIFI_STATE"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
+    <!-- No storage permissions: receiving auto-saves via MediaStore (API 29+, permission-free)
+         or the app-specific external Download dir (API ≤28); sending uses SAF/FileKit. -->
+
 
     <!-- Foreground service support so transfers survive app-backgrounding. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />

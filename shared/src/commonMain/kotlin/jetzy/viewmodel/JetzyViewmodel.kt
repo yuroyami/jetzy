@@ -106,16 +106,14 @@ class JetzyViewmodel : ViewModel() {
     data class PendingProceed(
         val manager: jetzy.managers.P2PManager,
         val operation: P2pOperation,
-        val peerPlatform: Platform,
     )
 
     val pendingProceed = MutableStateFlow<PendingProceed?>(null)
 
     /**
-     * Index into [P2pPlatformCallback.getFallbackP2pManagers] for the current
-     * peerPlatform. Bumped each time the user taps "try a different transport"
-     * on the discovery screen; null means "we haven't started the ladder yet
-     * (using the primary [P2pPlatformCallback.getSuitableP2pManager])".
+     * Index into [P2pPlatformCallback.getDefaultFallbackManagers] for the current attempt. Bumped
+     * each time the user taps "try a different transport" on the discovery screen; null means "we
+     * haven't started the ladder yet (still on the primary [P2pPlatformCallback.getDefaultP2pManager])".
      */
     val fallbackIndex = MutableStateFlow<Int?>(null)
 
@@ -126,19 +124,31 @@ class JetzyViewmodel : ViewModel() {
      */
     val fallbackCount = MutableStateFlow(0)
 
-    fun proceedFromMainScreen(peerPlatform: Platform, operation: P2pOperation) {
-        val manager = platformCallback.getSuitableP2pManager(peerPlatform) ?: return
+    /**
+     * Start a session with **no up-front Send/Receive or platform pick** — the gate-free home flow.
+     * Direction is *derived* from intent (staged files ⇒ we offer to send; nothing staged ⇒ we
+     * expect to receive); the wire's [jetzy.p2p.DirectionResolver] stays authoritative and may flip
+     * it once both HELLOs are exchanged. The bootstrap transport is the platform-agnostic
+     * [P2pPlatformCallback.getDefaultP2pManager] (mDNS), with the per-host ladder available behind
+     * "Try a different transport". Setting [currentOperation] now keeps every isSender-driven
+     * surface correct through discovery.
+     */
+    fun proceed() {
+        val operation = if (elementsToSend.isNotEmpty()) P2pOperation.SEND else P2pOperation.RECEIVE
+        currentOperation.value = operation
+
+        val manager = platformCallback.getDefaultP2pManager() ?: return
         // Initialize early so the manager has a viewmodel ref while we're showing
         // the gate dialog (it needs `viewmodel` for `snacky` calls etc.).
         manager.initialize(viewmodel = this)
 
         fallbackIndex.value = null
-        fallbackCount.value = platformCallback.getFallbackP2pManagers(peerPlatform).size
+        fallbackCount.value = platformCallback.getDefaultFallbackManagers().size
 
         if (manager.permissionRequirements.isEmpty()) {
             commitProceed(manager)
         } else {
-            pendingProceed.value = PendingProceed(manager, operation, peerPlatform)
+            pendingProceed.value = PendingProceed(manager, operation)
         }
     }
 
@@ -149,10 +159,16 @@ class JetzyViewmodel : ViewModel() {
      * button on the peer-discovery screen.
      */
     fun switchToNextFallbackTransport() {
-        val peer = currentPeerPlatform.value ?: return
-        val ladder = platformCallback.getFallbackP2pManagers(peer)
+        val ladder = platformCallback.getDefaultFallbackManagers()
         if (ladder.isEmpty()) return
-        val next = ((fallbackIndex.value ?: -1) + 1) % ladder.size
+        // B28: clamp, don't wrap. Modulo cycled 1→2→…→0→1 forever, so "try a different transport"
+        // silently looped the user back through transports that already failed with no terminal
+        // state. Stop at the last rung and say so.
+        val next = (fallbackIndex.value ?: -1) + 1
+        if (next >= ladder.size) {
+            snacky("No other transports to try. Make sure both devices are on the same Wi-Fi, or move them closer.")
+            return
+        }
         fallbackIndex.value = next
 
         val factory = ladder[next]
@@ -179,8 +195,7 @@ class JetzyViewmodel : ViewModel() {
             } else {
                 pendingProceed.value = PendingProceed(
                     newManager,
-                    currentOperation.value ?: return@launch,
-                    peer,
+                    currentOperation.value ?: P2pOperation.RECEIVE,
                 )
             }
         }

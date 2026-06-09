@@ -13,7 +13,7 @@ plugins {
 
 kmpSsot {
     appName         = "Jetzy"
-    versionName     = "0.4.1"
+    versionName     = "0.5.0"
     bundleIdBase    = "com.yuroyami.jetzy"
     iosBundleSuffix = ".ios"        // explicit
     javaVersion     = 21
@@ -23,7 +23,7 @@ kmpSsot {
 
     appLogoPngForeground   = file("shared/src/commonMain/composeResources/drawable/jetzy_raster.png")
     appLogoBackgroundColor = "#55555B"
-    appLogoAndroidSafeZoneRatio = 0.7
+    appLogoAndroidSafeZoneRatio = 0.6
 
     ios {
         usesNonExemptEncryption = false   // silences App Store "Missing Compliance"

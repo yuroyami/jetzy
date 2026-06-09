@@ -85,5 +85,11 @@
 	<string>$(PRODUCT_NAME)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!-- Make received files (auto-saved to <Documents>/Jetzy) visible to the user in the
+	     Files app under "On My iPhone › Jetzy". Build-time only — no runtime permission. -->
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 </dict>
 </plist>
