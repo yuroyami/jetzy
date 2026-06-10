@@ -79,6 +79,17 @@ Finish `WebReceiver` (B12) and promote "no app installed" to a first-class peer:
 
 Three parallel verification agents over HEAD + working tree; everything below is code-verified and **new** (not in JETZY_DEEP_REVIEW.md or PERFORMANCE_AUDIT.md).
 
+> **Status 2026-06-10 (same day):** Part B has been implemented on `master` in the commit series
+> `8cd1bf3..6538504` — protocol v4 sequential bidi (B47 closed), durable per-item auto-save,
+> the lifecycle/FGS/WifiLock batch, the iOS retry-for-all-failures batch (ships the race-dialog
+> WIP), the UX batch (radar taps, ladder skip, hotspot retry, gate-cancel), release hygiene,
+> the dead-code/strings sweep, the product adds (share target, open-after-receive, clipboard,
+> DnD, persisted prefs + editable device name), and 19 new hardening tests (suite: 98/98).
+> Deliberately deferred: iOS share extension (new Xcode target), engine message-key i18n
+> refactor, in-app received-files browser (needs a transfer-history layer), enabling R8
+> (rules staged), the M3-alpha and `-Xskip-prerelease-check` pins, and full semantics/i18n
+> passes. iOS backgrounding (`beginBackgroundTask` grace) remains the top open lifecycle item.
+
 ### B.1 Resolution status of B1–B47 after v0.5.0
 
 Of the 9 fixes claimed by `829d5b8`: **8 are real** (B1, B5, B9, B19, B20, B28, B30, B31). **B29 is partial** — handshake + receiver-manifest reads got timeouts, but the **sender's `readManifestAck` is still unbounded** (`P2PManager.kt:447`) and the sender watchdog starts only after it: a peer that handshakes then goes silent wedges the sender forever. B6/B7/B10 are partially improved. **35 of 47 remain open**, including all High-severity security items (B2/B3/B4) and:

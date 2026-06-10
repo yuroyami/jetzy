@@ -4,6 +4,7 @@ import kotlinx.coroutines.withContext
 import platform.AppKit.NSWorkspace
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
+import platform.Foundation.NSURL
 import platform.Foundation.NSUserDomainMask
 
 /**
@@ -22,5 +23,5 @@ actual suspend fun saveReceivedFilesToDefault(files: List<StagedReceivedFile>): 
 actual fun openReceivedLocation(): Boolean {
     val docs = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true)
         .firstOrNull() as? String ?: return false
-    return NSWorkspace.sharedWorkspace.openFile("$docs/Jetzy")
+    return NSWorkspace.sharedWorkspace.openURL(NSURL.fileURLWithPath("$docs/Jetzy"))
 }
