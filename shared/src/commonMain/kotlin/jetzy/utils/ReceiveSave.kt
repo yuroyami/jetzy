@@ -17,12 +17,23 @@ data class StagedReceivedFile(
 )
 
 /**
+ * What one save pass actually achieved: the human-readable destination and the temp paths that
+ * made it. [savedTempPaths] ⊆ the requested batch — the caller records them and retries only
+ * the remainder, so one bad file (or one yanked USB cable) can't strand the whole batch.
+ */
+data class SaveReport(
+    val destLabel: String,
+    val savedTempPaths: List<String>,
+)
+
+/**
  * Auto-saves received files to the platform's default, **user-visible**, **permission-free**
  * location the instant a transfer's CRC checks pass — the fix for the silent data-loss footgun
  * where tapping "Done" before a manual "Save" purged everything.
  *
- * Returns a short human-readable destination label (e.g. "Downloads/Jetzy") on success, or
- * `null` if the save failed entirely (caller then leaves the manual folder-picker available).
+ * Returns a [SaveReport] naming the destination and the subset of files that were persisted
+ * (per-item: a failure on one file doesn't abort the rest), or `null` if nothing could be saved
+ * at all (caller then leaves the manual folder-picker available).
  *
  * Per platform (none require a runtime permission prompt):
  *  - **Android**: MediaStore `Downloads/Jetzy` on API 29+ (survives uninstall, shows in the
@@ -31,37 +42,43 @@ data class StagedReceivedFile(
  *    once `UIFileSharingEnabled` + `LSSupportsOpeningDocumentsInPlace` are set in Info.plist.
  *  - **Desktop (JVM)**: `~/Downloads/Jetzy` (`XDG_DOWNLOAD_DIR` honoured on Linux).
  */
-expect suspend fun saveReceivedFilesToDefault(files: List<StagedReceivedFile>): String?
+expect suspend fun saveReceivedFilesToDefault(files: List<StagedReceivedFile>): SaveReport?
 
 /**
  * Shared, path-based mover used by the actuals whose default location is a real filesystem path
  * (iOS, macOS, desktop, and Android's API-≤28 fallback). Creates [destDirRoot] and any sanitized
  * subfolders, then moves each staged file in, suffixing the basename on collision so nothing is
  * ever overwritten. Uses an atomic rename where possible, falling back to copy+delete across
- * volumes (e.g. tmpfs `/tmp` → home partition on Linux, where `atomicMove` throws). Returns the
- * number of files moved. Throws on unrecoverable I/O failure — the actual wraps this in runCatching.
+ * volumes (e.g. tmpfs `/tmp` → home partition on Linux, where `atomicMove` throws).
+ *
+ * Per-item isolation: a file whose move fails (or whose temp has vanished — e.g. it was already
+ * saved by an earlier pass) is skipped, never aborting the rest of the batch. Returns the temp
+ * paths that were actually moved; the caller diffs against the request to know what to retry.
  */
-fun moveStagedFilesToDir(files: List<StagedReceivedFile>, destDirRoot: String): Int {
+fun moveStagedFilesToDir(files: List<StagedReceivedFile>, destDirRoot: String): List<String> {
     val root = Path(destDirRoot)
     if (!SystemFileSystem.exists(root)) SystemFileSystem.createDirectories(root)
 
-    var moved = 0
+    val saved = mutableListOf<String>()
     for (f in files) {
-        val safeName = SafePath.safeName(f.name)
-        val parentSegments = SafePath.safeSegments(f.relativePath.substringBeforeLast('/', ""))
+        runCatching {
+            if (!SystemFileSystem.exists(Path(f.tempPath))) return@runCatching
+            val safeName = SafePath.safeName(f.name)
+            val parentSegments = SafePath.safeSegments(f.relativePath.substringBeforeLast('/', ""))
 
-        var dirPath = destDirRoot
-        for (seg in parentSegments) {
-            dirPath = "$dirPath/$seg"
-            val p = Path(dirPath)
-            if (!SystemFileSystem.exists(p)) SystemFileSystem.createDirectories(p)
-        }
+            var dirPath = destDirRoot
+            for (seg in parentSegments) {
+                dirPath = "$dirPath/$seg"
+                val p = Path(dirPath)
+                if (!SystemFileSystem.exists(p)) SystemFileSystem.createDirectories(p)
+            }
 
-        val dest = uniqueDestination("$dirPath/$safeName")
-        moveOrCopy(Path(f.tempPath), Path(dest))
-        moved++
+            val dest = uniqueDestination("$dirPath/$safeName")
+            moveOrCopy(Path(f.tempPath), Path(dest))
+            saved.add(f.tempPath)
+        }.onFailure { loggy("save: couldn't move '${f.name}': ${it.message}") }
     }
-    return moved
+    return saved
 }
 
 /** Returns [candidate] if free, else inserts _1, _2, … before the extension until a free name is found. */

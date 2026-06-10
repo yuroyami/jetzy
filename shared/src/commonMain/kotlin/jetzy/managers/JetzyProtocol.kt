@@ -40,9 +40,13 @@ import jetzy.utils.Platform
 object JetzyProtocol {
     /** "JETZ" in ASCII — all four bytes sent on connection before anything else. */
     const val MAGIC: Int = 0x4A45545A
+    // v4: sequential bidirectional transfer (B47) — when both peers offer files, the
+    // DirectionResolver winner sends first and the roles swap over the same connection after its
+    // DONE (the loser's ManifestFrame follows where a v3 session ended). A v3 peer would wedge
+    // waiting on a counterpart that expects the second phase, so the strict gate stays load-bearing.
     // v3: symmetric handshake + HelloFrame.offeringFiles (intent), so transfer direction is
-    // derived, not user-declared. Bumped from v2; mixed v2/v3 peers fail fast at the version gate.
-    const val VERSION: Int = 3
+    // derived, not user-declared.
+    const val VERSION: Int = 4
 
     enum class AckStatus(val code: Byte) {
         OK(0),
@@ -163,11 +167,15 @@ object JetzyProtocol {
     }
 
     suspend fun readManifest(input: ByteReadChannel): ManifestFrame {
-        val sessionId = readString(input)
+        // The per-string 1 MB cap alone leaves aggregate memory unbounded (entries × 5 strings
+        // × 1 MB each), so every string in the frame draws from one shared byte budget — the
+        // only memory ceiling that doesn't depend on how fast the link can pump strings at us.
+        val budget = ByteBudget(MAX_MANIFEST_STRING_BUDGET)
+        val sessionId = readString(input, budget)
         val totalFiles = input.readInt()
         val totalBytes = input.readLong()
-        val senderName = readString(input)
-        val senderPlat = readString(input)
+        val senderName = readString(input, budget)
+        val senderPlat = readString(input, budget)
         val entryCount = input.readInt()
         // B20: the manifest is unauthenticated, attacker-controllable input. Validate every field
         // before we allocate against it or trust it downstream:
@@ -179,12 +187,12 @@ object JetzyProtocol {
         if (entryCount < 0 || entryCount > MAX_MANIFEST_ENTRIES) throw ProtocolException("Manifest entry count out of range: $entryCount")
         if (totalBytes < 0L) throw ProtocolException("Manifest totalBytes negative: $totalBytes")
         val entries = (0 until entryCount).map {
-            val name = readString(input)
+            val name = readString(input, budget)
             val size = input.readLong()
             if (size < 0L) throw ProtocolException("Manifest entry '$name' has negative size: $size")
-            val mime = readString(input).takeIf { it.isNotEmpty() }
-            val relPath = readString(input)
-            val typeStr = readString(input)
+            val mime = readString(input, budget).takeIf { it.isNotEmpty() }
+            val relPath = readString(input, budget)
+            val typeStr = readString(input, budget)
             ManifestEntry(
                 name = name,
                 sizeBytes = size,
@@ -276,10 +284,17 @@ object JetzyProtocol {
         if (bytes.isNotEmpty()) out.writeFully(bytes)
     }
 
-    private suspend fun readString(input: ByteReadChannel): String {
+    /** Running allowance for all strings in one frame; [readString] throws once it's spent. */
+    private class ByteBudget(var remaining: Long)
+
+    private suspend fun readString(input: ByteReadChannel, budget: ByteBudget? = null): String {
         val len = input.readInt()
         if (len < 0 || len > MAX_STRING_BYTES) {
             throw ProtocolException("String length out of range: $len")
+        }
+        if (budget != null) {
+            budget.remaining -= len
+            if (budget.remaining < 0) throw ProtocolException("Frame exceeds string byte budget")
         }
         if (len == 0) return ""
         val buf = ByteArray(len)
@@ -289,9 +304,13 @@ object JetzyProtocol {
 
     private const val MAX_STRING_BYTES = 1 shl 20 // 1 MB cap — protects against corruption
 
-    // Upper bound on files in one manifest (B20). Generous for any real folder share, but bounds
-    // the read/allocate loop so a hostile peer can't declare billions of entries.
-    private const val MAX_MANIFEST_ENTRIES = 1_000_000
+    // Upper bound on files in one manifest (B20). 10k files covers any realistic folder share;
+    // the previous 1M bound technically stopped "billions" but still let a fast LAN peer stream
+    // gigabytes of manifest strings before any other check fired.
+    private const val MAX_MANIFEST_ENTRIES = 10_000
+
+    /** Aggregate cap across every string in one manifest frame (names, paths, mime types). */
+    private const val MAX_MANIFEST_STRING_BUDGET = 32L * 1024 * 1024
 }
 
 class ProtocolException(message: String) : RuntimeException(message)

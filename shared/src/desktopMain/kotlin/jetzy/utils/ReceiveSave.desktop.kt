@@ -8,12 +8,12 @@ import java.util.Locale
  * Desktop JVM: move into `~/Downloads/Jetzy` (a real path → shared [moveStagedFilesToDir]).
  * No permission needed; lands where users actually look. Honours `XDG_DOWNLOAD_DIR` on Linux.
  */
-actual suspend fun saveReceivedFilesToDefault(files: List<StagedReceivedFile>): String? =
+actual suspend fun saveReceivedFilesToDefault(files: List<StagedReceivedFile>): SaveReport? =
     withContext(PreferablyIO) {
         if (files.isEmpty()) return@withContext null
         val dest = defaultDownloadsDir()
-        runCatching { moveStagedFilesToDir(files, dest) }
-            .fold(onSuccess = { "Downloads/Jetzy" }, onFailure = { null })
+        val saved = runCatching { moveStagedFilesToDir(files, dest) }.getOrDefault(emptyList())
+        if (saved.isEmpty()) null else SaveReport("Downloads/Jetzy", saved)
     }
 
 private fun defaultDownloadsDir(): String {

@@ -112,14 +112,16 @@ fun TransferScreenUI() {
 
     // On the receiver, the manifest/peer only arrive after the handshake. Show a connecting
     // state with a way out instead of a blank screen that traps the user if it hangs.
-    if (manifest == null || remote == null) {
+    // Captured into locals so everything below smart-casts non-null — the old `manifest!!`
+    // pattern was one refactor away from an NPE (remote was only coincidentally non-null
+    // whenever manifest was).
+    val mf = manifest
+    val peer = remote
+    if (mf == null || peer == null) {
         ConnectingState(
-            onCancel = {
-                viewmodel.viewModelScope.launch {
-                    manager.cleanup()
-                    viewmodel.resetEverything()
-                }
-            }
+            // Cancel ≠ discard: route through cancelDiscovery (which back-press already uses)
+            // so a cancelled connect keeps the staged tray for an immediate retry.
+            onCancel = { viewmodel.cancelDiscovery() }
         )
         return
     }
@@ -141,10 +143,10 @@ fun TransferScreenUI() {
 
                     // ── Peer row ──────────────────────────────────────────
                     val isSender = viewmodel.isSender
-                    val senderName = manifest!!.senderName
-                    val senderPlatform = manifest!!.senderPlatform
-                    val receiverName = if (isSender) remote!!.name else getDeviceName()
-                    val receiverPlatform = if (isSender) remote!!.platform else platform
+                    val senderName = mf.senderName
+                    val senderPlatform = mf.senderPlatform
+                    val receiverName = if (isSender) peer.name else getDeviceName()
+                    val receiverPlatform = if (isSender) peer.platform else platform
 
                     Row(
                         modifier = Modifier
@@ -179,9 +181,9 @@ fun TransferScreenUI() {
                     val speedLabel = remember(speed) {
                         if (speed > 0) speed.toHumanSize() + "/s" else "—"
                     }
-                    val remainingStr = remember(progress, speed, manifest?.totalBytes) {
+                    val remainingStr = remember(progress, speed, mf.totalBytes) {
                         remainingLabel(
-                            totalBytes = manifest?.totalBytes ?: 0L,
+                            totalBytes = mf.totalBytes,
                             progressFrac = progress,
                             speedBytesPerS = speed
                         )
@@ -189,8 +191,8 @@ fun TransferScreenUI() {
                     ProgressSection(
                         progress = progress,
                         completedCount = completedFiles,
-                        totalCount = manifest?.totalFiles ?: 0,
-                        totalBytes = manifest?.totalBytes,
+                        totalCount = mf.totalFiles,
+                        totalBytes = mf.totalBytes,
                         speedLabel = speedLabel,
                         remainingLabel = remainingStr,
                         modifier = Modifier.fillMaxWidth()
@@ -228,10 +230,13 @@ fun TransferScreenUI() {
 
                 // Received files are auto-saved to a default, user-visible folder the instant the
                 // transfer verifies (P2PManager.autoSaveReceivedFiles). Show a confirmation; only
-                // fall back to a manual folder picker if that auto-save didn't happen.
-                val hasFiles = manifest?.hasFiles == true
+                // fall back to a manual folder picker if that auto-save didn't happen. Keyed on
+                // actually-received items (not isSender): in a bidirectional session the side that
+                // received in phase 1 is the *sender* by the end, and a failed batch can still
+                // hold verified items worth saving.
+                val hasReceivedItems = manager.itemsRECEIVED.isNotEmpty()
 
-                if (transferComplete && !viewmodel.isSender && hasFiles) {
+                if (transferComplete && hasReceivedItems) {
                     val savedTo = savedLabel
                     if (saveComplete && savedTo != null) {
                         Text(
@@ -272,7 +277,9 @@ fun TransferScreenUI() {
                 // Resume affordance — visible when the transfer broke mid-way and we
                 // have partial data worth keeping. Re-opens the QR/discovery flow with
                 // the same session id so the protocol replies RESUME on next handshake.
-                if (transferComplete && canResume && !saveComplete) {
+                // No !saveComplete here: the verified subset of a broken batch is auto-saved
+                // (saveComplete can be true) while the remainder is still owed and resumable.
+                if (transferComplete && canResume) {
                     Button(
                         onClick = { viewmodel.resumeDiscovery() },
                         colors = ButtonDefaults.buttonColors(
@@ -291,14 +298,23 @@ fun TransferScreenUI() {
                     Spacer(Modifier.height(6.sdp))
                 }
 
-                // Always show Done/Cancel button
+                // Always show Done/Cancel button — but never let it fire while a save pass is
+                // moving files: its cleanup() purges temps and cancels children, which used to
+                // kill the in-flight auto-save and delete the very files it was persisting.
                 Button(
                     onClick = {
-                        viewmodel.viewModelScope.launch {
-                            manager.cleanup()
-                            viewmodel.resetEverything()
+                        if (transferComplete) {
+                            viewmodel.viewModelScope.launch {
+                                manager.cleanup()
+                                viewmodel.resetEverything()
+                            }
+                        } else {
+                            // Cancel ≠ discard: keep the staged tray (same path as back-press)
+                            // so cancelling a wrong-peer connect doesn't force a full re-pick.
+                            viewmodel.cancelDiscovery()
                         }
                     },
+                    enabled = !isSaving,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color.Transparent,
                         contentColor = colorScheme.onSurfaceVariant,

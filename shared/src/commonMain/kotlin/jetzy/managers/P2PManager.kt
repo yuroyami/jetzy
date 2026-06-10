@@ -231,16 +231,27 @@ abstract class P2PManager {
             val output = activeOutput
             if (input == null || output == null) { diag("beginTransfer: no active channels"); return@launch }
 
+            // Snapshot the staged tray ONCE: the HELLO's offeringFiles bit, the local
+            // DirectionResolver party, and the eventual send must all see the same value.
+            // Reading viewmodel.elementsToSend separately for each (across a blocking network
+            // read) let a mid-handshake tray mutation make the two peers resolve opposite
+            // directions — a symmetry break the whole gate-free design rests on.
+            val staged = viewmodel.elementsToSend.toList()
+            val offering = staged.isNotEmpty()
+
             // v3: handshake FIRST, then *derive* who sends from the exchanged intents — replacing
             // the old "the user already picked Send/Receive, just run it" branch. The manual pick
             // becomes advisory; the wire is authoritative.
-            val direction = try {
-                val peer = withTimeoutOrNull(handshakeTimeoutMs) { performHandshake(input, output) }
+            val direction: TransferDirection
+            val bothOffering: Boolean
+            try {
+                val peer = withTimeoutOrNull(handshakeTimeoutMs) { performHandshake(input, output, offering) }
                     ?: throw ProtocolException("Handshake timed out after ${handshakeTimeoutMs}ms — peer didn't respond")
-                DirectionResolver.resolve(
-                    local = TransferParty(viewmodel.elementsToSend.isNotEmpty(), platform, deviceName, handshakeTiebreaker),
+                direction = DirectionResolver.resolve(
+                    local = TransferParty(offering, platform, deviceName, handshakeTiebreaker),
                     remote = TransferParty(peer.offeringFiles, peer.platform, peer.name, peer.tiebreaker),
                 )
+                bothOffering = offering && peer.offeringFiles
             } catch (e: Exception) {
                 diag("handshake failed: ${e.message ?: e::class.simpleName}")
                 // Return to Main with the reason — beginTransfer already navigated to the transfer
@@ -248,17 +259,28 @@ abstract class P2PManager {
                 viewmodel.abortSession(friendlyFailure(e))
                 return@launch
             }
-            diag("direction resolved: $direction (peer=${remotePeerInfo.value?.name})")
+            diag("direction resolved: $direction (peer=${remotePeerInfo.value?.name}, bothOffering=$bothOffering)")
 
             // Keep currentOperation in sync so every isSender-driven UI surface stays correct.
+            // B47: when both sides staged files there is no longer a silent loser — the tiebreak
+            // winner sends first, then the roles swap over the same connection (sequential bidi,
+            // protocol v4): the second ManifestFrame follows right where a one-way session ends.
             when (direction) {
                 TransferDirection.SEND -> {
                     viewmodel.currentOperation.value = P2pOperation.SEND
-                    sendFiles(viewmodel.elementsToSend)
+                    val ok = sendFiles(staged, finalPhase = !bothOffering)
+                    if (ok && bothOffering) {
+                        viewmodel.currentOperation.value = P2pOperation.RECEIVE
+                        receiveFiles(finalPhase = true)
+                    }
                 }
                 TransferDirection.RECEIVE -> {
                     viewmodel.currentOperation.value = P2pOperation.RECEIVE
-                    receiveFiles()
+                    val ok = receiveFiles(finalPhase = !bothOffering)
+                    if (ok && bothOffering) {
+                        viewmodel.currentOperation.value = P2pOperation.SEND
+                        sendFiles(staged, finalPhase = true)
+                    }
                 }
                 TransferDirection.NONE -> {
                     diag("neither device staged files — nothing to transfer")
@@ -316,6 +338,10 @@ abstract class P2PManager {
         // Reset per-attempt UI state so a fresh handshake can run; sessionId + receiverLedger stay.
         transferComplete.value = false
         savedLocationLabel.value = null
+        // saveComplete must drop too: a partial batch may have fully saved before the break, and
+        // a still-true flag would make autoSave short-circuit when the resumed remainder lands.
+        // savedTempPaths stays, so already-persisted items are skipped per-item, not re-moved.
+        saveComplete.value = false
         transferProgress.value = 0f
         transferSpeed.value = 0L
         transferStatus.value = ""
@@ -326,12 +352,16 @@ abstract class P2PManager {
     }
 
     /**
-     * Deletes every temp-staged file unless the user already moved them to their
-     * chosen destination. Called from [cleanup] and on viewmodel reset so the
-     * next run never inherits orphan data.
+     * Deletes whatever is still sitting in the temp/staging dir. Called from [cleanup] and on
+     * viewmodel reset so the next run never inherits orphan data. Saved items were *moved* out of
+     * temp, so this only ever touches what was never persisted — unsaved FILE temps, inline-TEXT
+     * bodies (which used to leak forever once saveComplete short-circuited this purge), and a
+     * mid-file partial.
      */
     fun purgeUnsavedReceivedFiles() {
-        if (saveComplete.value) return
+        // Never yank temps out from under an in-flight save pass — the per-item move loop
+        // tolerates missing sources, but deleting mid-batch guarantees the tail is lost.
+        if (isSaving.value) return
 
         val toRemove = itemsRECEIVED.map { it.path } + listOfNotNull(inProgressTempPath)
         toRemove.forEach { path ->
@@ -340,6 +370,7 @@ abstract class P2PManager {
             }.onFailure { loggy("Failed to delete temp file '$path': ${it.message}") }
         }
         itemsRECEIVED.clear()
+        savedTempPaths.clear()
         inProgressTempPath = null
         canResume.value = false
     }
@@ -375,6 +406,14 @@ abstract class P2PManager {
     /** For the receiver: map fileIndex → (tempPath, bytesWritten, sizeBytes). */
     private val receiverLedger = mutableMapOf<Int, ReceiverFileState>()
 
+    /**
+     * Temp paths already persisted by a save pass (auto or manual). Saves are per-item durable:
+     * retries skip everything in here, so a one-file failure or a mid-batch interruption never
+     * strands or double-moves the rest. Cleared with the items themselves in
+     * [purgeUnsavedReceivedFiles]; deliberately kept across [prepareForResume].
+     */
+    private val savedTempPaths = mutableSetOf<String>()
+
     private data class ReceiverFileState(
         val tempPath: Path,
         val bytesWritten: Long,
@@ -406,9 +445,14 @@ abstract class P2PManager {
     }
 
     // ── Send ──────────────────────────────────────────────────────────────────
-    private suspend fun sendFiles(rawFiles: List<JetzyElement>) {
-        val output = activeOutput ?: run { diag("sendFiles: no output channel"); return }
-        val input = activeInput ?: run { diag("sendFiles: no input channel"); return }
+    /**
+     * Streams [rawFiles] to the peer. Returns true on a clean DONE. [finalPhase] is false only
+     * for the first half of a both-offering (bidi) session — it defers [transferComplete] so the
+     * Done button can't appear between the phases.
+     */
+    private suspend fun sendFiles(rawFiles: List<JetzyElement>, finalPhase: Boolean = true): Boolean {
+        val output = activeOutput ?: run { diag("sendFiles: no output channel"); return false }
+        val input = activeInput ?: run { diag("sendFiles: no input channel"); return false }
 
         val files = prepareElements(rawFiles)
         val entries = files.map {
@@ -443,24 +487,35 @@ abstract class P2PManager {
             // Handshake + direction resolution already happened in beginTransfer; send the manifest.
             JetzyProtocol.writeManifest(output, ManifestFrame(session, mf))
 
-            // 3. Read manifest ack
-            val ack = JetzyProtocol.readManifestAck(input)
+            // 3. Read manifest ack. Bounded like the handshake and the receiver's manifest read
+            // (B29's last gap): a peer that handshakes then goes silent before acking would
+            // otherwise wedge us forever — the byte-counting watchdog only starts after this.
+            val ack = withTimeoutOrNull(handshakeTimeoutMs) { JetzyProtocol.readManifestAck(input) }
+                ?: throw ProtocolException("Manifest ack timed out after ${handshakeTimeoutMs}ms — peer didn't respond")
             diag("manifest ack: ${ack.status} resume=${ack.resumeFileIndex}@${ack.resumeByteOffset}")
             when (ack.status) {
                 AckStatus.INSUFFICIENT_SPACE -> {
                     viewmodel.snacky("Receiver out of space: ${ack.reason.ifEmpty { "not enough free storage" }}")
                     markAllNonDoneAsFailed()
                     transferComplete.value = true
-                    return
+                    return false
                 }
                 AckStatus.REJECTED -> {
                     viewmodel.snacky("Receiver rejected transfer: ${ack.reason.ifEmpty { "unspecified" }}")
                     markAllNonDoneAsFailed()
                     transferComplete.value = true
-                    return
+                    return false
                 }
                 AckStatus.OK, AckStatus.RESUME -> { /* continue */ }
             }
+
+            // The ack's resume coordinates are unauthenticated remote input (B20's mirror, sender
+            // side): clamp before indexing with them — a hostile index would throw OOB into the
+            // generic abort, and a negative offset would trip the shrank-during-send check spuriously.
+            val resumeIndex = ack.resumeFileIndex.coerceIn(0, entries.size)
+            val resumeOffset = if (resumeIndex < entries.size) {
+                ack.resumeByteOffset.coerceIn(0L, entries[resumeIndex].sizeBytes)
+            } else 0L
 
             // 4. Stream files (honoring resume point)
             var totalBytesSent = 0L
@@ -471,17 +526,17 @@ abstract class P2PManager {
             startSenderStallWatchdog()
 
             // Advance already-done files in UI if resuming
-            for (i in 0 until ack.resumeFileIndex) {
+            for (i in 0 until resumeIndex) {
                 fileEntries.updateAt(i) {
                     it.copy(status = FileTransferStatus.Done, bytesTransferred = it.sizeBytes)
                 }
                 totalBytesSent += entries[i].sizeBytes
             }
 
-            files.drop(ack.resumeFileIndex).forEachIndexed { relIndex, file ->
-                val index = ack.resumeFileIndex + relIndex
+            files.drop(resumeIndex).forEachIndexed { relIndex, file ->
+                val index = resumeIndex + relIndex
                 val fileSize = entries[index].sizeBytes
-                val offset = if (index == ack.resumeFileIndex) ack.resumeByteOffset else 0L
+                val offset = if (index == resumeIndex) resumeOffset else 0L
 
                 fileEntries.updateAt(index) {
                     it.copy(status = FileTransferStatus.Active, bytesTransferred = offset)
@@ -573,7 +628,7 @@ abstract class P2PManager {
                     FileAck.CANCELLED -> {
                         fileEntries.updateAt(index) { it.copy(status = FileTransferStatus.Failed) }
                         diag("cancelled by receiver")
-                        return
+                        return false
                     }
                 }
             }
@@ -585,8 +640,14 @@ abstract class P2PManager {
             JetzyProtocol.writeDone(output)
             transferSpeed.value = 0L
             diag("all ${files.size} file(s) sent; DONE written")
-            transferComplete.value = true
             canResume.value = false
+            if (finalPhase) {
+                transferComplete.value = true
+            } else {
+                // Bidi phase boundary: the peer's ManifestFrame is next on this same connection.
+                transferStatus.value = "Sent all files — now receiving theirs…"
+            }
+            return true
         } catch (e: Exception) {
             diag("send failed: ${e.message ?: e::class.simpleName}")
             transferSpeed.value = 0L
@@ -594,15 +655,21 @@ abstract class P2PManager {
             transferComplete.value = true
             canResume.value = anyBytesMoved // allow "resume" UX only if we made progress
             viewmodel.snacky(friendlyFailure(e))
+            return false
         } finally {
             stallWatchdogJob?.cancel()
         }
     }
 
     // ── Receive ───────────────────────────────────────────────────────────────
-    private suspend fun receiveFiles() {
-        val input = activeInput ?: run { diag("receiveFiles: no input channel"); return }
-        val output = activeOutput ?: run { diag("receiveFiles: no output channel"); return }
+    /**
+     * Receives one manifest's worth of files. Returns true on a clean DONE. [finalPhase] is false
+     * only for the first half of a both-offering (bidi) session; verified files are auto-saved at
+     * the end of the phase either way, but [transferComplete] is deferred to the last phase.
+     */
+    private suspend fun receiveFiles(finalPhase: Boolean = true): Boolean {
+        val input = activeInput ?: run { diag("receiveFiles: no input channel"); return false }
+        val output = activeOutput ?: run { diag("receiveFiles: no output channel"); return false }
 
         try {
             // Handshake + direction resolution already happened in beginTransfer; read the manifest.
@@ -663,7 +730,7 @@ abstract class P2PManager {
                 viewmodel.snacky("Not enough free space for this transfer")
                 markAllNonDoneAsFailed()
                 transferComplete.value = true
-                return
+                return false
             }
 
             remotePeerInfo.value = PeerInfo(mf.senderName, mf.senderPlatform)
@@ -820,19 +887,35 @@ abstract class P2PManager {
             JetzyProtocol.readDone(input)
             transferSpeed.value = 0L
             diag("transfer complete — ${itemsRECEIVED.size} file(s) staged")
-            transferComplete.value = true
             canResume.value = false
-            // Persist out of the purgeable temp dir immediately (fixes the silent data-loss
-            // footgun where "Done" before "Save" deleted everything). Best-effort: if it can't,
-            // saveComplete stays false and the manual folder picker remains as a fallback.
+            // Persist out of the purgeable temp dir BEFORE flipping transferComplete (fixes the
+            // silent data-loss footgun where "Done" before "Save" deleted everything): the Done
+            // button appears on transferComplete and its cleanup() purges temps + cancels children,
+            // so flipping first opened a race where Done mid-save killed the move and deleted the
+            // files. Best-effort: if the save can't run, saveComplete stays false and the manual
+            // folder picker remains as the fallback.
             autoSaveReceivedFiles()
+            if (finalPhase) {
+                transferComplete.value = true
+            } else {
+                // Bidi phase boundary: our ManifestFrame goes out next on this same connection.
+                transferStatus.value = "Received all files — now sending yours…"
+            }
+            return true
         } catch (e: Exception) {
             diag("receive failed: ${e.message ?: e::class.simpleName}")
             transferSpeed.value = 0L
             markAllNonDoneAsFailed()
-            transferComplete.value = true
             canResume.value = anyBytesMoved
+            // Files that already CRC-verified are durable progress even though the batch failed —
+            // without this they sit in the purgeable temp dir behind a button labeled "Done"
+            // (the original B1 outcome, confined to interrupted transfers). preserveResume: a
+            // successful save of the completed subset must not clear the resume affordance for
+            // the files still owed.
+            autoSaveReceivedFiles(preserveResume = true)
+            transferComplete.value = true
             viewmodel.snacky(friendlyFailure(e))
+            return false
         } finally {
             stallWatchdogJob?.cancel()
         }
@@ -848,7 +931,7 @@ abstract class P2PManager {
      * socket/channel buffer and the simultaneous write→read cannot deadlock. Sets [remotePeerInfo]
      * and runs the live transport negotiation; returns the peer's HELLO.
      */
-    private suspend fun performHandshake(input: ByteReadChannel, output: ByteWriteChannel): HelloFrame {
+    private suspend fun performHandshake(input: ByteReadChannel, output: ByteWriteChannel, offeringFiles: Boolean): HelloFrame {
         JetzyProtocol.writeHandshake(output)
         JetzyProtocol.writeHello(
             output,
@@ -856,7 +939,7 @@ abstract class P2PManager {
                 deviceName,
                 platform,
                 P2pTechnology.localCapabilitiesMask(),
-                offeringFiles = viewmodel.elementsToSend.isNotEmpty(),
+                offeringFiles = offeringFiles,
                 tiebreaker = handshakeTiebreaker,
             ),
         )
@@ -1006,30 +1089,59 @@ abstract class P2PManager {
     }
 
     /**
-     * Auto-saves received FILE items to the platform's default, permission-free, user-visible
-     * location (Android MediaStore Downloads / iOS Files / desktop ~/Downloads) the instant the
-     * transfer's CRC checks pass. Files leave the purgeable temp dir immediately and [saveComplete]
-     * gates [purgeUnsavedReceivedFiles], so a later teardown can't delete them. The manual
-     * [finalizeReceivedFilesAt] picker remains as a fallback when auto-save isn't possible.
-     * Text-only transfers no-op (nothing to persist; the temp text is purged normally).
+     * What a save pass must persist: FILE entries always; TEXT entries only when they were too
+     * large to inline-preview (textContent == null — see B19's cap), since those exist *only* as
+     * a temp file. Small text lives in the UI/clipboard and is purged like before.
      */
-    private suspend fun autoSaveReceivedFiles() {
+    private fun saveableReceivedItems(): List<ReceivedItem> = itemsRECEIVED.filter {
+        it.entryType == EntryType.FILE || (it.entryType == EntryType.TEXT && it.textContent == null)
+    }
+
+    /**
+     * Auto-saves received items to the platform's default, permission-free, user-visible
+     * location (Android MediaStore Downloads / iOS Files / desktop ~/Downloads) the instant
+     * their CRC checks pass. Per-item durable: already-saved temp paths are skipped, partial
+     * success is recorded in [savedTempPaths] and surfaced, and only full coverage flips
+     * [saveComplete]. The manual [finalizeReceivedFilesAt] picker remains as the fallback for
+     * whatever a pass couldn't persist.
+     *
+     * [preserveResume] is set on the failure path: saving the verified subset must not clear
+     * the resume affordance for the files still owed.
+     */
+    private suspend fun autoSaveReceivedFiles(preserveResume: Boolean = false) {
         if (saveComplete.value) return
-        val fileItems = itemsRECEIVED.filter { it.entryType == EntryType.FILE }
-        if (fileItems.isEmpty()) return
+        val saveables = saveableReceivedItems()
+        if (saveables.isEmpty()) {
+            // Text-only batch: nothing needs disk persistence — mark the save settled so the UI
+            // offers Done instead of a pointless folder picker.
+            if (itemsRECEIVED.isNotEmpty()) saveComplete.value = true
+            return
+        }
+        val pending = saveables.filter { it.path.toString() !in savedTempPaths }
+        if (pending.isEmpty()) {
+            saveComplete.value = true
+            return
+        }
 
         isSaving.value = true
         try {
-            val staged = fileItems.map {
+            val staged = pending.map {
                 StagedReceivedFile(tempPath = it.path.toString(), name = it.name, relativePath = it.relativePath)
             }
-            val dest = saveReceivedFilesToDefault(staged)
-            if (dest != null) {
-                savedLocationLabel.value = dest
-                saveComplete.value = true
-                canResume.value = false
-                diag("auto-saved ${fileItems.size} file(s) to $dest")
-                viewmodel.snacky("Saved to $dest")
+            val report = saveReceivedFilesToDefault(staged)
+            if (report != null) {
+                savedTempPaths += report.savedTempPaths
+                savedLocationLabel.value = report.destLabel
+                if (saveables.all { it.path.toString() in savedTempPaths }) {
+                    saveComplete.value = true
+                    if (!preserveResume) canResume.value = false
+                    diag("auto-saved ${report.savedTempPaths.size} file(s) to ${report.destLabel}")
+                    viewmodel.snacky("Saved to ${report.destLabel}")
+                } else {
+                    val remaining = saveables.count { it.path.toString() !in savedTempPaths }
+                    diag("auto-saved ${report.savedTempPaths.size} file(s); $remaining still staged")
+                    viewmodel.snacky("Saved to ${report.destLabel} — $remaining file(s) couldn't be saved, tap Save to retry")
+                }
             } else {
                 // Auto-save unavailable — leave saveComplete false so the manual "Save to folder"
                 // button stays visible and the staged temp files survive for that retry.
@@ -1046,37 +1158,48 @@ abstract class P2PManager {
         p2pScope.launch {
             isSaving.value = true
             try {
-                val fileItems = itemsRECEIVED.filter { it.entryType == EntryType.FILE }
-                for (item in fileItems) {
-                    // relativePath + name are sender-controlled; sanitize so a crafted path like
-                    // "../../" can't write outside the folder the user chose (zip-slip).
-                    val safeName = SafePath.safeName(item.name)
-                    val parentSegments = SafePath.safeSegments(item.relativePath.substringBeforeLast('/', ""))
-                    if (parentSegments.isNotEmpty()) {
-                        var currentPath = destDir.path
-                        for (dir in parentSegments) {
-                            currentPath = "$currentPath/$dir"
-                            val dirPath = Path(currentPath)
-                            if (!SystemFileSystem.exists(dirPath)) {
-                                SystemFileSystem.createDirectories(dirPath)
+                val saveables = saveableReceivedItems()
+                val pending = saveables.filter { it.path.toString() !in savedTempPaths }
+                for (item in pending) {
+                    // Vanished temp (e.g. already moved by an interrupted earlier pass that
+                    // couldn't record it): nothing to move, and not this pass's failure.
+                    if (!SystemFileSystem.exists(item.path)) continue
+                    // Per-item isolation, same contract as auto-save: one bad file must not
+                    // strand the rest, and a retry only touches what's still missing.
+                    runCatching {
+                        // relativePath + name are sender-controlled; sanitize so a crafted path like
+                        // "../../" can't write outside the folder the user chose (zip-slip).
+                        val safeName = SafePath.safeName(item.name)
+                        val parentSegments = SafePath.safeSegments(item.relativePath.substringBeforeLast('/', ""))
+                        if (parentSegments.isNotEmpty()) {
+                            var currentPath = destDir.path
+                            for (dir in parentSegments) {
+                                currentPath = "$currentPath/$dir"
+                                val dirPath = Path(currentPath)
+                                if (!SystemFileSystem.exists(dirPath)) {
+                                    SystemFileSystem.createDirectories(dirPath)
+                                }
                             }
+                            SystemFileSystem.atomicMove(item.path, Path("$currentPath/$safeName"))
+                        } else {
+                            // No subfolder: keep the existing FileKit move (the temp file's basename is
+                            // already sanitized by allocateTempPath, so the destination name is safe).
+                            PlatformFile(item.path).atomicMove(destDir)
                         }
-                        SystemFileSystem.atomicMove(item.path, Path("$currentPath/$safeName"))
-                    } else {
-                        // No subfolder: keep the existing FileKit move (the temp file's basename is
-                        // already sanitized by allocateTempPath, so the destination name is safe).
-                        PlatformFile(item.path).atomicMove(destDir)
-                    }
+                        savedTempPaths.add(item.path.toString())
+                    }.onFailure { diag("save failed for '${item.name}': ${it.message ?: it::class.simpleName}") }
                 }
 
-                saveComplete.value = true
-                canResume.value = false
-                viewmodel.snacky("Files saved successfully!")
-            } catch (e: Exception) {
-                // Don't flip saveComplete — leaving it false keeps the Save button visible and,
-                // with isSaving reset below, re-enabled so the user can retry to another folder.
-                diag("save failed: ${e.message ?: e::class.simpleName}")
-                viewmodel.snacky("Couldn't save files: ${e.message ?: "unknown error"}. Tap Save to try again.")
+                if (saveables.all { it.path.toString() in savedTempPaths }) {
+                    saveComplete.value = true
+                    canResume.value = false
+                    viewmodel.snacky("Files saved successfully!")
+                } else {
+                    // Don't flip saveComplete — leaving it false keeps the Save button visible and,
+                    // with isSaving reset below, re-enabled so the user can retry to another folder.
+                    val remaining = saveables.count { it.path.toString() !in savedTempPaths }
+                    viewmodel.snacky("$remaining file(s) couldn't be saved. Tap Save to try again.")
+                }
             } finally {
                 isSaving.value = false
             }

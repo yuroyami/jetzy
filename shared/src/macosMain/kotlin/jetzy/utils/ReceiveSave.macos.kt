@@ -9,11 +9,11 @@ import platform.Foundation.NSUserDomainMask
  * macOS native: move into `<Documents>/Jetzy` (a real POSIX path → shared [moveStagedFilesToDir]).
  * No permission; visible in Finder under the user's Documents.
  */
-actual suspend fun saveReceivedFilesToDefault(files: List<StagedReceivedFile>): String? =
+actual suspend fun saveReceivedFilesToDefault(files: List<StagedReceivedFile>): SaveReport? =
     withContext(PreferablyIO) {
         if (files.isEmpty()) return@withContext null
         val docs = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true)
             .firstOrNull() as? String ?: return@withContext null
-        runCatching { moveStagedFilesToDir(files, "$docs/Jetzy") }
-            .fold(onSuccess = { "Documents › Jetzy" }, onFailure = { null })
+        val saved = runCatching { moveStagedFilesToDir(files, "$docs/Jetzy") }.getOrDefault(emptyList())
+        if (saved.isEmpty()) null else SaveReport("Documents › Jetzy", saved)
     }
