@@ -22,12 +22,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material3.Icon
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -50,9 +52,12 @@ import jetzy.managers.P2PManager
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.cancel
 import jetzy.shared.generated.resources.client_device
+import jetzy.shared.generated.resources.connect_failed_title
 import jetzy.shared.generated.resources.connect_to_device
-import jetzy.shared.generated.resources.ios_hotspot_autojoin_tip
+import jetzy.shared.generated.resources.ios_hotspot_race_body
+import jetzy.shared.generated.resources.ios_hotspot_race_title
 import jetzy.shared.generated.resources.point_camera_hint
+import jetzy.shared.generated.resources.try_again
 import jetzy.ui.LocalViewmodel
 import org.jetbrains.compose.resources.stringResource
 import jetzy.uiviewcontroller.QRScannerController
@@ -113,34 +118,10 @@ actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
                 )
             }
 
-            // Auto-Join tip — appears only on iOS because the auto-join race
-            // (iOS racing back to a known home Wi-Fi mid-association) is an
-            // iOS-specific behavior. The SSID-verification retry in
-            // LanWifiP2PM.joinWithRetry handles the race transparently when it
-            // can, but the user-facing nudge avoids the retry altogether.
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.Top,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(colorScheme.surfaceContainerHigh)
-                    .border(0.5.dp, colorScheme.outlineVariant, RoundedCornerShape(12.dp))
-                    .padding(horizontal = 14.dp, vertical = 11.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Info,
-                    contentDescription = null,
-                    tint = colorScheme.primary,
-                    modifier = Modifier.size(16.dp),
-                )
-                Text(
-                    text = stringResource(Res.string.ios_hotspot_autojoin_tip),
-                    fontSize = 11.sp,
-                    color = colorScheme.onSurfaceVariant,
-                    lineHeight = 15.sp,
-                )
-            }
+            // (No always-on Auto-Join tip here — it's irrelevant for cellular-only
+            // users and noise for everyone who never hits the race. The
+            // race-recovery dialog below surfaces guidance only when iOS actually
+            // associates with the wrong SSID, see [LanWifiP2PM.joinRaceDetected].)
 
             // main card
             Column(
@@ -178,6 +159,106 @@ actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(stringResource(Res.string.cancel), fontSize = 13.sp, color = colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+
+    // Failure dialogs. The race dialog fires only when iOS associated with a different
+    // network than the one in the scanned QR (auto-join policy beat our join) — see
+    // [LanWifiP2PM.joinRaceDetected]. Every other retryable failure (join refused, TCP
+    // unreachable, prompt dismissed) goes through the generic Try-again dialog via
+    // [LanWifiP2PM.connectFailed] — the snackbars used to advertise a "Retry" this screen
+    // didn't have (B6). Dismissing either restarts the camera so the user can re-scan.
+    val lanManager = manager as? LanWifiP2PM
+    if (lanManager != null) {
+        val raceSsid by lanManager.joinRaceDetected.collectAsState()
+        val failure by lanManager.connectFailed.collectAsState()
+        raceSsid?.let { ssid ->
+            RetryDialog(
+                title = stringResource(Res.string.ios_hotspot_race_title),
+                body = stringResource(Res.string.ios_hotspot_race_body, ssid),
+                onRetry = { lanManager.retryConnect() },
+                onDismiss = {
+                    lanManager.joinRaceDetected.value = null
+                    qrController.resumeScanning()
+                },
+            )
+        }
+        if (raceSsid == null) failure?.let { msg ->
+            RetryDialog(
+                title = stringResource(Res.string.connect_failed_title),
+                body = msg,
+                onRetry = { lanManager.retryConnect() },
+                onDismiss = {
+                    lanManager.connectFailed.value = null
+                    qrController.resumeScanning()
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun RetryDialog(title: String, body: String, onRetry: () -> Unit, onDismiss: () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            dismissOnBackPress = true,
+            // Modal on outside-clicks so a misplaced tap on the QR viewfinder
+            // behind it doesn't silently dismiss the only thing telling the
+            // user why their pairing failed.
+            dismissOnClickOutside = false,
+            usePlatformDefaultWidth = false,
+        ),
+    ) {
+        Surface(
+            shape = RoundedCornerShape(18.dp),
+            color = scheme.surface,
+            tonalElevation = 6.dp,
+            shadowElevation = 12.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text(
+                    text = title,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.W600,
+                    color = scheme.onSurface,
+                )
+                Text(
+                    text = body,
+                    fontSize = 13.sp,
+                    color = scheme.onSurfaceVariant,
+                    lineHeight = 19.sp,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 18.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(stringResource(Res.string.cancel), fontSize = 14.sp)
+                    }
+                    FilledTonalButton(
+                        onClick = onRetry,
+                        modifier = Modifier.weight(1.4f),
+                        shape = RoundedCornerShape(10.dp),
+                    ) {
+                        Text(
+                            stringResource(Res.string.try_again),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.W600,
+                        )
+                    }
+                }
             }
         }
     }

@@ -4,7 +4,8 @@ import shared
 @main
 struct iOSApp: App {
     init() {
-        UIApplication.shared.isIdleTimerDisabled = true //Keep screen on
+        // (Screen-on is session-scoped now — the Kotlin platform callback toggles
+        // isIdleTimerDisabled from proceed to cleanup instead of globally here.)
 
         // Wire the Wi-Fi Aware bridge into the shared module on iOS 26+. The Kotlin
         // platform callback reads `MainKt.wifiAwareBridge` when picking a manager

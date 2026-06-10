@@ -94,6 +94,17 @@ class LanMdnsP2PM : PeerDiscoveryP2PM() {
             }
             diag("mDNS lost ${service.name}")
         }
+        // A declined/revoked Local Network permission lands exactly here — these were silent
+        // stubs, so the user stared at an eternal empty radar with no hint (the same pattern
+        // B25 flagged for the camera, but on the app's *default* transport).
+        advertisingDelegate.onPublishFailed = { err ->
+            diag("mDNS publish failed: $err")
+            viewmodel.snacky("Couldn't announce on the local network. Check Settings → Privacy → Local Network → Jetzy.")
+        }
+        browsingDelegate.onSearchFailed = { err ->
+            diag("mDNS browse failed: $err")
+            viewmodel.snacky("Couldn't browse the local network. Check Settings → Privacy → Local Network → Jetzy.")
+        }
     }
 
     // ── Lifecycle ──────────────────────────────────────────────────────────────
@@ -206,13 +217,21 @@ class LanMdnsP2PM : PeerDiscoveryP2PM() {
 // ── Delegates ──────────────────────────────────────────────────────────────────
 
 private class AdvertisingDelegate : NSObject(), NSNetServiceDelegateProtocol {
+    var onPublishFailed: ((String) -> Unit)? = null
     override fun netServiceDidPublish(sender: NSNetService) { /* no-op */ }
-    override fun netService(sender: NSNetService, didNotPublish: Map<Any?, *>) { /* surface via diag if needed */ }
+    override fun netService(sender: NSNetService, didNotPublish: Map<Any?, *>) {
+        onPublishFailed?.invoke(didNotPublish.entries.joinToString())
+    }
 }
 
 private class BrowsingDelegate : NSObject(), NSNetServiceBrowserDelegateProtocol {
     var onServiceFound: ((NSNetService) -> Unit)? = null
     var onServiceLost: ((NSNetService) -> Unit)? = null
+    var onSearchFailed: ((String) -> Unit)? = null
+
+    override fun netServiceBrowser(browser: NSNetServiceBrowser, didNotSearch: Map<Any?, *>) {
+        onSearchFailed?.invoke(didNotSearch.entries.joinToString())
+    }
 
     // NSNetServiceBrowserDelegate exposes two methods with the same Kotlin shape
     // (didFindService / didFindDomain, didRemoveService / didRemoveDomain). We

@@ -82,6 +82,18 @@ class QRScannerController(
         }
     }
 
+    /**
+     * Restart the camera after a failed connect attempt so the user can re-scan a (possibly
+     * regenerated) QR. Detection stops the session ([captureOutput]) and only viewWillAppear
+     * resumed it — dismissing a failure dialog used to land on a frozen viewfinder whose only
+     * exit was Cancel-to-Main (B6's camera leg).
+     */
+    fun resumeScanning() {
+        if (captureSession?.isRunning() == false) {
+            captureSession?.startRunning()
+        }
+    }
+
     override fun viewWillDisappear(animated: Boolean) {
         super.viewWillDisappear(animated)
         if (captureSession?.isRunning() == true) {

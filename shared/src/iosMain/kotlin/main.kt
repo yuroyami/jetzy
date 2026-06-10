@@ -12,6 +12,7 @@ import jetzy.p2p.P2pPlatformCallback
 import jetzy.ui.AdamScreen
 import jetzy.utils.Platform
 import jetzy.viewmodel.JetzyViewmodel
+import platform.UIKit.UIApplication
 import platform.UIKit.UIViewController
 
 lateinit var viewmodel: JetzyViewmodel
@@ -62,6 +63,18 @@ fun MainViewController(): UIViewController = ComposeUIViewController(
                         jetzy.p2p.P2pTechnology.WiFiAware -> wifiAwareBridge?.let { WifiAwareP2PM.create(it) }
                         else -> null
                     }
+
+                // iOS has no foreground service; what these hooks scope here is the idle timer.
+                // The old global isIdleTimerDisabled=true in iOSApp.swift meant the phone never
+                // auto-locked even while idling on the main menu — keep the screen awake only
+                // from proceed (discovery) until cleanup.
+                override fun startBackgroundService() {
+                    UIApplication.sharedApplication.idleTimerDisabled = true
+                }
+
+                override fun stopBackgroundService() {
+                    UIApplication.sharedApplication.idleTimerDisabled = false
+                }
             }
         }
     )

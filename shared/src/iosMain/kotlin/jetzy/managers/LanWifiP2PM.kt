@@ -48,6 +48,15 @@ class LanWifiP2PM : P2PManager() {
      */
     val joinRaceDetected = MutableStateFlow<String?>(null)
 
+    /**
+     * Non-null when a connect attempt failed for a reason the user can simply retry — join
+     * refused/timed out, TCP unreachable, the join prompt dismissed. Everything except the
+     * auto-join race, which has its own dialog ([joinRaceDetected]). Carries the human-readable
+     * reason; the QR screen renders it as a Try-again dialog. (The old snackbars told the user
+     * to "Tap Retry" on a screen that had no Retry — B6.)
+     */
+    val connectFailed = MutableStateFlow<String?>(null)
+
     fun establishTcpClient(qrData: QRData): Job {
         activeJob?.cancel()
         lastQrData = qrData
@@ -62,9 +71,10 @@ class LanWifiP2PM : P2PManager() {
     fun retryConnect(): Boolean {
         val qr = lastQrData ?: return false
         activeJob?.cancel()
-        // Clear race state so the dialog dismisses; if the race repeats, the
-        // next [joinWithRetry] pass will set it again.
+        // Clear failure state so the dialogs dismiss; if the attempt fails again, the
+        // next pass will set them again.
         joinRaceDetected.value = null
+        connectFailed.value = null
         isHandshaking.value = true  // show the overlay again for the duration of this attempt
         activeJob = p2pScope.launch(PreferablyIO) {
             diag("user-triggered retry")
@@ -74,6 +84,7 @@ class LanWifiP2PM : P2PManager() {
     }
 
     private suspend fun connectAttempt(qrData: QRData) {
+        connectFailed.value = null
         try {
             // Seed the session id from the QR so the receive loop can detect and honor
             // a resume-scenario (same QR rescanned after a drop).
@@ -92,10 +103,10 @@ class LanWifiP2PM : P2PManager() {
                     // dialog is actually reachable (otherwise the spinner traps the screen).
                     isHandshaking.value = false
                     // When the auto-join race lost, the UI's race-recovery dialog
-                    // owns the messaging — don't double up with a snack. Only the
-                    // generic non-race failure path falls through to snacky.
+                    // owns the messaging — don't double up. Only the generic
+                    // non-race failure path raises the Try-again dialog.
                     if (joinRaceDetected.value == null) {
-                        viewmodel.snacky("Couldn't join ${qrData.hotspotSSID}. Tap Retry to try again.")
+                        connectFailed.value = "Couldn't join \"${qrData.hotspotSSID}\"."
                     }
                     return
                 }
@@ -108,14 +119,15 @@ class LanWifiP2PM : P2PManager() {
             if (!connected) {
                 diag("TCP connect gave up after $TCP_CONNECT_ATTEMPTS attempts")
                 isHandshaking.value = false
-                viewmodel.snacky("Couldn't reach sender at ${qrData.ipAddress}:${qrData.port}. Tap Retry to try again.")
+                connectFailed.value =
+                    "Couldn't reach the sender at ${qrData.ipAddress}:${qrData.port}. Make sure the QR screen is still open on the other device."
                 return
             }
             diag("connected")
         } catch (e: Exception) {
             isHandshaking.value = false
             diag("connect attempt failed: ${e.message ?: e::class.simpleName}")
-            viewmodel.snacky("Connection error: ${e.message ?: "unknown"}")
+            connectFailed.value = "Connection error: ${e.message ?: "unknown"}"
         }
     }
 
@@ -233,12 +245,23 @@ class LanWifiP2PM : P2PManager() {
         }
     }
 
+    override suspend fun prepareForResume() {
+        // Defensive: every other per-attempt flag resets here; a stale failure/race state
+        // would re-raise its dialog the moment the QR screen comes back for the resume.
+        joinRaceDetected.value = null
+        connectFailed.value = null
+        super.prepareForResume()
+    }
+
     override suspend fun cleanup() {
         activeJob?.cancel()
         activeJob = null
+        joinRaceDetected.value = null
+        connectFailed.value = null
         runCatching { selectorManager?.close() }
         selectorManager = null
         lastQrData?.let { NEHotspotConfigurationManager.sharedManager.removeConfigurationForSSID(it.hotspotSSID) }
+        lastQrData = null
         super.cleanup()
     }
 
