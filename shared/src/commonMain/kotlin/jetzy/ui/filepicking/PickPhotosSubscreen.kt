@@ -55,7 +55,9 @@ import jetzy.theme.jetzyYellow
 import jetzy.theme.sdp
 import jetzy.theme.ssp
 import jetzy.shared.generated.resources.Res
+import jetzy.shared.generated.resources.added_items
 import jetzy.shared.generated.resources.exclude
+import jetzy.shared.generated.resources.added_items
 import jetzy.shared.generated.resources.excluded_images
 import jetzy.shared.generated.resources.no_photos_added
 import jetzy.shared.generated.resources.select_photos_btn
@@ -80,7 +82,7 @@ fun PickPhotosSubscreen() {
     ) { picked ->
         picked?.let {
             it.forEach { image -> viewmodel.elementsToSend.add(JetzyElement.Photo(image)) }
-            viewmodel.snacky("Added ${it.size} photo(s)")
+            viewmodel.snackyRes(Res.string.added_items, it.size)
         }
     }
 
@@ -190,7 +192,7 @@ fun PickPhotosSubscreen() {
                     viewmodel.elementsToSend.removeAll { el -> toRemove.any { it === el } }
                     longclickedPhotos.clear()
 
-                    viewmodel.snacky("Excluded $count images from the list")
+                    viewmodel.snackyRes(Res.string.excluded_images, count)
                 },
                 text = { Text(stringResource(Res.string.exclude), fontSize = 10.ssp) },
                 modifier = Modifier.align(BottomStart).padding(6.sdp).padding(bottom = 8.sdp),

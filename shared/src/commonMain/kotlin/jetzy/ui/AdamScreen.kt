@@ -68,6 +68,10 @@ import jetzy.ui.Screen.Companion.nav3Entry
 import jetzy.ui.main.PermissionGateDialog
 import jetzy.utils.InitializeCoilSupportForFileKit
 import jetzy.shared.generated.resources.continue_label
+import jetzy.shared.generated.resources.developed_by
+import jetzy.shared.generated.resources.receiving
+import jetzy.shared.generated.resources.sending
+import jetzy.shared.generated.resources.version_label
 import jetzy.shared.generated.resources.sending_error_nothing
 import jetzy.viewmodel.JetzyViewmodel
 import org.jetbrains.compose.resources.stringResource
@@ -144,7 +148,7 @@ fun AdamScreen(onViewmodel: (JetzyViewmodel) -> Unit) {
                                         // the wire by DirectionResolver.
                                         if (currentScreen !is Screen.MainScreen && op != null) {
                                             Text(
-                                                text = if (op == P2pOperation.SEND) "Sending" else "Receiving",
+                                                text = if (op == P2pOperation.SEND) stringResource(Res.string.sending) else stringResource(Res.string.receiving),
                                                 modifier = Modifier.padding(horizontal = 4.sdp),
                                                 fontSize = 10.ssp,
                                             )
@@ -215,10 +219,9 @@ fun AdamScreen(onViewmodel: (JetzyViewmodel) -> Unit) {
                                     nav3Entry<Screen.PeerDiscoveryScreen>()
                                     nav3Entry<Screen.QRDiscoveryScreen>()
                                     nav3Entry<Screen.TransferScreen>()
-                                    nav3Entry<Screen.PickFilesSubscreen>()
-                                    nav3Entry<Screen.PickTextSubscreen>()
-                                    nav3Entry<Screen.PickVideosSubscreen>()
-                                    nav3Entry<Screen.PickPhotosSubscreen>()
+                                    // (The four picker subscreens render through
+                                    // ElementPickingScreen's pager, never the backstack —
+                                    // registering them here was dead weight.)
                                 }
                             )
                         }
@@ -270,13 +273,13 @@ fun AboutDialog(onDismiss: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Version ${BuildConfig.APP_VERSION}",
+                    text = stringResource(Res.string.version_label, BuildConfig.APP_VERSION),
                     fontSize = 11.ssp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(4.sdp))
                 Text(
-                    text = "Developed by",
+                    text = stringResource(Res.string.developed_by),
                     fontSize = 10.ssp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

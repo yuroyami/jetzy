@@ -15,9 +15,7 @@ import jetzy.p2p.P2pPlatformCallback
 import jetzy.theme.NightMode
 import jetzy.ui.Screen
 import jetzy.utils.NavigationDsl
-import jetzy.utils.Platform
 import jetzy.utils.PreferablyIO
-import jetzy.utils.platform
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -27,6 +25,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.getString
 
 class JetzyViewmodel : ViewModel() {
 
@@ -39,13 +39,9 @@ class JetzyViewmodel : ViewModel() {
     lateinit var platformCallback: P2pPlatformCallback
 
     val currentOperation = MutableStateFlow<P2pOperation?>(null)
-    val currentPeerPlatform = MutableStateFlow<Platform?>(null)
 
     val isSender: Boolean
         get() = currentOperation.value == P2pOperation.SEND
-
-    val peerPlatform: Platform
-        get() = currentPeerPlatform.value ?: platform
 
     @NavigationDsl
     fun navigateTo(screen: Screen, doRefresh: Boolean = false, noWayToReturn: Boolean = false) {
@@ -275,7 +271,6 @@ class JetzyViewmodel : ViewModel() {
         tearDownManager()
         elementsToSend.clear()
         currentOperation.value = null
-        currentPeerPlatform.value = null
 
         navigateTo(
             Screen.MainScreen, doRefresh = true, noWayToReturn = true
@@ -298,7 +293,6 @@ class JetzyViewmodel : ViewModel() {
     fun cancelDiscovery() {
         tearDownManager()
         currentOperation.value = null
-        currentPeerPlatform.value = null
 
         navigateTo(
             Screen.MainScreen, doRefresh = true, noWayToReturn = true
@@ -365,6 +359,17 @@ class JetzyViewmodel : ViewModel() {
 
     var snack = SnackbarHostState()
     private var snackbarJob: Job? = null
+    /** [snacky] with a string resource — usable from non-composable contexts (picker callbacks). */
+    fun snackyRes(res: StringResource, vararg args: Any, queue: Boolean = false) {
+        if (!queue) {
+            snack.currentSnackbarData?.dismiss()
+            snackbarJob?.cancel()
+        }
+        snackbarJob = viewModelScope.launch(Dispatchers.Main) {
+            snack.showSnackbar(message = getString(res, *args), duration = SnackbarDuration.Short)
+        }
+    }
+
     fun snacky(string: String, queue: Boolean = false) {
         if (!queue) {
             snack.currentSnackbarData?.dismiss()

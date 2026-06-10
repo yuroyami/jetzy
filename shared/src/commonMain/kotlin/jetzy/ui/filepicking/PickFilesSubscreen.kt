@@ -60,7 +60,12 @@ import jetzy.theme.jetzyYellow
 import jetzy.theme.sdp
 import jetzy.theme.ssp
 import jetzy.shared.generated.resources.Res
+import jetzy.shared.generated.resources.added_folder
+import jetzy.shared.generated.resources.added_items
 import jetzy.shared.generated.resources.exclude
+import jetzy.shared.generated.resources.excluded_items
+import jetzy.shared.generated.resources.files_tab
+import jetzy.shared.generated.resources.folders_tab
 import jetzy.shared.generated.resources.no_files_added
 import jetzy.shared.generated.resources.no_folders_added
 import jetzy.shared.generated.resources.select_files_btn
@@ -83,7 +88,7 @@ fun PickFilesSubscreenUI() {
     ) { files ->
         files?.let { picked ->
             picked.forEach { viewmodel.elementsToSend.add(JetzyElement.File(it)) }
-            viewmodel.snacky("Added ${picked.size} item(s)")
+            viewmodel.snackyRes(Res.string.added_items, picked.size)
             tab = FileFolderViewMode.Files
         }
     }
@@ -91,7 +96,7 @@ fun PickFilesSubscreenUI() {
     val folderPicker = rememberDirectoryPickerLauncher { folder ->
         folder?.let {
             viewmodel.elementsToSend.add(JetzyElement.Folder(it))
-            viewmodel.snacky("Added folder: ${it.name}")
+            viewmodel.snackyRes(Res.string.added_folder, it.name)
             tab = FileFolderViewMode.Folders
         }
     }
@@ -126,7 +131,7 @@ fun PickFilesSubscreenUI() {
                             onClick = {
                                 tab = FileFolderViewMode.Files
                             },
-                            text = { Text("Files") },
+                            text = { Text(stringResource(Res.string.files_tab)) },
                             icon = { Icon(Icons.Filled.FilePresent, null) }
                         )
                         LeadingIconTab(
@@ -134,7 +139,7 @@ fun PickFilesSubscreenUI() {
                             onClick = {
                                 tab = FileFolderViewMode.Folders
                             },
-                            text = { Text("Folders") },
+                            text = { Text(stringResource(Res.string.folders_tab)) },
                             icon = { Icon(Icons.Filled.FolderSpecial, null) }
                         )
                     }
@@ -196,7 +201,7 @@ fun PickFilesSubscreenUI() {
                     viewmodel.elementsToSend.removeAll { el -> toRemove.any { it === el } }
                     highlighted.clear()
 
-                    viewmodel.snacky("Excluded $count $itemType from the list")
+                    viewmodel.snackyRes(Res.string.excluded_items, count, itemType)
                 },
                 text = { Text(stringResource(Res.string.exclude), fontSize = 10.ssp) },
                 modifier = Modifier.align(BottomStart).padding(6.sdp).padding(bottom = 8.sdp),

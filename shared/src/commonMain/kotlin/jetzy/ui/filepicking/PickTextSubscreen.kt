@@ -56,6 +56,7 @@ import jetzy.models.JetzyElement
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.add_new_text
 import jetzy.shared.generated.resources.add_text_btn
+import jetzy.shared.generated.resources.text_removed
 import jetzy.shared.generated.resources.add_text_desc
 import jetzy.shared.generated.resources.cancel
 import jetzy.shared.generated.resources.field_empty
@@ -132,7 +133,7 @@ fun PickTextSubscreen() {
                                 onClick = {
                                     viewmodel.elementsToSend.removeAll { it === text }
                                     haptic.performHapticFeedback(HapticFeedbackType.Reject)
-                                    viewmodel.snacky("Text was removed from the list.")
+                                    viewmodel.snackyRes(Res.string.text_removed)
                                 }
                             ) {
                                 Icon(Icons.Filled.Delete, null)

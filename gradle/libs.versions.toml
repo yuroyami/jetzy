@@ -4,9 +4,6 @@ fontAwesome = "1.1.1"
 kotlin = "2.3.21"
 agp = "9.0.1" #"9.0.0-alpha05"
 compose-multiplatform = "1.11.0"
-kSerialization = "1.10.0"
-ksp = "2.3.7"
-skie = "0.10.10"
 buildConfig = "6.0.9"
 
 ## KMM Libs
@@ -19,11 +16,9 @@ compose-material3 = "1.11.0-alpha07"
 composeViewmodelNav3 = "2.10.0"
 navigation3Runtime = "1.1.1"
 navigation3Ui = "1.1.1"
-compose-unstyled = "1.49.0"
 coil = "3.4.0"
 kotlinx-io = "0.9.0"
 filekit = "0.14.1"
-uriKmp = "0.0.21"
 kotlinx-datetime = "0.8.0"
 qrose = "1.1.2"
 
@@ -34,7 +29,6 @@ appcompat = "1.7.1"
 coreKtx = "1.18.0"
 documentfile = "1.1.0"
 desugaring = "2.1.5"
-media3 = "1.8.0"
 
 ## Desktop-only
 zxing = "3.5.4"
@@ -52,7 +46,6 @@ coil = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose-multiplatform" }
 compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose-multiplatform" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "compose-material3" }
-compose-desktop = { module = "org.jetbrains.compose.desktop:desktop", version.ref = "compose-multiplatform" }
 compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "compose-multiplatform-icons" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose-multiplatform" }
 compose-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "composeViewmodelNav3" }
@@ -104,5 +97,3 @@ compose-plugin = { id = "org.jetbrains.compose", version.ref = "compose-multipla
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 buildConfig = { id = "com.github.gmazzo.buildconfig", version.ref = "buildConfig" }
-kSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

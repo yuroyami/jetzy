@@ -6,21 +6,14 @@
     <!-- Main Screen -->
     <string name="welcome_title">Welcome to Jetzy</string>
     <string name="welcome_subtitle">Quickly send &amp; receive files across different platforms</string>
-    <string name="what_to_do">What would you like to do?</string>
-    <string name="proceed">Proceed</string>
-    <string name="select_operation">Select an operation!</string>
-    <string name="select_platform">Select which platform your peer has!</string>
-    <string name="select_files_to_send">Select files to send!</string>
-    <string name="sending_to">Sending to...</string>
-    <string name="receiving_from">Receiving from...</string>
-    <string name="pick_files_to_send">Pick the files to send</string>
     <string name="choose_files">Choose files</string>
-    <string name="zero_files_selected">0 files selected</string>
-    <string name="sending_label">Sending: %1$s</string>
+    <string name="add_files_to_share">Add files to share</string>
+    <string name="sending">Sending</string>
+    <string name="receiving">Receiving</string>
+    <string name="version_label">Version %1$s</string>
+    <string name="developed_by">Developed by</string>
 
     <!-- Top Bar -->
-    <string name="sending_to_label">Sending to</string>
-    <string name="receiving_from_label">Receiving from</string>
     <string name="continue_label">Continue</string>
     <string name="sending_error_nothing">Sending Error: Nothing to send...</string>
 
@@ -104,9 +97,9 @@
     <string name="scanning">Scanning</string>
     <string name="no_devices_found">No devices found yet</string>
     <string name="ensure_jetzy_open">Make sure the other device has Jetzy open</string>
-    <string name="wifi_direct">Wi-Fi Direct</string>
     <string name="connect_to_peer">Connect to %1$s</string>
     <string name="select_device_to_connect">Select a device to connect</string>
+    <string name="nearby">Nearby</string>
 
     <!-- Transfer Screen -->
     <string name="sender_you">sender (You)</string>
@@ -119,27 +112,13 @@
     <string name="done">Done</string>
     <string name="cancel_transfer">Cancel transfer</string>
     <string name="reconnect_and_resume">Reconnect and resume where we left off</string>
+    <string name="saved_to">✓ Saved to %1$s</string>
+    <string name="faster_link_available">Faster link available: %1$s</string>
     <string name="connecting">Connecting…</string>
     <string name="calculating">Calculating…</string>
     <string name="seconds_remaining">%1$ds remaining</string>
     <string name="minutes_remaining">%1$dm %2$ds remaining</string>
     <string name="hours_remaining">%1$dh %2$dm remaining</string>
-    <string name="files_saved">Files saved successfully!</string>
-    <string name="transfer_interrupted">Transfer interrupted: connection lost</string>
-    <string name="transfer_interrupted_save">Transfer interrupted: connection lost. You can still save received files.</string>
-    <string name="transfer_stalled">Transfer stalled: no data received. You can save any completed files.</string>
-
-    <!-- Plurals helpers -->
-    <string name="file_count">%1$d file</string>
-    <string name="files_count">%1$d files</string>
-    <string name="folder_count">%1$d folder</string>
-    <string name="folders_count">%1$d folders</string>
-    <string name="photo_count">%1$d photo</string>
-    <string name="photos_count">%1$d photos</string>
-    <string name="video_count">%1$d video</string>
-    <string name="videos_count">%1$d videos</string>
-    <string name="text_count">%1$d text</string>
-    <string name="texts_count">%1$d texts</string>
 
     <!-- Transfer progress -->
     <string name="files_of_total">%1$d of %2$d files</string>

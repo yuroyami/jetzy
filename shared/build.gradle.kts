@@ -11,8 +11,6 @@ plugins {
     alias(libs.plugins.compose.plugin)
     alias(libs.plugins.android.library)
     alias(libs.plugins.buildConfig)
-    alias(libs.plugins.kSerialization)
-    alias(libs.plugins.ksp)
 }
 
 kotlin {

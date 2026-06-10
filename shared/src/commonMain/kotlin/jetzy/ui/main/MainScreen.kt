@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import jetzy.shared.generated.resources.Res
+import jetzy.shared.generated.resources.add_files_to_share
 import jetzy.shared.generated.resources.choose_files
 import jetzy.shared.generated.resources.welcome_subtitle
 import jetzy.shared.generated.resources.welcome_title
@@ -125,7 +126,7 @@ fun MainScreenUI() {
                     modifier = Modifier.fillMaxWidth().padding(6.sdp).animateContentSize()
                 ) {
                     Text(
-                        text = "Add files to share",
+                        text = stringResource(Res.string.add_files_to_share),
                         modifier = Modifier.fillMaxWidth().padding(8.sdp),
                         style = MaterialTheme.typography.titleMedium,
                         textAlign = TextAlign.Center,

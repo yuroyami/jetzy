@@ -68,7 +68,15 @@ import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.Copy
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import jetzy.shared.generated.resources.Res
+import jetzy.shared.generated.resources.calculating
 import jetzy.shared.generated.resources.cancel_transfer
+import jetzy.shared.generated.resources.faster_link_available
+import jetzy.shared.generated.resources.files_of_total
+import jetzy.shared.generated.resources.hours_remaining
+import jetzy.shared.generated.resources.minutes_remaining
+import jetzy.shared.generated.resources.saved_to
+import jetzy.shared.generated.resources.seconds_remaining
+import jetzy.shared.generated.resources.total_size
 import jetzy.shared.generated.resources.connecting
 import jetzy.shared.generated.resources.copy_text
 import jetzy.shared.generated.resources.done
@@ -181,12 +189,18 @@ fun TransferScreenUI() {
                     val speedLabel = remember(speed) {
                         if (speed > 0) speed.toHumanSize() + "/s" else "—"
                     }
-                    val remainingStr = remember(progress, speed, mf.totalBytes) {
-                        remainingLabel(
+                    val secsLeft = remember(progress, speed, mf.totalBytes) {
+                        remainingSeconds(
                             totalBytes = mf.totalBytes,
                             progressFrac = progress,
                             speedBytesPerS = speed
                         )
+                    }
+                    val remainingStr = when {
+                        secsLeft == null -> stringResource(Res.string.calculating)
+                        secsLeft < 60 -> stringResource(Res.string.seconds_remaining, secsLeft)
+                        secsLeft < 3600 -> stringResource(Res.string.minutes_remaining, secsLeft / 60, secsLeft % 60)
+                        else -> stringResource(Res.string.hours_remaining, secsLeft / 3600, (secsLeft % 3600) / 60)
                     }
                     ProgressSection(
                         progress = progress,
@@ -240,7 +254,7 @@ fun TransferScreenUI() {
                     val savedTo = savedLabel
                     if (saveComplete && savedTo != null) {
                         Text(
-                            text = "✓ Saved to $savedTo",
+                            text = stringResource(Res.string.saved_to, savedTo),
                             color = colorScheme.primary,
                             fontSize = 10.ssp,
                             fontWeight = FontWeight.W500,
@@ -366,15 +380,11 @@ private fun ConnectingState(onCancel: () -> Unit) {
 
 // ─── ETA helper ──────────────────────────────────────────────────────────────
 
-private fun remainingLabel(totalBytes: Long, progressFrac: Float, speedBytesPerS: Long): String {
-    if (speedBytesPerS <= 0L || progressFrac <= 0f || progressFrac >= 1f) return "Calculating…"
+/** Seconds left at the current speed, or null when it can't be estimated yet. */
+private fun remainingSeconds(totalBytes: Long, progressFrac: Float, speedBytesPerS: Long): Long? {
+    if (speedBytesPerS <= 0L || progressFrac <= 0f || progressFrac >= 1f) return null
     val bytesLeft = (totalBytes * (1f - progressFrac)).toLong()
-    val secsLeft = bytesLeft / speedBytesPerS
-    return when {
-        secsLeft < 60 -> "${secsLeft}s remaining"
-        secsLeft < 3600 -> "${secsLeft / 60}m ${secsLeft % 60}s remaining"
-        else -> "${secsLeft / 3600}h ${(secsLeft % 3600) / 60}m remaining"
-    }
+    return bytesLeft / speedBytesPerS
 }
 
 // ─── Upgrade badge ───────────────────────────────────────────────────────────
@@ -397,7 +407,7 @@ private fun UpgradeAvailableBadge(match: TransportMatch, modifier: Modifier = Mo
     ) {
         Text("⚡", fontSize = 12.ssp)
         Text(
-            text = "Faster link available: ${match.technology.displayName}",
+            text = stringResource(Res.string.faster_link_available, match.technology.displayName),
             color = cs.primary,
             fontWeight = FontWeight.SemiBold,
             fontSize = 12.ssp,
@@ -576,12 +586,8 @@ private fun ProgressSection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val fileCountLabel = remember(completedCount, totalCount, totalBytes) {
-                buildString {
-                    append("$completedCount of $totalCount files")
-                    if (totalBytes != null) append("  ·  ${totalBytes.toHumanSize()} total")
-                }
-            }
+            val fileCountLabel = stringResource(Res.string.files_of_total, completedCount, totalCount) +
+                (totalBytes?.let { stringResource(Res.string.total_size, it.toHumanSize()) } ?: "")
             Text(
                 text = fileCountLabel,
                 fontSize = 10.ssp,

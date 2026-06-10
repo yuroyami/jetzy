@@ -66,6 +66,7 @@ import jetzy.shared.generated.resources.cancel
 import jetzy.shared.generated.resources.connect_to_peer
 import jetzy.shared.generated.resources.ensure_jetzy_open
 import jetzy.shared.generated.resources.find_nearby_devices
+import jetzy.shared.generated.resources.nearby
 import jetzy.shared.generated.resources.nearby_devices
 import jetzy.shared.generated.resources.no_devices_found
 import jetzy.shared.generated.resources.peer_discovery
@@ -522,7 +523,7 @@ private fun PeerRow(
             // "Wi-Fi Direct" (which lied for mDNS / MPC / Bluetooth / Wi-Fi Aware peers).
             // Falls back to a neutral "Nearby" before the manager has set a technology.
             Text(
-                text = LocalViewmodel.current.p2pManager?.technology?.displayName ?: "Nearby",
+                text = LocalViewmodel.current.p2pManager?.technology?.displayName ?: stringResource(Res.string.nearby),
                 fontSize = 9.ssp,
                 color = colorScheme.onSurfaceVariant,
             )
