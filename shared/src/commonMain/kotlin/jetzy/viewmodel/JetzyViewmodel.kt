@@ -165,15 +165,31 @@ class JetzyViewmodel : ViewModel() {
         // B28: clamp, don't wrap. Modulo cycled 1→2→…→0→1 forever, so "try a different transport"
         // silently looped the user back through transports that already failed with no terminal
         // state. Stop at the last rung and say so.
-        val next = (fallbackIndex.value ?: -1) + 1
-        if (next >= ladder.size) {
+        //
+        // Also skip rungs that resolve to the transport we're already on: rung 0 of every ladder
+        // is mDNS — the default that just found nothing — so the first tap used to "switch" to a
+        // repeat of the failure, and hardware-dependent rungs duplicate on common devices (e.g.
+        // WiFiDirect twice on a non-NAN Android). Skipped candidates were never initialized, so
+        // dropping the reference is enough.
+        val currentTechnology = p2pManager?.technology
+        var next = (fallbackIndex.value ?: -1) + 1
+        var newManager: P2PManager? = null
+        while (next < ladder.size) {
+            val candidate = ladder[next].invoke()
+            if (candidate != null &&
+                (candidate.technology == null || candidate.technology != currentTechnology)
+            ) {
+                newManager = candidate
+                break
+            }
+            next++
+        }
+        if (newManager == null) {
+            fallbackIndex.value = ladder.size // park at the end so further taps short-circuit
             snacky("No other transports to try. Make sure both devices are on the same Wi-Fi, or move them closer.")
             return
         }
         fallbackIndex.value = next
-
-        val factory = ladder[next]
-        val newManager = factory.invoke() ?: return
         newManager.initialize(viewmodel = this)
 
         val oldManager = p2pManager
@@ -213,6 +229,14 @@ class JetzyViewmodel : ViewModel() {
     fun cancelPendingProceed() {
         val pending = pendingProceed.value ?: return
         pendingProceed.value = null
+        if (pending.manager === p2pManager) {
+            // Cancelling the gate mid-fallback-switch: the discovery screen is already bound to
+            // this manager (switchToNextFallbackTransport assigns it before the gate resolves).
+            // Tear down and return to Main like any other cancel — the old behavior cleaned the
+            // manager but left the screen running on its corpse with the rung consumed.
+            cancelDiscovery()
+            return
+        }
         viewModelScope.launch(PreferablyIO) {
             runCatching { pending.manager.cleanup() }
         }

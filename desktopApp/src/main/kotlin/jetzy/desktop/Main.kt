@@ -1,6 +1,10 @@
 package jetzy.desktop
 
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowState
@@ -14,17 +18,28 @@ import jetzy.managers.P2PManager
 import jetzy.p2p.P2pOperation
 import jetzy.p2p.P2pPlatformCallback
 import jetzy.ui.AdamScreen
+import jetzy.ui.QuitTransferDialog
 import jetzy.utils.Platform
 import jetzy.viewmodel.JetzyViewmodel
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import java.awt.Dimension
 
 private lateinit var viewmodel: JetzyViewmodel
 
 fun main() = application {
+    var confirmClose by remember { mutableStateOf(false) }
     Window(
         title = "Jetzy",
         state = rememberWindowState(width = 480.dp, height = 760.dp),
-        onCloseRequest = ::exitApplication,
+        onCloseRequest = {
+            // Closing mid-transfer used to be an instant silent kill: no teardown, no abort
+            // frame (the peer discovers via its 8s watchdog), staged temps left behind.
+            val transferring = ::viewmodel.isInitialized &&
+                viewmodel.p2pManager?.isConnected?.value == true &&
+                viewmodel.p2pManager?.transferComplete?.value == false
+            if (transferring) confirmClose = true else exitApplication()
+        },
     ) {
         SideEffect { window.minimumSize = Dimension(380, 600) }
         AdamScreen(
@@ -33,6 +48,19 @@ fun main() = application {
                 viewmodel.platformCallback = DesktopP2pCallback(viewmodel)
             }
         )
+
+        if (confirmClose) {
+            QuitTransferDialog(
+                onQuit = {
+                    confirmClose = false
+                    // Best-effort teardown (close sockets, purge temps) before the
+                    // process dies; bounded so quit can't hang.
+                    runBlocking { withTimeoutOrNull(2_000) { viewmodel.p2pManager?.cleanup() } }
+                    exitApplication()
+                },
+                onKeep = { confirmClose = false },
+            )
+        }
     }
 }
 

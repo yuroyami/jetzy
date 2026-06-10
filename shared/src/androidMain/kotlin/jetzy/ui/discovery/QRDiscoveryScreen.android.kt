@@ -22,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -60,6 +61,8 @@ import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.cancel
 import jetzy.shared.generated.resources.host_device
 import jetzy.shared.generated.resources.hotspot_active
+import jetzy.shared.generated.resources.hotspot_failed_hint
+import jetzy.shared.generated.resources.try_again
 import jetzy.shared.generated.resources.network
 import jetzy.shared.generated.resources.password
 import jetzy.shared.generated.resources.qr_code_desc
@@ -75,11 +78,18 @@ actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
     val colorScheme = MaterialTheme.colorScheme
 
     var qrData by remember { mutableStateOf<QRData?>(null) }
+    var hotspotFailed by remember { mutableStateOf(false) }
     var refreshor by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(refreshor) {
         qrData = null
-        qrData = (manager as? HotspotP2PM)?.establishTcpServer()?.await()
+        hotspotFailed = false
+        val data = (manager as? HotspotP2PM)?.establishTcpServer()?.await()
+        qrData = data
+        // Null = hotspot couldn't start (Wi-Fi off, location off, OS refused). The screen
+        // used to keep the "Starting hotspot…" shimmer forever with no way forward — the
+        // refreshor retry state existed but nothing ever incremented it.
+        hotspotFailed = data == null
     }
 
     Box(
@@ -135,12 +145,14 @@ actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 val data = qrData
-                if (data != null) {
-                    QrCodeBlock(qrData = data)
-                    LivePill(ssid = data.hotspotSSID)
-                    CredentialsRow(qrData = data)
-                } else {
-                    QrLoadingBlock()
+                when {
+                    data != null -> {
+                        QrCodeBlock(qrData = data)
+                        LivePill(ssid = data.hotspotSSID)
+                        CredentialsRow(qrData = data)
+                    }
+                    hotspotFailed -> HotspotFailedBlock(onRetry = { refreshor++ })
+                    else -> QrLoadingBlock()
                 }
             }
 
@@ -242,6 +254,35 @@ private fun QrCodeBlock(qrData: QRData) {
                 .fillMaxSize()
                 .padding(12.dp)
         )
+    }
+}
+
+@Composable
+private fun HotspotFailedBlock(onRetry: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(200.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(colorScheme.errorContainer.copy(alpha = 0.35f))
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = stringResource(Res.string.hotspot_failed_hint),
+                fontSize = 12.sp,
+                color = colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                lineHeight = 17.sp,
+            )
+            FilledTonalButton(onClick = onRetry, shape = RoundedCornerShape(10.dp)) {
+                Text(stringResource(Res.string.try_again), fontSize = 13.sp, fontWeight = FontWeight.W600)
+            }
+        }
     }
 }
 

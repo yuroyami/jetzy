@@ -39,6 +39,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -47,6 +48,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -67,7 +72,8 @@ import jetzy.shared.generated.resources.peer_discovery
 import jetzy.shared.generated.resources.scanning
 import jetzy.shared.generated.resources.select_device_hint
 import jetzy.shared.generated.resources.select_device_to_connect
-import jetzy.shared.generated.resources.wifi_direct
+import jetzy.shared.generated.resources.try_different_transport
+import jetzy.shared.generated.resources.visible_as
 import jetzy.ui.LocalViewmodel
 import jetzy.utils.getDeviceName
 import org.jetbrains.compose.resources.stringResource
@@ -170,6 +176,14 @@ fun PeerDiscoveryScreenUI() {
                     color = colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
+                // Two same-model phones advertise the same name (B17) — at least let each
+                // user answer "which one is you?" for the person scanning for them.
+                Text(
+                    text = stringResource(Res.string.visible_as, getDeviceName()),
+                    fontSize = 9.ssp,
+                    color = colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
             }
 
             // ── Radar ────────────────────────────────────────────────────────
@@ -252,7 +266,7 @@ fun PeerDiscoveryScreenUI() {
                         .padding(vertical = 8.sdp, horizontal = 12.sdp)
                 ) {
                     Text(
-                        text = "Try a different transport",
+                        text = stringResource(Res.string.try_different_transport),
                         fontSize = 10.ssp,
                         fontWeight = FontWeight.W500,
                         color = colorScheme.onSurface,
@@ -413,33 +427,32 @@ private fun RadarView(
                     )
 
                     val angleRad = angle.toDouble() * (PI / 180.0)
-                    val dotSize = 10.dp
 
+                    // Dot-sized box aligned where the dot lives, drawing + hit-testing in one.
+                    // Each dot used to be a fillMaxSize clickable: every peer's tap target was
+                    // the WHOLE radar, so with 2+ peers the top-most box swallowed every tap
+                    // and selected the wrong device — and screen readers saw N overlapping
+                    // unlabeled fullscreen buttons.
+                    val biasX = (radius * cos(angleRad)).toFloat()
+                    val biasY = (radius * sin(angleRad)).toFloat()
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
+                            .align(BiasAlignment(biasX, biasY))
+                            .size(32.dp)
                             .drawBehind {
-                                val cx = size.width / 2f
-                                val cy = size.height / 2f
-                                val maxR = size.minDimension / 2f
-                                val dx = (maxR * radius * cos(angleRad)).toFloat()
-                                val dy = (maxR * radius * sin(angleRad)).toFloat()
-                                val dotR = dotSize.toPx() / 2f
-
+                                val c = Offset(size.width / 2f, size.height / 2f)
+                                val dotR = 5.dp.toPx()
                                 // ripple — alpha is animated so copy() must stay here
                                 drawCircle(
                                     color = colors.accent.copy(alpha = rippleAlpha),
                                     radius = dotR * rippleScale,
-                                    center = Offset(cx + dx, cy + dy),
+                                    center = c,
                                 )
-                                // dot — the O(n) firstOrNull scan was always true; use accent directly
-                                drawCircle(
-                                    color = colors.accent,
-                                    radius = dotR,
-                                    center = Offset(cx + dx, cy + dy),
-                                )
+                                drawCircle(color = colors.accent, radius = dotR, center = c)
                             }
-                            .clickable { onPeerSelected(peer) }
+                            .clip(CircleShape)
+                            .semantics { contentDescription = peer.name }
+                            .clickable(role = Role.Button) { onPeerSelected(peer) }
                     )
                 }
             }
@@ -476,7 +489,9 @@ private fun PeerRow(
                 color = if (isSelected) colors.accent else colorScheme.outlineVariant,
                 shape = RoundedCornerShape(10.sdp)
             )
-            .clickable(onClick = onClick)
+            // Selection was conveyed by color/border only — invisible to screen readers.
+            .semantics { selected = isSelected }
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = 10.sdp, vertical = 8.sdp)
     ) {
         // avatar

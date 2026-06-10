@@ -57,6 +57,7 @@
     <string name="share_to_nearby">Share to nearby device</string>
     <string name="scan_code_hint">Let the other device scan this code to connect instantly</string>
     <string name="starting_hotspot">Starting hotspot...</string>
+    <string name="hotspot_failed_hint">Couldn\'t start the hotspot. Check that Wi-Fi is on and your mobile hotspot is off, then try again.</string>
     <string name="hotspot_active">Hotspot active — %1$s</string>
     <string name="network">Network</string>
     <string name="password">Password</string>
@@ -69,6 +70,31 @@
     <string name="ios_hotspot_race_body">Your iPhone associated with another network instead of \"%1$s\" while joining.\n\nGo to Settings → Wi-Fi → tap ⓘ next to your home network → turn Auto-Join off, then tap Try again. You can turn Auto-Join back on after the transfer.</string>
     <string name="try_again">Try again</string>
     <string name="connect_failed_title">Couldn\'t connect</string>
+    <string name="visible_as">You\'re visible as "%1$s"</string>
+    <string name="try_different_transport">Try a different transport</string>
+    <string name="retry">Retry</string>
+
+    <!-- QR Discovery Screen - Desktop -->
+    <string name="desktop_host_share_code">Share this code with your peer</string>
+    <string name="desktop_host_hint">Open Jetzy on the other device and scan this QR code.</string>
+    <string name="starting_server">Starting server…</string>
+    <string name="address_label">Address</string>
+    <string name="device_label">Device</string>
+    <string name="desktop_client_title">Connect to your peer</string>
+    <string name="desktop_client_hint">Desktops have no camera path here. Paste the QR text or load a saved QR image.</string>
+    <string name="qr_contents">QR contents</string>
+    <string name="paste_from_clipboard">Paste from clipboard</string>
+    <string name="load_qr_image">Load QR image…</string>
+    <string name="reading_image">Reading…</string>
+    <string name="connect">Connect</string>
+    <string name="qr_image_unreadable">Couldn\'t read a QR code from that image.</string>
+    <string name="invalid_jetzy_qr">That doesn\'t look like a valid Jetzy QR.</string>
+
+    <!-- Desktop quit confirmation -->
+    <string name="quit_transfer_title">Transfer in progress</string>
+    <string name="quit_transfer_body">Quitting now will interrupt the transfer — the other device will see it as a lost connection.</string>
+    <string name="quit_anyway">Quit</string>
+    <string name="keep_transferring">Keep transferring</string>
 
     <!-- Peer Discovery Screen -->
     <string name="peer_discovery">PEER DISCOVERY</string>

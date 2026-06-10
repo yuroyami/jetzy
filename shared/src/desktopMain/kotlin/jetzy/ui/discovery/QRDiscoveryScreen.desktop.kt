@@ -50,6 +50,25 @@ import io.github.alexzhirkevich.qrose.rememberQrCodePainter
 import jetzy.managers.LanHostP2PM
 import jetzy.managers.LanP2PM
 import jetzy.managers.P2PManager
+import jetzy.shared.generated.resources.Res
+import jetzy.shared.generated.resources.address_label
+import jetzy.shared.generated.resources.cancel
+import jetzy.shared.generated.resources.client_device
+import jetzy.shared.generated.resources.connect
+import jetzy.shared.generated.resources.desktop_client_hint
+import jetzy.shared.generated.resources.desktop_client_title
+import jetzy.shared.generated.resources.desktop_host_hint
+import jetzy.shared.generated.resources.desktop_host_share_code
+import jetzy.shared.generated.resources.device_label
+import jetzy.shared.generated.resources.host_device
+import jetzy.shared.generated.resources.invalid_jetzy_qr
+import jetzy.shared.generated.resources.load_qr_image
+import jetzy.shared.generated.resources.paste_from_clipboard
+import jetzy.shared.generated.resources.qr_code_desc
+import jetzy.shared.generated.resources.qr_contents
+import jetzy.shared.generated.resources.qr_image_unreadable
+import jetzy.shared.generated.resources.reading_image
+import jetzy.shared.generated.resources.starting_server
 import jetzy.models.QRData
 import jetzy.models.QRData.Companion.toQRData
 import jetzy.ui.LocalViewmodel
@@ -57,6 +76,7 @@ import jetzy.utils.loggy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 actual fun P2pQrContent(modifier: Modifier, manager: P2PManager) {
@@ -93,20 +113,20 @@ private fun HostQrPanel(modifier: Modifier, manager: LanHostP2PM) {
                 .padding(horizontal = 32.dp, vertical = 24.dp)
         ) {
             Text(
-                text = "Host device",
+                text = stringResource(Res.string.host_device),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.W500,
                 color = colorScheme.onSurfaceVariant,
             )
             Text(
-                text = "Share this code with your peer",
+                text = stringResource(Res.string.desktop_host_share_code),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.W500,
                 color = colorScheme.onSurface,
                 textAlign = TextAlign.Center,
             )
             Text(
-                text = "Open Jetzy on the other device, choose to send/receive, and scan this QR code.",
+                text = stringResource(Res.string.desktop_host_hint),
                 fontSize = 13.sp,
                 color = colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -137,10 +157,10 @@ private fun HostQrPanel(modifier: Modifier, manager: LanHostP2PM) {
                             .background(Color.White)
                             .padding(12.dp),
                     ) {
-                        Image(painter = qrPainter, contentDescription = "QR code")
+                        Image(painter = qrPainter, contentDescription = stringResource(Res.string.qr_code_desc))
                     }
-                    QrTextRow(label = "Address", value = address)
-                    QrTextRow(label = "Device", value = data.deviceName)
+                    QrTextRow(label = stringResource(Res.string.address_label), value = address)
+                    QrTextRow(label = stringResource(Res.string.device_label), value = data.deviceName)
                 } else {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -149,13 +169,13 @@ private fun HostQrPanel(modifier: Modifier, manager: LanHostP2PM) {
                     ) {
                         CircularProgressIndicator()
                         Spacer(Modifier.height(8.dp))
-                        Text("Starting server…", fontSize = 12.sp, color = colorScheme.onSurfaceVariant)
+                        Text(stringResource(Res.string.starting_server), fontSize = 12.sp, color = colorScheme.onSurfaceVariant)
                     }
                 }
             }
 
             TextButton(onClick = { viewmodel.cancelDiscovery() }, modifier = Modifier.fillMaxWidth()) {
-                Text("Cancel", fontSize = 13.sp, color = colorScheme.onSurfaceVariant)
+                Text(stringResource(Res.string.cancel), fontSize = 13.sp, color = colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -195,6 +215,9 @@ private fun ClientQrPanel(modifier: Modifier, manager: LanP2PM) {
     var pasted by remember { mutableStateOf("") }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var isScanningImage by remember { mutableStateOf(false) }
+    // Resolved up front: these are set from click lambdas, which aren't composable contexts.
+    val unreadableMsg = stringResource(Res.string.qr_image_unreadable)
+    val invalidMsg = stringResource(Res.string.invalid_jetzy_qr)
 
     Box(
         modifier = modifier.fillMaxSize().background(colorScheme.surface),
@@ -209,20 +232,20 @@ private fun ClientQrPanel(modifier: Modifier, manager: LanP2PM) {
                 .padding(horizontal = 32.dp, vertical = 24.dp),
         ) {
             Text(
-                "Client device",
+                stringResource(Res.string.client_device),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.W500,
                 color = colorScheme.onSurfaceVariant,
             )
             Text(
-                "Connect to your peer",
+                stringResource(Res.string.desktop_client_title),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.W500,
                 color = colorScheme.onSurface,
                 textAlign = TextAlign.Center,
             )
             Text(
-                "Desktops have no camera path here. Paste the QR text or load a saved QR image.",
+                stringResource(Res.string.desktop_client_hint),
                 fontSize = 13.sp,
                 color = colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -241,7 +264,7 @@ private fun ClientQrPanel(modifier: Modifier, manager: LanP2PM) {
                 OutlinedTextField(
                     value = pasted,
                     onValueChange = { pasted = it },
-                    label = { Text("QR contents") },
+                    label = { Text(stringResource(Res.string.qr_contents)) },
                     placeholder = { Text("SSID:PASSWORD:IP:PORT:NAME[:SESSION]") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = false,
@@ -256,7 +279,7 @@ private fun ClientQrPanel(modifier: Modifier, manager: LanP2PM) {
                             clipboard.getText()?.text?.let { pasted = it.trim() }
                         },
                         modifier = Modifier.weight(1f),
-                    ) { Text("Paste from clipboard") }
+                    ) { Text(stringResource(Res.string.paste_from_clipboard)) }
 
                     FilledTonalButton(
                         onClick = {
@@ -265,19 +288,19 @@ private fun ClientQrPanel(modifier: Modifier, manager: LanP2PM) {
                                 val decoded = pickAndDecodeQrImage()
                                 isScanningImage = false
                                 if (decoded != null) pasted = decoded
-                                else statusMessage = "Couldn't read a QR code from that image."
+                                else statusMessage = unreadableMsg
                             }
                         },
                         enabled = !isScanningImage,
                         modifier = Modifier.weight(1f),
-                    ) { Text(if (isScanningImage) "Reading…" else "Load QR image…") }
+                    ) { Text(if (isScanningImage) stringResource(Res.string.reading_image) else stringResource(Res.string.load_qr_image)) }
                 }
 
                 FilledTonalButton(
                     onClick = {
                         val parsed = runCatching { pasted.trim().toQRData() }.getOrNull()
                         if (parsed == null || parsed.ipAddress.isBlank() || parsed.port <= 0) {
-                            statusMessage = "That doesn't look like a valid Jetzy QR."
+                            statusMessage = invalidMsg
                             return@FilledTonalButton
                         }
                         statusMessage = null
@@ -292,7 +315,7 @@ private fun ClientQrPanel(modifier: Modifier, manager: LanP2PM) {
                     },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = pasted.isNotBlank(),
-                ) { Text("Connect") }
+                ) { Text(stringResource(Res.string.connect)) }
 
                 statusMessage?.let {
                     Text(it, fontSize = 12.sp, color = colorScheme.error)
@@ -300,7 +323,7 @@ private fun ClientQrPanel(modifier: Modifier, manager: LanP2PM) {
             }
 
             TextButton(onClick = { viewmodel.cancelDiscovery() }, modifier = Modifier.fillMaxWidth()) {
-                Text("Cancel", fontSize = 13.sp, color = colorScheme.onSurfaceVariant)
+                Text(stringResource(Res.string.cancel), fontSize = 13.sp, color = colorScheme.onSurfaceVariant)
             }
         }
     }
