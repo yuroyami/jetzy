@@ -63,6 +63,12 @@ class MainActivity: ComponentActivity(), P2pPlatformCallback {
                     viewmodel = it
                     viewmodel.platformCallback = this
                     trackDayNight = true
+                    // A config-change recreation (uiMode/density/unfold) lands here with the
+                    // session still alive in the retained viewmodel — re-assert the screen-on
+                    // flag, which was set on the old window by startBackgroundService().
+                    if (viewmodel.p2pManager != null) {
+                        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                    }
                 }
             )
 

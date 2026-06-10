@@ -10,9 +10,12 @@
         android:supportsRtl="false"
         android:theme="@style/Theme.splash">
 
+        <!-- uiMode/density/screenLayout/smallestScreenSize: without these, a scheduled dark-mode
+             flip or a foldable unfold mid-transfer recreates the Activity — dropping
+             KEEP_SCREEN_ON and leaving live managers holding the destroyed instance. -->
         <activity
             android:name="jetzy.MainActivity"
-            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:configChanges="orientation|keyboardHidden|screenSize|uiMode|density|screenLayout|smallestScreenSize"
             android:exported="true"
             android:imeOptions="flagNoExtractUi"
             android:fitsSystemWindows="true"

@@ -183,14 +183,35 @@ class BluetoothSppP2PM(private val context: Context) : PeerDiscoveryP2PM() {
     }
 
     private fun registerDiscoveryReceiver() {
-        val filter = IntentFilter(BluetoothDevice.ACTION_FOUND)
+        val filter = IntentFilter(BluetoothDevice.ACTION_FOUND).apply {
+            addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
+        }
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                if (intent?.action != BluetoothDevice.ACTION_FOUND) return
-                @Suppress("DEPRECATION")
-                val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
-                    ?: return
-                registerDevice(device)
+                when (intent?.action) {
+                    BluetoothDevice.ACTION_FOUND -> {
+                        @Suppress("DEPRECATION")
+                        val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
+                            ?: return
+                        registerDevice(device)
+                    }
+                    BluetoothAdapter.ACTION_STATE_CHANGED -> {
+                        // Adapter-off kills the scan and the RFCOMM server silently; without
+                        // this the screen kept claiming it was discovering over a dead radio.
+                        val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)
+                        if (state == BluetoothAdapter.STATE_TURNING_OFF || state == BluetoothAdapter.STATE_OFF) {
+                            foundDevices.clear()
+                            peerCache.clear()
+                            availablePeers.value = emptyList()
+                            runCatching { serverSocket?.close() }
+                            serverSocket = null
+                            isDiscovering.value = false
+                            isAdvertising.value = false
+                            diag("Bluetooth turned off — discovery stopped")
+                            viewmodel.snacky("Bluetooth turned off — discovery stopped.")
+                        }
+                    }
+                }
             }
         }
         // Receiver registration flag differs on API 33+; we don't take broadcasts from external apps.

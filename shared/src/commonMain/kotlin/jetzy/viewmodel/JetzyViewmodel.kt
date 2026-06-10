@@ -18,6 +18,7 @@ import jetzy.utils.NavigationDsl
 import jetzy.utils.Platform
 import jetzy.utils.PreferablyIO
 import jetzy.utils.platform
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -287,6 +288,27 @@ class JetzyViewmodel : ViewModel() {
         viewModelScope.launch(PreferablyIO) {
             runCatching { manager.cleanup() }
         }
+    }
+
+    /**
+     * The host (activity/window) is going away for real — the last reliable signal to tear the
+     * session down. Without this, swiping the task away mid-session left sockets open and the
+     * Android foreground service running headless with its "transferring" notification until
+     * force-stop ([P2PManager.cleanup] is the only thing that stops it).
+     *
+     * viewModelScope is already cancelled by the time onCleared runs, so the teardown rides a
+     * detached scope; it's a short close-sockets/stop-service burst with no UI to return to.
+     */
+    override fun onCleared() {
+        val manager = p2pManager
+        p2pManager = null
+        pendingProceed.value = null
+        if (manager != null) {
+            CoroutineScope(PreferablyIO).launch {
+                runCatching { manager.cleanup() }
+            }
+        }
+        super.onCleared()
     }
 
     /**

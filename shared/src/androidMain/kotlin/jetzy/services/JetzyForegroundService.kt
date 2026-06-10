@@ -1,5 +1,6 @@
 package jetzy.services
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -8,6 +9,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
@@ -30,6 +32,7 @@ import jetzy.MainActivity
 class JetzyForegroundService : Service() {
 
     private var wakeLock: PowerManager.WakeLock? = null
+    private var wifiLock: WifiManager.WifiLock? = null
     private var cachedNotification: Notification? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -54,29 +57,54 @@ class JetzyForegroundService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
-        acquireWakeLock()
-        return START_STICKY
+        acquireLocks()
+        // NOT_STICKY: this service is meaningless without the in-process transfer that started
+        // it. START_STICKY resurrected it after process death with no manager alive and no code
+        // path that would ever stop it — a permanent "Jetzy is transferring" zombie notification
+        // holding a fresh wakelock.
+        return START_NOT_STICKY
     }
 
     override fun onDestroy() {
-        releaseWakeLock()
+        releaseLocks()
         super.onDestroy()
     }
 
-    private fun acquireWakeLock() {
-        if (wakeLock?.isHeld == true) return
+    @SuppressLint("WakelockTimeout")
+    private fun acquireLocks() {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Jetzy::TransferWakeLock").also {
-            // 30 minutes is well over the longest realistic transfer; the lock
-            // is released either on the timeout or in onDestroy, whichever comes first.
-            it.setReferenceCounted(false)
-            it.acquire(30L * 60L * 1000L)
+        if (wakeLock?.isHeld != true) {
+            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Jetzy::TransferWakeLock").also {
+                // No timeout: the old 30-minute cap silently lapsed under long transfers (multi-GB
+                // over Bluetooth easily exceeds it) with no re-acquisition. Release is guaranteed
+                // by onDestroy, which always runs — the service is stopped from cleanup(), the
+                // viewmodel's onCleared(), or the OS itself, and NOT_STICKY closed the zombie path.
+                it.setReferenceCounted(false)
+                it.acquire()
+            }
+        }
+        // The partial wakelock keeps the CPU alive but not the Wi-Fi radio: with the screen off
+        // many devices drop Wi-Fi into power-save and throttle or park the link — exactly the
+        // backgrounded-transfer case this service exists to protect.
+        if (wifiLock?.isHeld != true) {
+            val wm = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                WifiManager.WIFI_MODE_FULL_LOW_LATENCY
+            } else {
+                @Suppress("DEPRECATION") WifiManager.WIFI_MODE_FULL_HIGH_PERF
+            }
+            wifiLock = wm.createWifiLock(mode, "Jetzy::TransferWifiLock").also {
+                it.setReferenceCounted(false)
+                it.acquire()
+            }
         }
     }
 
-    private fun releaseWakeLock() {
+    private fun releaseLocks() {
         runCatching { wakeLock?.takeIf { it.isHeld }?.release() }
         wakeLock = null
+        runCatching { wifiLock?.takeIf { it.isHeld }?.release() }
+        wifiLock = null
     }
 
     private fun buildNotification(): Notification {

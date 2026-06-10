@@ -1,6 +1,10 @@
 package jetzy.managers
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import io.ktor.network.selector.SelectorManager
@@ -45,6 +49,7 @@ class LanMdnsP2PM(private val context: Context) : PeerDiscoveryP2PM() {
     private var discoveryListener: NsdManager.DiscoveryListener? = null
     private var serverSocket: ServerSocket? = null
     private var selectorManager: SelectorManager? = null
+    private var wifiLostCallback: ConnectivityManager.NetworkCallback? = null
 
     private val foundPeers = mutableMapOf<String, NsdServiceInfo>()
     // Parallel map of already-mapped peers, kept in sync with [foundPeers] at every
@@ -98,6 +103,7 @@ class LanMdnsP2PM(private val context: Context) : PeerDiscoveryP2PM() {
 
         registerService(deviceName, bound.port)
         startBrowsing()
+        watchWifiLoss()
     }
 
     override suspend fun stopDiscoveryAndAdvertising() {
@@ -105,8 +111,48 @@ class LanMdnsP2PM(private val context: Context) : PeerDiscoveryP2PM() {
         runCatching { discoveryListener?.let { nsdManager.stopServiceDiscovery(it) } }
         registrationListener = null
         discoveryListener = null
+        unwatchWifiLoss()
+        // Close the listening socket too — a restart (e.g. the discovery screen's LaunchedEffect
+        // re-running after a config change) binds a fresh one, and without this the old socket
+        // leaked while still accepting.
+        runCatching { serverSocket?.close() }
+        serverSocket = null
         isDiscovering.value = false
         isAdvertising.value = false
+    }
+
+    /**
+     * NSD lost-callbacks are unreliable when the whole Wi-Fi network drops (vs a single peer
+     * leaving), so the radar kept showing stale peers — and the "try a different transport"
+     * escape hatch is gated on the peer list being empty. Watch the Wi-Fi network itself and
+     * clear the list the moment it goes.
+     */
+    private fun watchWifiLoss() {
+        if (wifiLostCallback != null) return
+        val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onLost(network: Network) {
+                if (foundPeerModels.isEmpty()) return
+                foundPeers.clear()
+                foundPeerModels.clear()
+                availablePeers.value = emptyList()
+                diag("Wi-Fi lost — cleared stale mDNS peers")
+            }
+        }
+        runCatching {
+            cm.registerNetworkCallback(
+                NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build(),
+                callback,
+            )
+            wifiLostCallback = callback
+        }
+    }
+
+    private fun unwatchWifiLoss() {
+        val callback = wifiLostCallback ?: return
+        wifiLostCallback = null
+        val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        runCatching { cm.unregisterNetworkCallback(callback) }
     }
 
     private fun registerService(deviceName: String, port: Int) {
