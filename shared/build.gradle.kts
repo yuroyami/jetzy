@@ -138,6 +138,7 @@ kotlin {
 
         commonTest.dependencies {
             implementation(kotlin("test"))
+            implementation(libs.koroutines.test) // Dispatchers.setMain for viewmodel tests
         }
 
         androidMain.dependencies {

@@ -65,6 +65,7 @@ koin-compose-navigation3 = { module = "io.insert-koin:koin-compose-navigation3" 
 
 ## Android-only
 koroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "koroutines" }
+koroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "koroutines" }
 koroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "koroutines" }
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 zxing-javase = { module = "com.google.zxing:javase", version.ref = "zxing" }
