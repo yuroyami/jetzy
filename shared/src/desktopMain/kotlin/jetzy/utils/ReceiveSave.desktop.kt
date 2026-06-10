@@ -1,6 +1,7 @@
 package jetzy.utils
 
 import kotlinx.coroutines.withContext
+import java.awt.Desktop
 import java.io.File
 import java.util.Locale
 
@@ -32,3 +33,7 @@ private fun defaultDownloadsDir(): String {
     if (!jetzy.exists()) jetzy.mkdirs()
     return jetzy.absolutePath
 }
+
+actual fun openReceivedLocation(): Boolean = runCatching {
+    Desktop.getDesktop().open(File(defaultDownloadsDir()))
+}.isSuccess

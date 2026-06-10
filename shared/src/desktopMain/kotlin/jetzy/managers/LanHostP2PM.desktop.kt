@@ -7,7 +7,6 @@ import io.ktor.network.sockets.connection
 import io.ktor.network.sockets.port
 import jetzy.models.QRData
 import jetzy.utils.PreferablyIO
-import jetzy.utils.getDeviceName
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -78,7 +77,7 @@ class LanHostP2PM : P2PManager() {
                 hotspotPassword = "",                  // ditto
                 ipAddress = localAddress,
                 port = bound.port,
-                deviceName = getDeviceName(),
+                deviceName = jetzy.utils.deviceName,
                 sessionId = session,
             )
         } catch (e: Exception) {

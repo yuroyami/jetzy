@@ -17,6 +17,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -25,12 +26,22 @@ import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import jetzy.models.JetzyElement
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.add_files_to_share
+import jetzy.shared.generated.resources.added_items
 import jetzy.shared.generated.resources.choose_files
+import jetzy.shared.generated.resources.clipboard_added
+import jetzy.shared.generated.resources.clipboard_empty
+import jetzy.shared.generated.resources.no_received_yet
+import jetzy.shared.generated.resources.received_files
+import jetzy.shared.generated.resources.connect_to_receive
+import jetzy.shared.generated.resources.send
+import jetzy.shared.generated.resources.send_clipboard
 import jetzy.shared.generated.resources.welcome_subtitle
 import jetzy.shared.generated.resources.welcome_title
 import jetzy.theme.sdp
@@ -39,6 +50,7 @@ import jetzy.ui.LocalViewmodel
 import jetzy.ui.Screen
 import jetzy.utils.ComposeUtils.JetzyText
 import jetzy.utils.ComposeUtils.scheme
+import jetzy.utils.openReceivedLocation
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -82,7 +94,7 @@ fun MainScreenUI() {
                         // Single action that reads either way: "Send" when files are staged,
                         // "Connect to receive" when the tray is empty.
                         Text(
-                            if (hasFiles) "Send" else "Connect to receive",
+                            if (hasFiles) stringResource(Res.string.send) else stringResource(Res.string.connect_to_receive),
                             style = MaterialTheme.typography.titleLarge,
                         )
                     }
@@ -96,6 +108,11 @@ fun MainScreenUI() {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(pv)
+                // Desktop: files/folders dropped from Finder/Explorer land straight in the tray.
+                .jetzyDropTarget { dropped ->
+                    viewmodel.elementsToSend.addAll(dropped)
+                    viewmodel.snackyRes(Res.string.added_items, dropped.size)
+                }
                 .verticalScroll(parentScrollState)
                 .animateContentSize(),
             horizontalAlignment = CenterHorizontally,
@@ -141,6 +158,22 @@ fun MainScreenUI() {
                         Text(stringResource(Res.string.choose_files), style = MaterialTheme.typography.titleLarge)
                     }
 
+                    // The most common "beam this link/OTP to my other device" case in one tap —
+                    // paste-to-send used to be buried four levels deep in the text-add dialog.
+                    @Suppress("DEPRECATION") // TODO: LocalClipboard suspend API (with TextRow's copy side)
+                    val clipboard = LocalClipboardManager.current
+                    TextButton(onClick = {
+                        val clipText = clipboard.getText()?.text?.takeIf { it.isNotBlank() }
+                        if (clipText != null) {
+                            viewmodel.elementsToSend.add(JetzyElement.Text(clipText))
+                            viewmodel.snackyRes(Res.string.clipboard_added)
+                        } else {
+                            viewmodel.snackyRes(Res.string.clipboard_empty)
+                        }
+                    }) {
+                        Text(stringResource(Res.string.send_clipboard), style = MaterialTheme.typography.titleSmall)
+                    }
+
                     val countText = remember(
                         filesForSending.size,
                         foldersForSending.size,
@@ -168,6 +201,15 @@ fun MainScreenUI() {
                         color = lerp(scheme.onSurface, scheme.outlineVariant, 0.65f)
                     )
                 }
+            }
+
+            // Post-transfer access: everything Jetzy received lives in one deterministic
+            // folder — jump there without redoing a transfer (the app used to offer no way
+            // back to received files once the success screen was dismissed).
+            TextButton(onClick = {
+                if (!openReceivedLocation()) viewmodel.snackyRes(Res.string.no_received_yet)
+            }) {
+                Text(stringResource(Res.string.received_files), style = MaterialTheme.typography.titleSmall)
             }
 
             Spacer(Modifier.height(70.sdp))

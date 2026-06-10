@@ -5,7 +5,7 @@ import io.ktor.utils.io.readAvailable
 import io.ktor.utils.io.writeFully
 import jetzy.p2p.P2pPeer
 import jetzy.utils.PreferablyIO
-import jetzy.utils.getDeviceName
+import jetzy.utils.deviceName
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
@@ -41,7 +41,7 @@ class MpcP2PM : PeerDiscoveryP2PM() {
 
     override val technology = jetzy.p2p.P2pTechnology.MultipeerConnectivity
 
-    private val localPeerID = MCPeerID(displayName = getDeviceName())
+    private val localPeerID = MCPeerID(displayName = deviceName)
     private val session = MCSession(peer = localPeerID, securityIdentity = null, encryptionPreference = MCEncryptionOptional)
 
     private var advertiser: MCNearbyServiceAdvertiser? = null

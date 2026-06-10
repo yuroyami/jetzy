@@ -3,7 +3,9 @@ package jetzy.utils
 import kotlinx.coroutines.withContext
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
+import platform.Foundation.NSURL
 import platform.Foundation.NSUserDomainMask
+import platform.UIKit.UIApplication
 
 /**
  * iOS: move into `<Documents>/Jetzy` — a real POSIX path, so the shared [moveStagedFilesToDir]
@@ -18,3 +20,13 @@ actual suspend fun saveReceivedFilesToDefault(files: List<StagedReceivedFile>): 
         val saved = runCatching { moveStagedFilesToDir(files, "$docs/Jetzy") }.getOrDefault(emptyList())
         if (saved.isEmpty()) null else SaveReport("On My iPhone › Jetzy", saved)
     }
+
+/** shareddocuments:// is the Files app's scheme for jumping straight to an on-device path. */
+actual fun openReceivedLocation(): Boolean {
+    val docs = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true)
+        .firstOrNull() as? String ?: return false
+    val url = NSURL(string = "shareddocuments://$docs/Jetzy") ?: return false
+    if (!UIApplication.sharedApplication.canOpenURL(url)) return false
+    UIApplication.sharedApplication.openURL(url, options = emptyMap<Any?, Any>(), completionHandler = null)
+    return true
+}

@@ -129,6 +129,8 @@ kotlin {
             implementation(libs.filekit)
             implementation(libs.filekit.coil) //Extension for coil support with filekit
 
+            implementation(libs.multiplatform.settings) // JetzyPrefs (night mode, device-name override)
+
             /* Koin Dependency Injection */
             implementation(project.dependencies.platform(libs.koin.bom))
             implementation(libs.bundles.koin)

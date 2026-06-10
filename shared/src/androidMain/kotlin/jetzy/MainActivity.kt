@@ -1,6 +1,8 @@
 package jetzy
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -18,12 +20,16 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import io.github.vinceglb.filekit.PlatformFile
 import jetzy.managers.BluetoothSppP2PM
 import jetzy.managers.HotspotP2PM
 import jetzy.managers.LanMdnsP2PM
 import jetzy.managers.P2PManager
 import jetzy.managers.WiFiDirectP2PM
 import jetzy.managers.WifiAwareP2PM
+import jetzy.models.JetzyElement
+import jetzy.shared.generated.resources.Res
+import jetzy.shared.generated.resources.added_items
 import jetzy.utils.isWifiAwareSupported
 import jetzy.p2p.P2pPlatformCallback
 import jetzy.services.JetzyForegroundService
@@ -45,6 +51,9 @@ class MainActivity: ComponentActivity(), P2pPlatformCallback {
         // instead of leaking this Activity for the life of the process.
         val appCtx = applicationContext
         contextGetter = { appCtx }
+
+        // Share-sheet launch: stash now, apply once the viewmodel exists (see onViewmodel).
+        pendingShared = extractSharedElements(intent)
 
         /* Tweaking some window UI elements */
         window.attributes = window.attributes.apply {
@@ -69,6 +78,9 @@ class MainActivity: ComponentActivity(), P2pPlatformCallback {
                     if (viewmodel.p2pManager != null) {
                         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                     }
+                    // Launched via the share sheet: the extras were stashed in onCreate because
+                    // the viewmodel doesn't exist until this callback.
+                    consumePendingShare()
                 }
             )
 
@@ -115,6 +127,53 @@ class MainActivity: ComponentActivity(), P2pPlatformCallback {
             jetzy.p2p.P2pTechnology.BluetoothSpp -> BluetoothSppP2PM(this)
             else -> null
         }
+
+    // ── Share-sheet intake ────────────────────────────────────────────────────
+    /** Elements extracted from a SEND/SEND_MULTIPLE launch, parked until the viewmodel exists. */
+    private var pendingShared: List<JetzyElement> = emptyList()
+
+    private fun consumePendingShare() {
+        val shared = pendingShared
+        pendingShared = emptyList()
+        if (shared.isEmpty()) return
+        viewmodel.elementsToSend.addAll(shared)
+        viewmodel.snackyRes(Res.string.added_items, shared.size)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // App already running and the user shared more content into it.
+        val shared = extractSharedElements(intent)
+        if (shared.isNotEmpty() && ::viewmodel.isInitialized) {
+            viewmodel.elementsToSend.addAll(shared)
+            viewmodel.snackyRes(Res.string.added_items, shared.size)
+        }
+    }
+
+    /**
+     * Maps a share-sheet launch into tray elements: streamed URIs become [JetzyElement.File]
+     * (the read grant lives as long as this task — plenty for a session), a plain-text share
+     * becomes [JetzyElement.Text]. Anything else is ignored.
+     */
+    private fun extractSharedElements(intent: Intent?): List<JetzyElement> {
+        intent ?: return emptyList()
+        fun uri(u: Uri?): JetzyElement? = u?.let { JetzyElement.File(PlatformFile(it)) }
+        return when (intent.action) {
+            Intent.ACTION_SEND -> {
+                @Suppress("DEPRECATION")
+                val stream = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                val text = intent.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { it.isNotBlank() }
+                listOfNotNull(uri(stream) ?: text?.let { JetzyElement.Text(it) })
+            }
+            Intent.ACTION_SEND_MULTIPLE -> {
+                @Suppress("DEPRECATION")
+                intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)
+                    .orEmpty()
+                    .mapNotNull { uri(it) }
+            }
+            else -> emptyList()
+        }
+    }
 
     private val p2pPermissioner = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()

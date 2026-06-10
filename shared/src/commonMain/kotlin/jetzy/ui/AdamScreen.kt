@@ -158,11 +158,13 @@ fun AdamScreen(onViewmodel: (JetzyViewmodel) -> Unit) {
                                         if (currentScreen != Screen.FilePickingScreen) {
                                             IconButton(
                                                 onClick = {
-                                                    viewmodel.nightMode.value = when (nightMode) {
-                                                        NightMode.SYSTEM -> if (isSystemInDarkMode) NightMode.LIGHT else NightMode.DARK
-                                                        NightMode.DARK -> NightMode.LIGHT
-                                                        NightMode.LIGHT -> NightMode.DARK
-                                                    }
+                                                    viewmodel.setNightMode(
+                                                        when (nightMode) {
+                                                            NightMode.SYSTEM -> if (isSystemInDarkMode) NightMode.LIGHT else NightMode.DARK
+                                                            NightMode.DARK -> NightMode.LIGHT
+                                                            NightMode.LIGHT -> NightMode.DARK
+                                                        }
+                                                    )
                                                 }
                                             ) {
                                                 Icon(

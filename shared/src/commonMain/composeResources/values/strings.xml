@@ -8,6 +8,13 @@
     <string name="welcome_subtitle">Quickly send &amp; receive files across different platforms</string>
     <string name="choose_files">Choose files</string>
     <string name="add_files_to_share">Add files to share</string>
+    <string name="send">Send</string>
+    <string name="connect_to_receive">Connect to receive</string>
+    <string name="send_clipboard">Send clipboard</string>
+    <string name="clipboard_added">Clipboard text added to the tray</string>
+    <string name="clipboard_empty">Clipboard is empty</string>
+    <string name="received_files">Received files</string>
+    <string name="no_received_yet">Nothing received yet</string>
     <string name="sending">Sending</string>
     <string name="receiving">Receiving</string>
     <string name="version_label">Version %1$s</string>
@@ -64,6 +71,10 @@
     <string name="try_again">Try again</string>
     <string name="connect_failed_title">Couldn\'t connect</string>
     <string name="visible_as">You\'re visible as "%1$s"</string>
+    <string name="edit_name_title">Your device name</string>
+    <string name="device_name_hint">Shown to nearby devices. Leave empty to use the device\'s own name.</string>
+    <string name="save">Save</string>
+    <string name="name_saved_hint">Name saved — applies from the next discovery.</string>
     <string name="try_different_transport">Try a different transport</string>
     <string name="retry">Retry</string>
 
@@ -113,6 +124,7 @@
     <string name="cancel_transfer">Cancel transfer</string>
     <string name="reconnect_and_resume">Reconnect and resume where we left off</string>
     <string name="saved_to">✓ Saved to %1$s</string>
+    <string name="open_folder">Open</string>
     <string name="faster_link_available">Faster link available: %1$s</string>
     <string name="connecting">Connecting…</string>
     <string name="calculating">Calculating…</string>

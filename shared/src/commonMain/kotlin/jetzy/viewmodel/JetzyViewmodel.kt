@@ -14,6 +14,7 @@ import jetzy.p2p.P2pOperation
 import jetzy.p2p.P2pPlatformCallback
 import jetzy.theme.NightMode
 import jetzy.ui.Screen
+import jetzy.utils.JetzyPrefs
 import jetzy.utils.NavigationDsl
 import jetzy.utils.PreferablyIO
 import kotlinx.coroutines.CoroutineScope
@@ -251,7 +252,13 @@ class JetzyViewmodel : ViewModel() {
         )
     }
 
-    val nightMode = MutableStateFlow(NightMode.SYSTEM)
+    val nightMode = MutableStateFlow(JetzyPrefs.nightMode)
+
+    /** Theme toggle, persisted — the in-memory-only flow reset to SYSTEM every launch. */
+    fun setNightMode(mode: NightMode) {
+        nightMode.value = mode
+        JetzyPrefs.nightMode = mode
+    }
 
     val elementsToSend = mutableStateListOf<JetzyElement>().also { list ->
         if (BuildConfig.DEBUG) {

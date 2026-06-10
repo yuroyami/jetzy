@@ -36,6 +36,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -74,6 +75,7 @@ import jetzy.shared.generated.resources.faster_link_available
 import jetzy.shared.generated.resources.files_of_total
 import jetzy.shared.generated.resources.hours_remaining
 import jetzy.shared.generated.resources.minutes_remaining
+import jetzy.shared.generated.resources.open_folder
 import jetzy.shared.generated.resources.saved_to
 import jetzy.shared.generated.resources.seconds_remaining
 import jetzy.shared.generated.resources.total_size
@@ -90,7 +92,8 @@ import jetzy.shared.generated.resources.text_snippet
 import jetzy.p2p.TransportMatch
 import jetzy.ui.LocalViewmodel
 import jetzy.utils.Platform
-import jetzy.utils.getDeviceName
+import jetzy.utils.deviceName
+import jetzy.utils.openReceivedLocation
 import jetzy.utils.platform
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -153,7 +156,7 @@ fun TransferScreenUI() {
                     val isSender = viewmodel.isSender
                     val senderName = mf.senderName
                     val senderPlatform = mf.senderPlatform
-                    val receiverName = if (isSender) peer.name else getDeviceName()
+                    val receiverName = if (isSender) peer.name else deviceName
                     val receiverPlatform = if (isSender) peer.platform else platform
 
                     Row(
@@ -253,14 +256,23 @@ fun TransferScreenUI() {
                 if (transferComplete && hasReceivedItems) {
                     val savedTo = savedLabel
                     if (saveComplete && savedTo != null) {
-                        Text(
-                            text = stringResource(Res.string.saved_to, savedTo),
-                            color = colorScheme.primary,
-                            fontSize = 10.ssp,
-                            fontWeight = FontWeight.W500,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.sdp),
-                            textAlign = TextAlign.Center,
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 2.sdp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = stringResource(Res.string.saved_to, savedTo),
+                                color = colorScheme.primary,
+                                fontSize = 10.ssp,
+                                fontWeight = FontWeight.W500,
+                            )
+                            // The success state used to be a dead end — every input for "show me
+                            // the files" existed and was discarded.
+                            TextButton(onClick = { openReceivedLocation() }) {
+                                Text(stringResource(Res.string.open_folder), fontSize = 10.ssp, fontWeight = FontWeight.W600)
+                            }
+                        }
                     } else if (!saveComplete) {
                         // Fallback: auto-save couldn't persist (rare) — let the user pick a folder.
                         // isSaving is hoisted to TransferScreenUI so this branch never violates

@@ -31,7 +31,7 @@ import jetzy.permissions.AndroidPermissionRequirements
 import jetzy.permissions.PermissionRequirement
 import jetzy.utils.JETZY_WIFI_AWARE_SERVICE
 import jetzy.utils.PreferablyIO
-import jetzy.utils.getDeviceName
+import jetzy.utils.deviceName
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -274,7 +274,7 @@ class WifiAwareP2PM(private val context: Context) : PeerDiscoveryP2PM() {
         info.seenVia.sendMessage(
             info.peerHandle,
             MESSAGE_ID_HELLO,
-            "HELLO\n${getDeviceName()}".toByteArray(StandardCharsets.UTF_8)
+            "HELLO\n$deviceName".toByteArray(StandardCharsets.UTF_8)
         )
         diag("HELLO sent to ${info.displayName}")
 

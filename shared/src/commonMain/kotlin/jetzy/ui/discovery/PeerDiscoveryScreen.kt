@@ -24,9 +24,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -64,6 +67,10 @@ import jetzy.p2p.P2pPeer
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.cancel
 import jetzy.shared.generated.resources.connect_to_peer
+import jetzy.shared.generated.resources.device_name_hint
+import jetzy.shared.generated.resources.edit_name_title
+import jetzy.shared.generated.resources.name_saved_hint
+import jetzy.shared.generated.resources.save
 import jetzy.shared.generated.resources.ensure_jetzy_open
 import jetzy.shared.generated.resources.find_nearby_devices
 import jetzy.shared.generated.resources.nearby
@@ -76,7 +83,8 @@ import jetzy.shared.generated.resources.select_device_to_connect
 import jetzy.shared.generated.resources.try_different_transport
 import jetzy.shared.generated.resources.visible_as
 import jetzy.ui.LocalViewmodel
-import jetzy.utils.getDeviceName
+import jetzy.utils.JetzyPrefs
+import jetzy.utils.deviceName
 import org.jetbrains.compose.resources.stringResource
 import kotlinx.coroutines.launch
 import kotlin.math.PI
@@ -124,7 +132,7 @@ fun PeerDiscoveryScreenUI() {
 
     LaunchedEffect(null) {
         viewmodel.viewModelScope.launch {
-            manager.startDiscoveryAndAdvertising(getDeviceName())
+            manager.startDiscoveryAndAdvertising(deviceName)
         }
     }
 
@@ -177,14 +185,33 @@ fun PeerDiscoveryScreenUI() {
                     color = colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
-                // Two same-model phones advertise the same name (B17) — at least let each
-                // user answer "which one is you?" for the person scanning for them.
+                // Two same-model phones advertise the same name (B17) — let each user answer
+                // "which one is you?" for the person scanning for them, and tap to change it
+                // (persisted; advertised from the next discovery session).
+                var displayName by remember { mutableStateOf(deviceName) }
+                var showNameEditor by remember { mutableStateOf(false) }
                 Text(
-                    text = stringResource(Res.string.visible_as, getDeviceName()),
+                    text = stringResource(Res.string.visible_as, displayName),
                     fontSize = 9.ssp,
                     color = colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.sdp))
+                        .clickable(role = Role.Button) { showNameEditor = true }
+                        .padding(horizontal = 6.sdp, vertical = 2.sdp),
                 )
+                if (showNameEditor) {
+                    DeviceNameDialog(
+                        current = displayName,
+                        onSave = { newName ->
+                            JetzyPrefs.deviceNameOverride = newName
+                            displayName = deviceName
+                            showNameEditor = false
+                            viewmodel.snackyRes(Res.string.name_saved_hint)
+                        },
+                        onDismiss = { showNameEditor = false },
+                    )
+                }
             }
 
             // ── Radar ────────────────────────────────────────────────────────
@@ -619,4 +646,36 @@ private fun ConnectButton(peer: P2pPeer?, onClick: () -> Unit) {
             color = colorScheme.onPrimary,
         )
     }
+}
+
+// ── Device-name editor ─────────────────────────────────────────────────────────
+
+@Composable
+private fun DeviceNameDialog(current: String, onSave: (String) -> Unit, onDismiss: () -> Unit) {
+    var value by remember { mutableStateOf(current) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.edit_name_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.sdp)) {
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = { value = it },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    text = stringResource(Res.string.device_name_hint),
+                    fontSize = 9.ssp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(value) }) { Text(stringResource(Res.string.save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.cancel)) }
+        },
+    )
 }

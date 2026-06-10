@@ -1,6 +1,8 @@
 package jetzy.utils
 
+import android.app.DownloadManager
 import android.content.ContentValues
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -87,3 +89,10 @@ private fun saveToAppSpecificDownloads(files: List<StagedReceivedFile>): SaveRep
     val saved = moveStagedFilesToDir(files, base.absolutePath)
     return if (saved.isEmpty()) null else SaveReport("App storage › Download", saved)
 }
+
+/** Files land in MediaStore Downloads/Jetzy, so the system Downloads UI is the right viewer. */
+actual fun openReceivedLocation(): Boolean = runCatching {
+    MainActivity.contextGetter().startActivity(
+        Intent(DownloadManager.ACTION_VIEW_DOWNLOADS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    )
+}.isSuccess

@@ -46,12 +46,19 @@ expect fun generateTimestampMillis(): Long
 expect fun getDeviceName(): String
 
 /**
- * Memoized device name. [getDeviceName] hits the OS on every call — and on desktop does a
- * blocking InetAddress lookup — yet the value is stable for the process lifetime. Callers on
- * hot paths (the handshake, Compose recomposition) should read this instead of re-invoking
- * [getDeviceName]. `by lazy` defaults to thread-safe (SYNCHRONIZED) initialization.
+ * Memoized platform device name. [getDeviceName] hits the OS on every call — and on desktop does
+ * a blocking InetAddress lookup — yet the value is stable for the process lifetime. `by lazy`
+ * defaults to thread-safe (SYNCHRONIZED) initialization.
  */
-val deviceName: String by lazy { getDeviceName() }
+private val platformDeviceName: String by lazy { getDeviceName() }
+
+/**
+ * The name this device advertises and embeds in HELLO/QR frames: the user's saved override when
+ * set ([JetzyPrefs.deviceNameOverride] — two same-model phones otherwise collide as e.g. two
+ * "Pixel 7"s, B17), else the memoized platform name. All callers — hot paths included — read
+ * this instead of re-invoking [getDeviceName].
+ */
+val deviceName: String get() = JetzyPrefs.deviceNameOverride ?: platformDeviceName
 
 expect val PreferablyIO: CoroutineDispatcher
 

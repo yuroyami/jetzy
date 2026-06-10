@@ -19,6 +19,7 @@ navigation3Ui = "1.1.1"
 coil = "3.4.0"
 kotlinx-io = "0.9.0"
 filekit = "0.14.1"
+multiplatformSettings = "1.3.0"
 kotlinx-datetime = "0.8.0"
 qrose = "1.1.2"
 
@@ -42,6 +43,7 @@ koroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", ve
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 filekit = { module = "io.github.vinceglb:filekit-dialogs-compose", version.ref = "filekit" }
 filekit-coil = { module = "io.github.vinceglb:filekit-coil", version.ref = "filekit" }
+multiplatform-settings = { module = "com.russhwolf:multiplatform-settings-no-arg", version.ref = "multiplatformSettings" }
 coil = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose-multiplatform" }
 compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose-multiplatform" }

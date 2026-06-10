@@ -1,6 +1,7 @@
 package jetzy.utils
 
 import kotlinx.coroutines.withContext
+import platform.AppKit.NSWorkspace
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
@@ -17,3 +18,9 @@ actual suspend fun saveReceivedFilesToDefault(files: List<StagedReceivedFile>): 
         val saved = runCatching { moveStagedFilesToDir(files, "$docs/Jetzy") }.getOrDefault(emptyList())
         if (saved.isEmpty()) null else SaveReport("Documents › Jetzy", saved)
     }
+
+actual fun openReceivedLocation(): Boolean {
+    val docs = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true)
+        .firstOrNull() as? String ?: return false
+    return NSWorkspace.sharedWorkspace.openFile("$docs/Jetzy")
+}

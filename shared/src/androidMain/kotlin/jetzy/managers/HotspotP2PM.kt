@@ -16,7 +16,6 @@ import jetzy.p2p.P2pTechnology
 import jetzy.permissions.AndroidPermissionRequirements
 import jetzy.permissions.PermissionRequirement
 import jetzy.utils.PreferablyIO
-import jetzy.utils.getDeviceName
 import jetzy.utils.loggy
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
@@ -135,7 +134,7 @@ class HotspotP2PM(private val context: Context) : P2PManager() {
                 hotspotPassword = password,
                 ipAddress = localAddress,
                 port = boundSocket.port,
-                deviceName = getDeviceName(),
+                deviceName = jetzy.utils.deviceName,
                 sessionId = session,
                 // Advertised so a scanner who supports a faster mutual transport
                 // (e.g. Wi-Fi Aware) can spot it and offer to upgrade after the

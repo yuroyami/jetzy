@@ -45,6 +45,13 @@ data class SaveReport(
 expect suspend fun saveReceivedFilesToDefault(files: List<StagedReceivedFile>): SaveReport?
 
 /**
+ * Opens the platform's default receive location (the same place [saveReceivedFilesToDefault]
+ * writes to) in the system file browser. Returns false when the platform couldn't launch one —
+ * the caller simply hides/ignores the affordance.
+ */
+expect fun openReceivedLocation(): Boolean
+
+/**
  * Shared, path-based mover used by the actuals whose default location is a real filesystem path
  * (iOS, macOS, desktop, and Android's API-≤28 fallback). Creates [destDirRoot] and any sanitized
  * subfolders, then moves each staged file in, suffixing the basename on collision so nothing is
