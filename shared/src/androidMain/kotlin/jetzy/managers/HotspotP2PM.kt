@@ -59,7 +59,6 @@ class HotspotP2PM(private val context: Context) : P2PManager() {
                 add(AndroidPermissionRequirements.locationServicesEnabled(activity))
             }
             add(AndroidPermissionRequirements.mobileHotspotOff(activity))
-            add(AndroidPermissionRequirements.ignoreBatteryOptimizations(activity))
         }
     }
 

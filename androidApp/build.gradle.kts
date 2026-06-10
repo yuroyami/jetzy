@@ -26,7 +26,7 @@ android {
                 storeFile = keystoreFile
 
                 val localProperties = Properties().apply {
-                    val file = File("local.properties")
+                    val file = rootProject.file("local.properties")
                     if (file.exists()) load(file.inputStream())
                 }
                 localProperties.apply {
@@ -44,7 +44,11 @@ android {
 
     buildTypes {
         release {
+            // Shrinking stays OFF until the rules in proguard-rules.pro get on-device
+            // validation (ktor sockets + Koin reflection are the known breakage risks).
+            // The rules file is staged so flipping this is config + testing, not research.
             isMinifyEnabled = false
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfigs.findByName("keystore")?.let { signingConfig = it }
         }
         debug {

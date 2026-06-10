@@ -13,8 +13,6 @@ import android.provider.Settings
 import androidx.core.content.ContextCompat
 import jetzy.MainActivity
 import jetzy.shared.generated.resources.Res
-import jetzy.shared.generated.resources.perm_background_desc
-import jetzy.shared.generated.resources.perm_background_title
 import jetzy.shared.generated.resources.perm_hotspot_off_desc
 import jetzy.shared.generated.resources.perm_hotspot_off_title
 import jetzy.shared.generated.resources.perm_location_desc
@@ -155,36 +153,6 @@ object AndroidPermissionRequirements {
                 }.recoverCatching {
                     activity.startActivity(
                         Intent(Settings.ACTION_WIRELESS_SETTINGS)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    )
-                }
-            },
-        )
-    }
-
-    fun ignoreBatteryOptimizations(activity: MainActivity): PermissionRequirement {
-        val pm = activity.applicationContext.getSystemService(Context.POWER_SERVICE) as PowerManager
-        val pkg = activity.packageName
-        return PermissionRequirement(
-            id = "ignore_battery_opt",
-            titleRes = Res.string.perm_background_title,
-            descriptionRes = Res.string.perm_background_desc,
-            kind = PermissionRequirement.Kind.BACKGROUND_OPTIN,
-            isGrantedNow = { pm.isIgnoringBatteryOptimizations(pkg) },
-            request = {
-                // ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS triggers a system dialog
-                // on most OEMs; fall back to the settings list if the targeted intent
-                // is filtered out (Play store policy varies on OEM forks).
-                runCatching {
-                    @SuppressWarnings("BatteryLife")
-                    activity.startActivity(
-                        Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                            .setData(Uri.parse("package:$pkg"))
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    )
-                }.recoverCatching {
-                    activity.startActivity(
-                        Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     )
                 }

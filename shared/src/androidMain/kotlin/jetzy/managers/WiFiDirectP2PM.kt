@@ -64,7 +64,6 @@ class WiFiDirectP2PM(private val context: Context) : PeerDiscoveryP2PM() {
                 add(AndroidPermissionRequirements.nearbyDevices(activity))
                 add(AndroidPermissionRequirements.postNotifications(activity))
                 add(AndroidPermissionRequirements.wifiEnabled(activity))
-                add(AndroidPermissionRequirements.ignoreBatteryOptimizations(activity))
             }
         }
 

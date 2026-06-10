@@ -27,9 +27,6 @@
     <!-- Notification permission needed (API 33+) for the foreground-service notification. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Battery optimization opt-out so the OS doesn't kill us mid-transfer. -->
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-
     <!-- Bluetooth Classic SPP transport (fallback when Wi-Fi-based paths fail). API 31+
          splits BT permissions into _CONNECT (pair/socket) and _SCAN (discovery); older
          APIs used the umbrella BLUETOOTH/BLUETOOTH_ADMIN, both kept for compatibility. -->

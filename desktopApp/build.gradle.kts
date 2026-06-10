@@ -37,7 +37,11 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "Jetzy"
-            packageVersion = kmpSsot.versionName.get()
+            // jpackage requires MAJOR > 0 for DMG/MSI ProductVersion, so the installer
+            // version can't track the app's 0.x versionName until 1.0 — map 0.x.y -> 1.x.y.
+            packageVersion = kmpSsot.versionName.get().let { v ->
+                if (v.startsWith("0.")) "1." + v.removePrefix("0.") else v
+            }
             description = "Peer-to-peer file transfer for desktop"
             copyright = "© 2026 Yuroyami"
 

@@ -170,6 +170,4 @@
     <string name="perm_location_services_desc">Android 9–12 require location services for the hotspot to broadcast its name.</string>
     <string name="perm_hotspot_off_title">Mobile hotspot off</string>
     <string name="perm_hotspot_off_desc">A running mobile hotspot blocks Jetzy from starting its own. Turn it off in Settings.</string>
-    <string name="perm_background_title">Background activity</string>
-    <string name="perm_background_desc">Allow Jetzy to keep the transfer running when the screen turns off.</string>
 </resources>
