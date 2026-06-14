@@ -168,6 +168,9 @@
     <string name="a11y_status_done">Done</string>
     <string name="a11y_status_failed">Failed</string>
 
+    <!-- Discovery -->
+    <string name="connect_directly">Not on the same Wi-Fi? Connect directly</string>
+
     <!-- Onboarding -->
     <string name="onboarding_title">How Jetzy works</string>
     <string name="onboarding_step_open">Open Jetzy on both devices — they must be near each other.</string>

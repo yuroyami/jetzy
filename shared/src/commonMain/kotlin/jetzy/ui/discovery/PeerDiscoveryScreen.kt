@@ -66,6 +66,7 @@ import jetzy.managers.PeerDiscoveryP2PM
 import jetzy.p2p.P2pPeer
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.cancel
+import jetzy.shared.generated.resources.connect_directly
 import jetzy.shared.generated.resources.connect_to_peer
 import jetzy.shared.generated.resources.device_name_hint
 import jetzy.shared.generated.resources.edit_name_title
@@ -298,6 +299,32 @@ fun PeerDiscoveryScreenUI() {
                         fontSize = 10.ssp,
                         fontWeight = FontWeight.W500,
                         color = colorScheme.onSurface,
+                    )
+                }
+            }
+
+            // ── Connect-directly affordance (cross-network, e.g. Android↔iPhone with no shared
+            //    Wi-Fi) ──────────────────────────────────────────────────────────
+            // The deterministic universal path: jump straight to a QR-paired hotspot instead of
+            // walking the ladder onto transports the peer may not support (an iPhone can't do
+            // Wi-Fi Direct). Shown once the radar's been empty long enough.
+            if (emptyLongEnough) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.sdp))
+                        .background(colorScheme.primaryContainer)
+                        .clickable(role = Role.Button) {
+                            viewmodel.connectDirectly()
+                        }
+                        .padding(vertical = 8.sdp, horizontal = 12.sdp)
+                ) {
+                    Text(
+                        text = stringResource(Res.string.connect_directly),
+                        fontSize = 10.ssp,
+                        fontWeight = FontWeight.W600,
+                        color = colorScheme.onPrimaryContainer,
                     )
                 }
             }

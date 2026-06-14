@@ -12,11 +12,15 @@ import jetzy.managers.P2PManager
 import jetzy.models.JetzyElement
 import jetzy.p2p.P2pOperation
 import jetzy.p2p.P2pPlatformCallback
+import jetzy.p2p.P2pTechnology
+import jetzy.p2p.Role
 import jetzy.theme.NightMode
 import jetzy.ui.Screen
 import jetzy.utils.JetzyPrefs
 import jetzy.utils.NavigationDsl
+import jetzy.utils.Platform
 import jetzy.utils.PreferablyIO
+import jetzy.utils.platform
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -211,6 +215,43 @@ class JetzyViewmodel : ViewModel() {
                     newManager,
                     currentOperation.value ?: P2pOperation.RECEIVE,
                 )
+            }
+        }
+    }
+
+    /**
+     * Skip the radar and go straight to the universal cross-network path: a QR-paired hotspot.
+     * mDNS (the bootstrap) only finds a peer when both devices are already on the *same* Wi-Fi;
+     * when they aren't — the everyday Android↔iPhone "no shared network" case — this is the path
+     * that always works: Android stands up a WPA2 hotspot and shows a QR, the peer scans it and
+     * joins, payloads stream over TCP. Routed through [P2pPlatformCallback.getManagerForTechnology]
+     * so each platform picks the right side (Android hosts → HotspotP2PM; iOS/other joins →
+     * LanWifi). Disruptive (toggles the host's Wi-Fi), so it is an explicit user choice on the
+     * empty-radar screen, never auto-fired off a slow mDNS.
+     */
+    fun connectDirectly() {
+        val role = if (platform == Platform.Android) Role.HOST else Role.CLIENT
+        val manager = platformCallback.getManagerForTechnology(P2pTechnology.HotspotLAN, role) ?: run {
+            snacky("Direct connect isn't available on this device.")
+            return
+        }
+        manager.initialize(viewmodel = this)
+        // Direct-connect IS the cross-network endpoint of the ladder — park it so a later
+        // "Try a different transport" tap short-circuits instead of looping.
+        fallbackIndex.value = platformCallback.getDefaultFallbackManagers().size
+
+        val oldManager = p2pManager
+        p2pManager = manager
+        viewModelScope.launch(PreferablyIO) {
+            runCatching { oldManager?.cleanup() }
+            if (manager.permissionRequirements.isEmpty()) {
+                navigateTo(
+                    screen = if (manager.usesPeerDiscovery) Screen.PeerDiscoveryScreen else Screen.QRDiscoveryScreen,
+                    doRefresh = true,
+                    noWayToReturn = true,
+                )
+            } else {
+                pendingProceed.value = PendingProceed(manager, currentOperation.value ?: P2pOperation.RECEIVE)
             }
         }
     }
