@@ -19,7 +19,7 @@ import platform.Foundation.NSError
 import platform.Foundation.NSInputStream
 import platform.Foundation.NSOutputStream
 import platform.Foundation.NSStreamStatus
-import platform.MultipeerConnectivity.MCEncryptionOptional
+import platform.MultipeerConnectivity.MCEncryptionRequired
 import platform.MultipeerConnectivity.MCNearbyServiceAdvertiser
 import platform.MultipeerConnectivity.MCNearbyServiceAdvertiserDelegateProtocol
 import platform.MultipeerConnectivity.MCNearbyServiceBrowser
@@ -42,7 +42,8 @@ class MpcP2PM : PeerDiscoveryP2PM() {
     override val technology = jetzy.p2p.P2pTechnology.MultipeerConnectivity
 
     private val localPeerID = MCPeerID(displayName = deviceName)
-    private val session = MCSession(peer = localPeerID, securityIdentity = null, encryptionPreference = MCEncryptionOptional)
+    // MCEncryptionRequired (not Optional): refuse to negotiate the iOS↔iOS link down to plaintext.
+    private val session = MCSession(peer = localPeerID, securityIdentity = null, encryptionPreference = MCEncryptionRequired)
 
     private var advertiser: MCNearbyServiceAdvertiser? = null
     private var browser: MCNearbyServiceBrowser? = null

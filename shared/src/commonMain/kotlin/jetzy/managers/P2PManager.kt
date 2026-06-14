@@ -1,5 +1,6 @@
 package jetzy.managers
 
+import Jetzy.shared.BuildConfig
 import androidx.annotation.CallSuper
 import androidx.compose.runtime.mutableStateListOf
 import io.github.vinceglb.filekit.PlatformFile
@@ -421,10 +422,13 @@ abstract class P2PManager {
     )
 
     // ── Diagnostics helper ───────────────────────────────────────────────────
+    // diag messages carry peer device names + filenames. The in-memory 50-entry buffer stays
+    // on-device (never transmitted). The platform logger leg leaks the same PII into logcat/Console
+    // where other apps / sysdiagnose can read it, so it is gated to debug builds only.
     protected fun diag(msg: String) {
         val stamped = "[${generateTimestampMillis() % 100_000}] $msg"
         diagnostics.value = (diagnostics.value + stamped).takeLast(50)
-        loggy(stamped)
+        if (BuildConfig.DEBUG) loggy(stamped)
     }
 
     // ── Prepare elements (flatten folders) ──────────────────────────────────

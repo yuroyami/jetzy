@@ -72,7 +72,7 @@ kotlin {
         summary = "Some description for the Shared Module"
         homepage = "Link to the Shared Module homepage"
         version = "1.0"
-        ios.deploymentTarget = "14.0"
+        ios.deploymentTarget = "16.0" // align with the app target floor (README: iOS 16.0+)
         podfile = project.file("../iosApp/Podfile")
         framework {
             baseName = "shared"
@@ -187,5 +187,7 @@ kotlin {
 
 buildConfig {
     buildConfigField("APP_VERSION", kmpSsot.versionName.get())
-    buildConfigField("DEBUG", true)
+    // DEBUG was hardcoded true → leaked into release binaries (verbose PII logging, debug-only
+    // branches). Default false (release-safe); opt in locally with -Pjetzy.debug=true.
+    buildConfigField("DEBUG", providers.gradleProperty("jetzy.debug").map(String::toBoolean).getOrElse(false))
 }
