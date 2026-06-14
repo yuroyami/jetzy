@@ -1,13 +1,5 @@
 package jetzy.p2p
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Bluetooth
-import androidx.compose.material.icons.outlined.Hub
-import androidx.compose.material.icons.outlined.Lan
-import androidx.compose.material.icons.outlined.LeakAdd
-import androidx.compose.material.icons.outlined.Sensors
-import androidx.compose.material.icons.outlined.WifiTethering
-import androidx.compose.ui.graphics.vector.ImageVector
 import jetzy.utils.Platform
 import jetzy.utils.isWifiAwareSupported
 import jetzy.utils.platform
@@ -20,10 +12,7 @@ import jetzy.utils.platform
  */
 sealed class P2pTechnology(
     val id: String,
-    val icon: ImageVector,
     val supportedPlatforms: Set<Platform>,
-    val priority: P2pTechPriority,
-    val discoveryMode: P2pDiscoveryMode,
     /**
      * Stable bit assignment for the [jetzy.managers.JetzyProtocol.HelloFrame.capabilities]
      * bitmask and the `caps` field in [jetzy.models.QRData]. Each technology owns one bit
@@ -35,7 +24,6 @@ sealed class P2pTechnology(
      * Intrinsic desirability (0–100) of this transport *when it works* — a blend of
      * throughput, setup friction, and how disruptive it is to the device's existing
      * connectivity. [TransportNegotiator] ranks the mutually-supported transports by this.
-     * Finer-grained than [priority] (which is kept for display/tiering).
      */
     val quality: Int,
 ) {
@@ -130,9 +118,6 @@ sealed class P2pTechnology(
     object WiFiAware : P2pTechnology(
         id = "wifi_aware",
         supportedPlatforms = setOf(Platform.Android, Platform.IOS),
-        priority = P2pTechPriority.RECOMMENDED,
-        icon = Icons.Outlined.Sensors,
-        discoveryMode = P2pDiscoveryMode.PeerDiscovery,
         capabilityBit = 0,
         quality = 92,
     ) {
@@ -152,9 +137,6 @@ sealed class P2pTechnology(
     object WiFiDirect : P2pTechnology(
         id = "wifi_direct",
         supportedPlatforms = setOf(Platform.Android, Platform.PC),
-        priority = P2pTechPriority.RECOMMENDED,
-        icon = Icons.Outlined.LeakAdd,
-        discoveryMode = P2pDiscoveryMode.PeerDiscovery,
         capabilityBit = 1,
         quality = 84,
     ) {
@@ -170,9 +152,6 @@ sealed class P2pTechnology(
     object NearbyConnections : P2pTechnology(
         id = "nearby_connections",
         supportedPlatforms = setOf(Platform.Android),
-        priority = P2pTechPriority.RECOMMENDED,
-        icon = Icons.Outlined.Hub,
-        discoveryMode = P2pDiscoveryMode.PeerDiscovery,
         capabilityBit = 2,
         quality = 86,
     ) {
@@ -191,9 +170,6 @@ sealed class P2pTechnology(
     object MultipeerConnectivity : P2pTechnology(
         id = "multipeer",
         supportedPlatforms = setOf(Platform.IOS),
-        priority = P2pTechPriority.RECOMMENDED,
-        icon = Icons.Outlined.Hub,
-        discoveryMode = P2pDiscoveryMode.PeerDiscovery,
         capabilityBit = 3,
         quality = 88,
     ) {
@@ -213,9 +189,6 @@ sealed class P2pTechnology(
     object LocalNetworkMdns : P2pTechnology(
         id = "local_network_mdns",
         supportedPlatforms = setOf(Platform.Android, Platform.IOS, Platform.PC, Platform.Web),
-        priority = P2pTechPriority.RECOMMENDED,
-        icon = Icons.Outlined.Lan,
-        discoveryMode = P2pDiscoveryMode.PeerDiscovery,
         capabilityBit = 4,
         quality = 80,
     ) {
@@ -231,9 +204,6 @@ sealed class P2pTechnology(
     object LocalNetwork : P2pTechnology(
         id = "local_network",
         supportedPlatforms = setOf(Platform.Web, Platform.PC),
-        priority = P2pTechPriority.ACCEPTABLE,
-        icon = Icons.Outlined.Lan,
-        discoveryMode = P2pDiscoveryMode.QRCode,
         capabilityBit = 5,
         quality = 55,
     ) {
@@ -254,9 +224,6 @@ sealed class P2pTechnology(
     object HotspotLAN : P2pTechnology(
         id = "hotspot_lan",
         supportedPlatforms = setOf(Platform.Android, Platform.IOS),
-        priority = P2pTechPriority.ACCEPTABLE,
-        icon = Icons.Outlined.WifiTethering,
-        discoveryMode = P2pDiscoveryMode.QRCode,
         capabilityBit = 6,
         quality = 62,
     ) {
@@ -286,9 +253,6 @@ sealed class P2pTechnology(
     object BluetoothSpp : P2pTechnology(
         id = "bluetooth_spp",
         supportedPlatforms = setOf(Platform.Android, Platform.PC),
-        priority = P2pTechPriority.FALLBACK,
-        icon = Icons.Outlined.Bluetooth,
-        discoveryMode = P2pDiscoveryMode.PeerDiscovery,
         capabilityBit = 7,
         quality = 25,
     ) {
@@ -304,9 +268,6 @@ sealed class P2pTechnology(
     object Bluetooth : P2pTechnology(
         id = "bluetooth",
         supportedPlatforms = setOf(Platform.Android, Platform.IOS, Platform.PC),
-        priority = P2pTechPriority.FALLBACK,
-        icon = Icons.Outlined.Bluetooth,
-        discoveryMode = P2pDiscoveryMode.PeerDiscovery,
         capabilityBit = 8,
         quality = 0,
     ) {

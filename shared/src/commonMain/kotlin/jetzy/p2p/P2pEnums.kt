@@ -2,17 +2,6 @@ package jetzy.p2p
 
 enum class P2pOperation { SEND, RECEIVE }
 
-enum class P2pTechPriority {
-    FALLBACK ,       // Use only if better options unavailable
-    ACCEPTABLE,     // Works well, but not optimal
-    RECOMMENDED    // Best option for this platform combo
-}
-
-enum class P2pDiscoveryMode {
-    QRCode,
-    PeerDiscovery
-}
-
 /** Which side stands up the data-plane server for a chosen transport; the other dials it. */
 enum class Role { HOST, CLIENT }
 
