@@ -19,7 +19,7 @@ kmpSsot {
     sharedModule     = "shared"
     androidAppModule = "androidApp"
 
-    appLogoPngForeground   = file("shared/src/commonMain/composeResources/drawable/jetzy_raster.png")
+    appLogoPngForeground   = file("branding/jetzy_raster.png")
     appLogoBackgroundColor = "#55555B"
     appLogoAndroidSafeZoneRatio = 0.6
 

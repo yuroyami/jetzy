@@ -45,7 +45,7 @@ compose.desktop {
             description = "Peer-to-peer file transfer for desktop"
             copyright = "© 2026 Yuroyami"
 
-            val logoIco = rootProject.file("shared/src/commonMain/composeResources/drawable/jetzy_raster_withbg.png")
+            val logoIco = rootProject.file("branding/jetzy_raster_withbg.png")
             macOS {
                 bundleID = "${kmpSsot.bundleIdBase.get()}.desktop"
                 iconFile.set(logoIco)
