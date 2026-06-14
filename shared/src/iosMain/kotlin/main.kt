@@ -12,10 +12,70 @@ import jetzy.p2p.P2pPlatformCallback
 import jetzy.ui.AdamScreen
 import jetzy.utils.Platform
 import jetzy.viewmodel.JetzyViewmodel
+import platform.Foundation.NSNotificationCenter
 import platform.UIKit.UIApplication
+import platform.UIKit.UIApplicationDidEnterBackgroundNotification
+import platform.UIKit.UIApplicationWillEnterForegroundNotification
+import platform.UIKit.UIBackgroundTaskIdentifier
+import platform.UIKit.UIBackgroundTaskInvalid
 import platform.UIKit.UIViewController
+import platform.darwin.NSObjectProtocol
 
 lateinit var viewmodel: JetzyViewmodel
+
+/**
+ * iOS has no foreground service. The honest, App-Store-safe way to survive a brief
+ * background/lock mid-transfer is `beginBackgroundTask`: when the app is backgrounded during an
+ * active transfer we request an execution assertion (~30s of grace, sometimes more), and release
+ * it on return to foreground, on transfer end, or when the OS expiration handler fires. This does
+ * NOT make multi-minute background transfers work — iOS will still suspend a generic-socket app —
+ * but it converts a short glance-away / incoming-notification (previously a hard kill once the
+ * peer's 8s stall watchdog fired) into a survivable interruption. Scoped to an active transfer so
+ * idling on a menu never holds an assertion. Needs on-device validation.
+ */
+private object IosBackgroundGuard {
+    private var bgTaskId: UIBackgroundTaskIdentifier = UIBackgroundTaskInvalid
+    private var didEnterBgObserver: NSObjectProtocol? = null
+    private var willEnterFgObserver: NSObjectProtocol? = null
+
+    fun start() {
+        if (didEnterBgObserver != null) return // already armed
+        val center = NSNotificationCenter.defaultCenter
+        didEnterBgObserver = center.addObserverForName(
+            name = UIApplicationDidEnterBackgroundNotification,
+            `object` = null,
+            queue = null,
+        ) { _ -> beginTask() }
+        willEnterFgObserver = center.addObserverForName(
+            name = UIApplicationWillEnterForegroundNotification,
+            `object` = null,
+            queue = null,
+        ) { _ -> endTask() }
+    }
+
+    fun stop() {
+        endTask()
+        val center = NSNotificationCenter.defaultCenter
+        didEnterBgObserver?.let { center.removeObserver(it) }
+        willEnterFgObserver?.let { center.removeObserver(it) }
+        didEnterBgObserver = null
+        willEnterFgObserver = null
+    }
+
+    private fun beginTask() {
+        if (bgTaskId != UIBackgroundTaskInvalid) return
+        bgTaskId = UIApplication.sharedApplication.beginBackgroundTaskWithName("jetzy-transfer") {
+            endTask() // expiration handler — OS is reclaiming us; release the assertion now.
+        }
+    }
+
+    private fun endTask() {
+        if (bgTaskId != UIBackgroundTaskInvalid) {
+            UIApplication.sharedApplication.endBackgroundTask(bgTaskId)
+            bgTaskId = UIBackgroundTaskInvalid
+        }
+    }
+}
 
 /**
  * Set from Swift (in `iOSApp.swift`) before `MainViewController()` is invoked. Holds
@@ -64,16 +124,19 @@ fun MainViewController(): UIViewController = ComposeUIViewController(
                         else -> null
                     }
 
-                // iOS has no foreground service; what these hooks scope here is the idle timer.
-                // The old global isIdleTimerDisabled=true in iOSApp.swift meant the phone never
-                // auto-locked even while idling on the main menu — keep the screen awake only
-                // from proceed (discovery) until cleanup.
+                // iOS has no foreground service. These hooks scope two things to an active
+                // transfer: the idle timer (screen stays awake from proceed/discovery until
+                // cleanup — the old global isIdleTimerDisabled=true kept the phone awake even
+                // idling on the menu) and a beginBackgroundTask grace assertion so a brief
+                // background/lock no longer instantly kills the link (see IosBackgroundGuard).
                 override fun startBackgroundService() {
                     UIApplication.sharedApplication.idleTimerDisabled = true
+                    IosBackgroundGuard.start()
                 }
 
                 override fun stopBackgroundService() {
                     UIApplication.sharedApplication.idleTimerDisabled = false
+                    IosBackgroundGuard.stop()
                 }
             }
         }
