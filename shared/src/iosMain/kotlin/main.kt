@@ -87,6 +87,9 @@ private object IosBackgroundGuard {
 @Suppress("unused")
 var wifiAwareBridge: WifiAwareBridge? = null
 
+/** Registers the foreground-drain observer for the share extension exactly once. */
+private var sharedInboxObserverArmed = false
+
 @Suppress("unused", "FunctionName")
 @OptIn(ExperimentalComposeUiApi::class)
 fun MainViewController(): UIViewController = ComposeUIViewController(
@@ -97,6 +100,18 @@ fun MainViewController(): UIViewController = ComposeUIViewController(
     AdamScreen(
         onViewmodel = {
             viewmodel = it
+
+            // iOS share-extension intake: stage any files shared into Jetzy while it was closed,
+            // and again on every return to foreground (a share can arrive while we're backgrounded).
+            jetzy.utils.SharedInbox.drainInto(it)
+            if (!sharedInboxObserverArmed) {
+                sharedInboxObserverArmed = true
+                NSNotificationCenter.defaultCenter.addObserverForName(
+                    name = UIApplicationWillEnterForegroundNotification,
+                    `object` = null,
+                    queue = null,
+                ) { _ -> jetzy.utils.SharedInbox.drainInto(viewmodel) }
+            }
 
             viewmodel.platformCallback = object: P2pPlatformCallback {
                 // mDNS is the platform-agnostic bootstrap — it finds any Jetzy peer on the shared
