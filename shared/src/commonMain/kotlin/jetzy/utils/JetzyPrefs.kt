@@ -30,9 +30,15 @@ object JetzyPrefs {
             ?: NightMode.SYSTEM
         set(value) = settings.putString(KEY_NIGHT_MODE, value.name)
 
+    /** True once the user has dismissed the first-run "how it works" explainer. */
+    var onboardingSeen: Boolean
+        get() = settings.getBoolean(KEY_ONBOARDING_SEEN, false)
+        set(value) = settings.putBoolean(KEY_ONBOARDING_SEEN, value)
+
     /** Matches the mDNS service-name cap so the advertised name is never silently truncated. */
     private const val MAX_NAME_LENGTH = 63
 
     private const val KEY_DEVICE_NAME = "device_name_override"
     private const val KEY_NIGHT_MODE = "night_mode"
+    private const val KEY_ONBOARDING_SEEN = "onboarding_seen"
 }

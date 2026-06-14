@@ -55,6 +55,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -69,9 +73,12 @@ import compose.icons.fontawesomeicons.Solid
 import compose.icons.fontawesomeicons.solid.Copy
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import jetzy.shared.generated.resources.Res
+import jetzy.shared.generated.resources.a11y_status_active
+import jetzy.shared.generated.resources.a11y_status_done
+import jetzy.shared.generated.resources.a11y_status_failed
+import jetzy.shared.generated.resources.a11y_status_pending
 import jetzy.shared.generated.resources.calculating
 import jetzy.shared.generated.resources.cancel_transfer
-import jetzy.shared.generated.resources.faster_link_available
 import jetzy.shared.generated.resources.files_of_total
 import jetzy.shared.generated.resources.hours_remaining
 import jetzy.shared.generated.resources.minutes_remaining
@@ -89,7 +96,6 @@ import jetzy.shared.generated.resources.save_files_to_folder
 import jetzy.shared.generated.resources.sender
 import jetzy.shared.generated.resources.sender_you
 import jetzy.shared.generated.resources.text_snippet
-import jetzy.p2p.TransportMatch
 import jetzy.ui.LocalViewmodel
 import jetzy.utils.Platform
 import jetzy.utils.deviceName
@@ -215,14 +221,13 @@ fun TransferScreenUI() {
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    // The negotiation brain ran live on the handshake (see P2PManager
-                    // .negotiatePeerCapabilities). When a faster mutual transport than the one we
-                    // bootstrapped on exists, hint it here. Acting on it (the in-band UPGRADE that
-                    // gear-shifts the live stream onto this link) is the next milestone.
-                    upgrade?.let {
-                        Spacer(Modifier.height(10.sdp))
-                        UpgradeAvailableBadge(it, Modifier.align(Alignment.CenterHorizontally))
-                    }
+                    // The negotiation brain runs live on the handshake (see P2PManager
+                    // .negotiatePeerCapabilities) and computes `upgrade`. The "Faster link available"
+                    // badge is intentionally NOT rendered: acting on it (the in-band UPGRADE that
+                    // gear-shifts the live stream onto the faster link) is not wired yet, so showing
+                    // the user a link they can't switch to is misleading. Re-enable the badge in the
+                    // same change that lands the live transport upgrade.
+                    @Suppress("UNUSED_EXPRESSION") (upgrade)
 
                     Spacer(Modifier.height(12.sdp))
 
@@ -257,7 +262,10 @@ fun TransferScreenUI() {
                     val savedTo = savedLabel
                     if (saveComplete && savedTo != null) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 2.sdp),
+                            // Polite live region: a screen reader announces "saved to …" when the
+                            // transfer completes, instead of the success state arriving silently.
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 2.sdp)
+                                .semantics { liveRegion = LiveRegionMode.Polite },
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -397,34 +405,6 @@ private fun remainingSeconds(totalBytes: Long, progressFrac: Float, speedBytesPe
     if (speedBytesPerS <= 0L || progressFrac <= 0f || progressFrac >= 1f) return null
     val bytesLeft = (totalBytes * (1f - progressFrac)).toLong()
     return bytesLeft / speedBytesPerS
-}
-
-// ─── Upgrade badge ───────────────────────────────────────────────────────────
-
-/**
- * "⚡ Faster link available" pill. Surfaces the result of the live transport negotiation — proof
- * that the once-dead negotiator now runs on the real handshake — and the visible anchor the in-band
- * UPGRADE (gear-shift) will hang off of next.
- */
-@Composable
-private fun UpgradeAvailableBadge(match: TransportMatch, modifier: Modifier = Modifier) {
-    val cs = MaterialTheme.colorScheme
-    Row(
-        modifier = modifier
-            .clip(RoundedCornerShape(50))
-            .background(cs.primary.copy(alpha = 0.12f))
-            .padding(horizontal = 12.sdp, vertical = 6.sdp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.sdp),
-    ) {
-        Text("⚡", fontSize = 12.ssp)
-        Text(
-            text = stringResource(Res.string.faster_link_available, match.technology.displayName),
-            color = cs.primary,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 12.ssp,
-        )
-    }
 }
 
 @Composable
@@ -877,6 +857,17 @@ private fun FileTypeIcon(typeLabel: String) {
 @Composable
 private fun FileStatusIndicator(status: FileTransferStatus) {
     val colorScheme = MaterialTheme.colorScheme
+    // Per-file status was conveyed by color + glyph only; screen readers announced nothing.
+    // stateDescription makes Done/Active/Pending/Failed spoken, not just seen.
+    val statusLabel = stringResource(
+        when (status) {
+            FileTransferStatus.Pending -> Res.string.a11y_status_pending
+            FileTransferStatus.Active -> Res.string.a11y_status_active
+            FileTransferStatus.Done -> Res.string.a11y_status_done
+            FileTransferStatus.Failed -> Res.string.a11y_status_failed
+        }
+    )
+    Box(modifier = Modifier.semantics { stateDescription = statusLabel }) {
     when (status) {
         FileTransferStatus.Done -> {
             Box(
@@ -942,5 +933,6 @@ private fun FileStatusIndicator(status: FileTransferStatus) {
                 Text("✕", fontSize = 6.ssp, color = colorScheme.onErrorContainer)
             }
         }
+    }
     }
 }

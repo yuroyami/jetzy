@@ -161,4 +161,17 @@
     <string name="perm_location_services_desc">Android 9–12 require location services for the hotspot to broadcast its name.</string>
     <string name="perm_hotspot_off_title">Mobile hotspot off</string>
     <string name="perm_hotspot_off_desc">A running mobile hotspot blocks Jetzy from starting its own. Turn it off in Settings.</string>
+
+    <!-- Accessibility -->
+    <string name="a11y_status_pending">Waiting</string>
+    <string name="a11y_status_active">Transferring</string>
+    <string name="a11y_status_done">Done</string>
+    <string name="a11y_status_failed">Failed</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">How Jetzy works</string>
+    <string name="onboarding_step_open">Open Jetzy on both devices — they must be near each other.</string>
+    <string name="onboarding_step_network">Keep both on the same Wi-Fi, or let Jetzy create its own hotspot. No internet needed.</string>
+    <string name="onboarding_step_pick">Pick files on one device, tap the other when it appears, and the transfer starts.</string>
+    <string name="onboarding_got_it">Got it</string>
 </resources>
