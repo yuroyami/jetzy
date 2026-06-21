@@ -59,8 +59,11 @@ import jetzy.shared.generated.resources.add_text_btn
 import jetzy.shared.generated.resources.text_removed
 import jetzy.shared.generated.resources.add_text_desc
 import jetzy.shared.generated.resources.cancel
+import jetzy.shared.generated.resources.clipboard_added
+import jetzy.shared.generated.resources.clipboard_empty
 import jetzy.shared.generated.resources.field_empty
 import jetzy.shared.generated.resources.no_texts_added
+import jetzy.shared.generated.resources.send_clipboard
 import jetzy.shared.generated.resources.text_to_send
 import jetzy.ui.LocalViewmodel
 import jetzy.utils.ComposeUtils.scheme
@@ -73,6 +76,7 @@ import org.jetbrains.compose.resources.stringResource
 fun PickTextSubscreen() {
     val viewmodel = LocalViewmodel.current
     val haptic = LocalHapticFeedback.current
+    val clipboard = LocalClipboardManager.current
 
     var textAddPopup by remember { mutableStateOf(false ) }
 
@@ -146,17 +150,41 @@ fun PickTextSubscreen() {
             }
         }
 
-        SmallExtendedFloatingActionButton(
-            icon = {
-                Icon(Icons.Filled.TextFormat, null)
-            },
-            onClick = {
-                textAddPopup = true
-            },
-            text = { Text(stringResource(Res.string.add_new_text)) },
+        // "Send clipboard" lives here — beside "Add new text" — instead of on the home screen.
+        // Paste-to-send is a text action, so it belongs in the text-adding surface where the user
+        // is already thinking about text snippets, not on the gate-free home screen.
+        Column(
             modifier = Modifier.align(BottomEnd).padding(6.sdp).padding(bottom = 8.sdp),
-            expanded = true
-        )
+            horizontalAlignment = androidx.compose.ui.Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(8.sdp)
+        ) {
+            SmallExtendedFloatingActionButton(
+                icon = {
+                    Icon(Icons.Filled.ContentPaste, null)
+                },
+                onClick = {
+                    val clipText = clipboard.getText()?.text?.takeIf { it.isNotBlank() }
+                    if (clipText != null) {
+                        viewmodel.elementsToSend.add(JetzyElement.Text(clipText))
+                        viewmodel.snackyRes(Res.string.clipboard_added)
+                    } else {
+                        viewmodel.snackyRes(Res.string.clipboard_empty)
+                    }
+                },
+                text = { Text(stringResource(Res.string.send_clipboard)) },
+                expanded = true
+            )
+            SmallExtendedFloatingActionButton(
+                icon = {
+                    Icon(Icons.Filled.TextFormat, null)
+                },
+                onClick = {
+                    textAddPopup = true
+                },
+                text = { Text(stringResource(Res.string.add_new_text)) },
+                expanded = true
+            )
+        }
     }
 
     if (textAddPopup) {
@@ -193,7 +221,6 @@ fun PickTextSubscreen() {
                 }
             },
             text = {
-                val clipboard = LocalClipboardManager.current
                 TextField(
                     modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                     shape = RoundedCornerShape(12.sdp),

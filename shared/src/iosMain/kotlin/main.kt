@@ -20,6 +20,8 @@ import platform.UIKit.UIBackgroundTaskIdentifier
 import platform.UIKit.UIBackgroundTaskInvalid
 import platform.UIKit.UIViewController
 import platform.darwin.NSObjectProtocol
+import platform.darwin.dispatch_async
+import platform.darwin.dispatch_get_main_queue
 
 lateinit var viewmodel: JetzyViewmodel
 
@@ -75,6 +77,15 @@ private object IosBackgroundGuard {
             bgTaskId = UIBackgroundTaskInvalid
         }
     }
+}
+
+/**
+ * Run [block] on the main queue. async (not sync) so a call already on a background dispatcher
+ * doesn't block waiting for the UI thread, and a call already on main still defers cleanly rather
+ * than risking a re-entrant dispatch_sync deadlock.
+ */
+private fun onMainQueue(block: () -> Unit) {
+    dispatch_async(dispatch_get_main_queue()) { block() }
 }
 
 /**
@@ -144,12 +155,17 @@ fun MainViewController(): UIViewController = ComposeUIViewController(
                 // cleanup — the old global isIdleTimerDisabled=true kept the phone awake even
                 // idling on the menu) and a beginBackgroundTask grace assertion so a brief
                 // background/lock no longer instantly kills the link (see IosBackgroundGuard).
-                override fun startBackgroundService() {
+                // UIApplication and IosBackgroundGuard's begin/endBackgroundTask are UIKit main-
+                // thread-only APIs. cleanup() (which calls stopBackgroundService) runs on a
+                // background dispatcher via tearDownManager, so calling these inline crashed UIKit's
+                // main-thread assertion on every teardown path (Done / cancel / back). Marshal to the
+                // main queue so the call site's thread no longer matters.
+                override fun startBackgroundService() = onMainQueue {
                     UIApplication.sharedApplication.idleTimerDisabled = true
                     IosBackgroundGuard.start()
                 }
 
-                override fun stopBackgroundService() {
+                override fun stopBackgroundService() = onMainQueue {
                     UIApplication.sharedApplication.idleTimerDisabled = false
                     IosBackgroundGuard.stop()
                 }

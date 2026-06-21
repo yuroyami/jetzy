@@ -9,9 +9,9 @@
     <string name="choose_files">Choose files</string>
     <string name="add_files_to_share">Add files to share</string>
     <string name="send">Send</string>
-    <string name="connect_to_receive">Connect to receive</string>
+    <string name="connect_to_receive">Connect</string>
     <string name="send_clipboard">Send clipboard</string>
-    <string name="clipboard_added">Clipboard text added to the tray</string>
+    <string name="clipboard_added">Clipboard text added</string>
     <string name="clipboard_empty">Clipboard is empty</string>
     <string name="received_files">Received files</string>
     <string name="no_received_yet">Nothing received yet</string>
@@ -169,7 +169,7 @@
     <string name="a11y_status_failed">Failed</string>
 
     <!-- Discovery -->
-    <string name="connect_directly">Not on the same Wi-Fi? Connect directly</string>
+    <string name="connect_directly">Connect with QR code instead</string>
 
     <!-- Onboarding -->
     <string name="onboarding_title">How Jetzy works</string>

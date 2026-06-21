@@ -30,17 +30,13 @@ import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import jetzy.models.JetzyElement
 import jetzy.shared.generated.resources.Res
 import jetzy.shared.generated.resources.add_files_to_share
 import jetzy.shared.generated.resources.added_items
 import jetzy.shared.generated.resources.choose_files
-import jetzy.shared.generated.resources.clipboard_added
-import jetzy.shared.generated.resources.clipboard_empty
 import jetzy.shared.generated.resources.no_received_yet
 import jetzy.shared.generated.resources.onboarding_got_it
 import jetzy.shared.generated.resources.onboarding_step_network
@@ -50,7 +46,6 @@ import jetzy.shared.generated.resources.onboarding_title
 import jetzy.shared.generated.resources.received_files
 import jetzy.shared.generated.resources.connect_to_receive
 import jetzy.shared.generated.resources.send
-import jetzy.shared.generated.resources.send_clipboard
 import jetzy.shared.generated.resources.welcome_subtitle
 import jetzy.shared.generated.resources.welcome_title
 import jetzy.utils.JetzyPrefs
@@ -112,7 +107,7 @@ fun MainScreenUI() {
                         shape = RoundedCornerShape(8.sdp)
                     ) {
                         // Single action that reads either way: "Send" when files are staged,
-                        // "Connect to receive" when the tray is empty.
+                        // "Connect" when nothing is staged (you'll receive).
                         Text(
                             if (hasFiles) stringResource(Res.string.send) else stringResource(Res.string.connect_to_receive),
                             style = MaterialTheme.typography.titleLarge,
@@ -155,8 +150,8 @@ fun MainScreenUI() {
                 )
             }
 
-            // The one and only input: add files to share (optional — connect with an empty tray to
-            // receive). No mode toggle, no platform guess.
+            // The one and only input: add files to share (optional — connect with nothing staged to
+            // receive instead). No mode toggle, no platform guess.
             MainScreenSurface {
                 Column(
                     horizontalAlignment = CenterHorizontally,
@@ -178,22 +173,6 @@ fun MainScreenUI() {
                         Text(stringResource(Res.string.choose_files), style = MaterialTheme.typography.titleLarge)
                     }
 
-                    // The most common "beam this link/OTP to my other device" case in one tap —
-                    // paste-to-send used to be buried four levels deep in the text-add dialog.
-                    @Suppress("DEPRECATION") // TODO: LocalClipboard suspend API (with TextRow's copy side)
-                    val clipboard = LocalClipboardManager.current
-                    TextButton(onClick = {
-                        val clipText = clipboard.getText()?.text?.takeIf { it.isNotBlank() }
-                        if (clipText != null) {
-                            viewmodel.elementsToSend.add(JetzyElement.Text(clipText))
-                            viewmodel.snackyRes(Res.string.clipboard_added)
-                        } else {
-                            viewmodel.snackyRes(Res.string.clipboard_empty)
-                        }
-                    }) {
-                        Text(stringResource(Res.string.send_clipboard), style = MaterialTheme.typography.titleSmall)
-                    }
-
                     val countText = remember(
                         filesForSending.size,
                         foldersForSending.size,
@@ -208,7 +187,7 @@ fun MainScreenUI() {
                             if (videosForSending.isNotEmpty()) add("${videosForSending.size} video${if (videosForSending.size > 1) "s" else ""}")
                             if (textForSending.isNotEmpty()) add("${textForSending.size} text${if (textForSending.size > 1) "s" else ""}")
                         }.joinToString(", ").let {
-                            if (it.isEmpty()) "Nothing added — connect with an empty tray to receive"
+                            if (it.isEmpty()) "Nothing added — tap Connect to receive instead"
                             else "Sending: $it"
                         }
                     }

@@ -65,7 +65,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewModelScope
 import jetzy.theme.sdp
 import jetzy.theme.ssp
 import compose.icons.FontAwesomeIcons
@@ -101,7 +100,6 @@ import jetzy.utils.Platform
 import jetzy.utils.deviceName
 import jetzy.utils.openReceivedLocation
 import jetzy.utils.platform
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -338,10 +336,11 @@ fun TransferScreenUI() {
                 Button(
                     onClick = {
                         if (transferComplete) {
-                            viewmodel.viewModelScope.launch {
-                                manager.cleanup()
-                                viewmodel.resetEverything()
-                            }
+                            // resetEverything() already tears the manager down (tearDownManager →
+                            // cleanup()), so calling cleanup() here too double-ran teardown — the
+                            // second pass landing on a background dispatcher, which is what tripped
+                            // the iOS UIKit main-thread crash on Done. One reset is enough.
+                            viewmodel.resetEverything()
                         } else {
                             // Cancel ≠ discard: keep the staged tray (same path as back-press)
                             // so cancelling a wrong-peer connect doesn't force a full re-pick.

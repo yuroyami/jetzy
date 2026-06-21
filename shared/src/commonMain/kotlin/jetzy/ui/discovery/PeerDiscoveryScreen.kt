@@ -58,7 +58,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewModelScope
 import jetzy.theme.sdp
 import jetzy.theme.ssp
@@ -77,11 +76,9 @@ import jetzy.shared.generated.resources.find_nearby_devices
 import jetzy.shared.generated.resources.nearby
 import jetzy.shared.generated.resources.nearby_devices
 import jetzy.shared.generated.resources.no_devices_found
-import jetzy.shared.generated.resources.peer_discovery
 import jetzy.shared.generated.resources.scanning
 import jetzy.shared.generated.resources.select_device_hint
 import jetzy.shared.generated.resources.select_device_to_connect
-import jetzy.shared.generated.resources.try_different_transport
 import jetzy.shared.generated.resources.visible_as
 import jetzy.ui.LocalViewmodel
 import jetzy.utils.JetzyPrefs
@@ -116,18 +113,6 @@ fun PeerDiscoveryScreenUI() {
 
     val availablePeers by manager.availablePeers.collectAsState()
     val isDiscovering  by manager.isDiscovering.collectAsState()
-    val fallbackCount  by viewmodel.fallbackCount.collectAsState()
-
-    // The fallback affordance only makes sense after the user has given the
-    // current transport a real chance to find something — 6s with no peers.
-    var emptyLongEnough by remember { mutableStateOf(false) }
-    LaunchedEffect(availablePeers.isEmpty(), isDiscovering) {
-        emptyLongEnough = false
-        if (availablePeers.isEmpty() && isDiscovering) {
-            kotlinx.coroutines.delay(6000)
-            emptyLongEnough = availablePeers.isEmpty()
-        }
-    }
 
     var selectedPeer by remember { mutableStateOf<P2pPeer?>(null) }
 
@@ -157,8 +142,8 @@ fun PeerDiscoveryScreenUI() {
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.sdp, vertical = 20.sdp),
-            verticalArrangement = Arrangement.spacedBy(10.sdp)
+                .padding(horizontal = 16.sdp, vertical = 12.sdp),
+            verticalArrangement = Arrangement.spacedBy(8.sdp)
         ) {
 
             // ── Header ──────────────────────────────────────────────────────
@@ -167,22 +152,15 @@ fun PeerDiscoveryScreenUI() {
                 verticalArrangement = Arrangement.spacedBy(4.sdp)
             ) {
                 Text(
-                    text = stringResource(Res.string.peer_discovery),
-                    fontSize = 9.ssp,
-                    fontWeight = FontWeight.W500,
-                    color = colorScheme.onSurfaceVariant,
-                    letterSpacing = 0.08.sp,
-                )
-                Text(
                     text = stringResource(Res.string.find_nearby_devices),
-                    fontSize = 14.ssp,
+                    fontSize = 12.ssp,
                     fontWeight = FontWeight.W500,
                     color = colorScheme.onSurface,
                     textAlign = TextAlign.Center,
                 )
                 Text(
                     text = stringResource(Res.string.select_device_hint),
-                    fontSize = 10.ssp,
+                    fontSize = 9.ssp,
                     color = colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
@@ -220,7 +198,7 @@ fun PeerDiscoveryScreenUI() {
                 peers = availablePeers,
                 selectedPeer = selectedPeer,
                 onPeerSelected = { selectedPeer = it },
-                modifier = Modifier.size(140.sdp)
+                modifier = Modifier.size(120.sdp)
             )
 
             // ── Peer list card ───────────────────────────────────────────────
@@ -278,55 +256,31 @@ fun PeerDiscoveryScreenUI() {
                 }
             )
 
-            // ── Try-different-transport affordance ───────────────────────────
-            // Only shown when the user has given the current transport a chance
-            // (6s with no peers found) AND the platform callback offers a ladder.
-            if (emptyLongEnough && fallbackCount > 0) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.sdp))
-                        .background(colorScheme.surfaceContainerHigh)
-                        .border(0.5.dp, colorScheme.outlineVariant, RoundedCornerShape(10.sdp))
-                        .clickable {
-                            viewmodel.switchToNextFallbackTransport()
-                        }
-                        .padding(vertical = 8.sdp, horizontal = 12.sdp)
-                ) {
-                    Text(
-                        text = stringResource(Res.string.try_different_transport),
-                        fontSize = 10.ssp,
-                        fontWeight = FontWeight.W500,
-                        color = colorScheme.onSurface,
-                    )
-                }
-            }
-
-            // ── Connect-directly affordance (cross-network, e.g. Android↔iPhone with no shared
-            //    Wi-Fi) ──────────────────────────────────────────────────────────
-            // The deterministic universal path: jump straight to a QR-paired hotspot instead of
-            // walking the ladder onto transports the peer may not support (an iPhone can't do
-            // Wi-Fi Direct). Shown once the radar's been empty long enough.
-            if (emptyLongEnough) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.sdp))
-                        .background(colorScheme.primaryContainer)
-                        .clickable(role = Role.Button) {
-                            viewmodel.connectDirectly()
-                        }
-                        .padding(vertical = 8.sdp, horizontal = 12.sdp)
-                ) {
-                    Text(
-                        text = stringResource(Res.string.connect_directly),
-                        fontSize = 10.ssp,
-                        fontWeight = FontWeight.W600,
-                        color = colorScheme.onPrimaryContainer,
-                    )
-                }
+            // ── Always-visible QR fallback ────────────────────────────────────
+            // Local scanning only finds a peer when both devices already share a Wi-Fi; the
+            // everyday Android↔iPhone "no shared network" case finds nothing and the user is left
+            // staring at an empty radar. So the universal QR path — Android stands up a hotspot and
+            // shows a code, the peer scans it — is offered up-front, not gated behind a 6s timeout
+            // that the user can't see coming. (The old "try a different transport" affordance is
+            // gone: it surfaced transport internals the user can't reason about and silently walked
+            // a ladder onto links the peer may not even support.)
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.sdp))
+                    .background(colorScheme.primaryContainer)
+                    .clickable(role = Role.Button) {
+                        viewmodel.connectDirectly()
+                    }
+                    .padding(vertical = 8.sdp, horizontal = 12.sdp)
+            ) {
+                Text(
+                    text = stringResource(Res.string.connect_directly),
+                    fontSize = 10.ssp,
+                    fontWeight = FontWeight.W600,
+                    color = colorScheme.onPrimaryContainer,
+                )
             }
 
             // ── Cancel ───────────────────────────────────────────────────────
